@@ -1,0 +1,27 @@
+{
+  "name": "mirror-freedos",
+  "description": "Pentium MMX 233 mirror of the real rig, FreeDOS 1.4",
+  "dos": "freedos",
+  "c": {
+    "route": "build",
+    "builder": "freedos",
+    "geometry": { "cylinders": 260, "heads": 16, "sectorsPerTrack": 63 },
+    "clusterSize": 4096,
+    "label": "FREEDOS"
+  },
+  "d": {
+    "geometry": { "cylinders": 130, "heads": 16, "sectorsPerTrack": 63 },
+    "clusterSize": 2048,
+    "label": "REBEEP"
+  },
+  "install": {
+    "tool": "freedos-floppy",
+    "folder": "144m",
+    "floppies": ["x86BOOT.img", "x86DSK01.img", "x86DSK02.img", "x86DSK03.img", "x86DSK04.img", "x86DSK05.img", "x86DSK06.img"]
+  },
+  "tools": ["86box", "86box-roms", "jemm", "freedos"],
+  "roms": [
+    "machines/ficpa2012/113jb16.awd",
+    "video/et4000/ET4000.BIN"
+  ]
+}

@@ -1,0 +1,49 @@
+# mirror-freedos: Pentium MMX 233 mirror of the real rig, running FreeDOS 1.4.
+# Rendered to <home>/vms/mirror-freedos/86box.cfg on every `rebeep vm run`.
+# Edit this file, not the 86Box settings dialog: GUI changes are overwritten.
+# Never add uuid or cpu_override (each opens a dialog).
+
+[General]
+vid_renderer = qt_software
+window_remember = 0
+
+[Machine]
+machine = ficpa2012
+cpu_family = pentium_p55c
+cpu_speed = 233333333
+cpu_multi = 3.5
+cpu_use_dynarec = 1
+fpu_type = internal
+mem_size = 16384
+time_sync = local
+
+[Video]
+gfxcard = et4000ax
+
+[Input devices]
+mouse_type = none
+
+[Sound]
+sndcard = sb_vibra16s
+fm_driver = nuked
+
+[Storage controllers]
+hdc_1 = internal
+fdc = internal
+
+[Hard disks]
+hdd_01_parameters = {{C_PARAMS}}
+hdd_01_fn = {{C_IMG}}
+hdd_01_ide_channel = 0:0
+{{#D_IMG}}
+hdd_02_parameters = {{D_PARAMS}}
+hdd_02_fn = {{D_IMG}}
+hdd_02_ide_channel = 0:1
+{{/D_IMG}}
+
+[Floppy and CD-ROM drives]
+fdd_01_type = 35_2hd
+fdd_02_type = none
+{{#FDD1_FN}}
+fdd_01_fn = {{FDD1_FN}}
+{{/FDD1_FN}}

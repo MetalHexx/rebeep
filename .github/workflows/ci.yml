@@ -1,0 +1,58 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tools:
+    name: tools (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the payload guard scans every commit in the range
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install NASM and dosfstools (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y nasm dosfstools
+          command -v fsck.fat   # the FAT image tests skip themselves without it
+          nasm -v
+
+      - name: Install NASM (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install nasm
+          nasm -v
+
+      - name: Use a throwaway rebeep home
+        shell: bash
+        run: echo "REBEEP_HOME=$RUNNER_TEMP/rebeep-home" >> "$GITHUB_ENV"
+
+      - name: Host check
+        run: node tools/rebeep.mjs env check
+
+      - name: Tools tests (fsck.fat checks the FAT images on Linux)
+        run: node tools/rebeep.mjs test run --suite tools
+
+      - name: Fetch NASM (pinned on Windows, system NASM elsewhere)
+        run: node tools/rebeep.mjs tool fetch nasm
+
+      - name: Build
+        run: node tools/rebeep.mjs build run
+
+      - name: Payload guard
+        run: node tools/rebeep.mjs repo check --range origin/main..HEAD --strict

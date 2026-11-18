@@ -1,0 +1,16 @@
+{
+  "targets": [
+    {
+      "name": "REBEEP.COM",
+      "source": "rebeep.asm",
+      "format": "bin",
+      "deploy": "REBEEP"
+    },
+    {
+      "name": "QPICHK.COM",
+      "source": "diag/qpichk.asm",
+      "format": "bin",
+      "deploy": "ENV"
+    }
+  ]
+}

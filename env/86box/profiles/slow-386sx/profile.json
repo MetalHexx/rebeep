@@ -1,0 +1,20 @@
+{
+  "name": "slow-386sx",
+  "description": "386SX/16 with 4 MB, a clone of the MS-DOS 6.22 C:",
+  "dos": "msdos622",
+  "c": {
+    "route": "clone",
+    "from": "mirror-msdos",
+    "geometry": { "cylinders": 260, "heads": 16, "sectorsPerTrack": 63 }
+  },
+  "d": {
+    "geometry": { "cylinders": 260, "heads": 16, "sectorsPerTrack": 63 },
+    "clusterSize": 4096,
+    "label": "REBEEP"
+  },
+  "tools": ["86box", "86box-roms", "jemm"],
+  "roms": [
+    "machines/awardsx/Unknown 386SX OPTi291 - Award (original).BIN",
+    "video/et4000/ET4000.BIN"
+  ]
+}

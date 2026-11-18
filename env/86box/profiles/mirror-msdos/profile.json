@@ -1,0 +1,23 @@
+{
+  "name": "mirror-msdos",
+  "description": "Pentium MMX 233 mirror of the real rig, MS-DOS 6.22",
+  "dos": "msdos622",
+  "c": {
+    "route": "blank",
+    "geometry": { "cylinders": 260, "heads": 16, "sectorsPerTrack": 63 }
+  },
+  "d": {
+    "geometry": { "cylinders": 130, "heads": 16, "sectorsPerTrack": 63 },
+    "clusterSize": 2048,
+    "label": "REBEEP"
+  },
+  "install": {
+    "media": "msdos622",
+    "floppies": ["DISK1.IMA", "DISK2.IMA", "DISK3.IMA"]
+  },
+  "tools": ["86box", "86box-roms", "jemm"],
+  "roms": [
+    "machines/ficpa2012/113jb16.awd",
+    "video/et4000/ET4000.BIN"
+  ]
+}

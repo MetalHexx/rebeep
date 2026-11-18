@@ -1,0 +1,13 @@
+# LF everywhere by default
+* text=auto eol=lf
+
+# DOS files must stay CRLF, whatever the host's git settings
+env/86box/dos/** text eol=crlf
+*.BAT text eol=crlf
+*.bat text eol=crlf
+*.SYS text eol=crlf
+*.sys text eol=crlf
+
+# Never touch binaries
+*.png binary
+*.jpg binary
