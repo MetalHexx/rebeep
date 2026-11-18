@@ -13,7 +13,7 @@
 | `lib/profiles` · `vmcfg` · `proc` | VM profiles, 86Box cfg rendering, launch and running-VM detection |
 | `lib/delivery` · `freedos` · `nasm` · `guard` | D: contents · scripted FreeDOS C: · assembling · payload guard |
 | `lib/fsx` | Atomic writes, copies and directory swaps. Use it for anything that replaces user files |
-| `test/` | `*.test.mjs`; shared fixtures in `helpers`, `zipfixture`, `vmenv`, `fake86box` |
+| `test/` | `*.test.mjs`; shared fixtures in `helpers.mjs`, `fake86box.mjs` (a stand-in for 86Box) and `serve.mjs` (a local HTTP server for downloads) |
 
 ## Rules
 

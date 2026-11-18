@@ -45,6 +45,13 @@ description.
 - **Each folder's `AGENTS.md`** must stay true. The rules for writing them are in the root
   [AGENTS.md](../AGENTS.md).
 
+## Keeping docs healthy
+
+Before you commit or open a PR, run the `update-docs` skill
+([SKILL.md](../.claude/skills/update-docs/SKILL.md)). It maps your change to the docs it touches and
+checks them against the rules and budgets in the root [AGENTS.md](../AGENTS.md#10-writing-docs).
+Every user-visible change also adds a line under `## [Unreleased]` in [CHANGELOG.md](../CHANGELOG.md).
+
 ## Report your host
 
 The environment is verified on Windows. If you run it on Linux or macOS, add your result to the

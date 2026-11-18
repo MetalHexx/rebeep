@@ -13,10 +13,8 @@
 
 ## Rules
 
-- Scannable and high signal: tables, short bullets, commands you can copy.
-- Commands and options must match `rebeep ... --help`. Change both in the same PR.
+- Style, altitude and budgets: the root [AGENTS.md](../AGENTS.md) "Writing docs" section.
 - A new doc gets a line in `README.md` here.
-- The repo's front door is the root `README.md`. Keep it short and link here for detail.
 
 ## Pitfalls
 
