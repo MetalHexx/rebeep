@@ -17,7 +17,8 @@ export function readPackageVersion(repo) {
 
 /**
  * Validates `targets.json` and returns its targets with defaults filled in. `root` (`src`, the
- * default, or `tests`) is the repo folder the source is resolved under.
+ * default, or `tests`) is the repo folder the source is resolved under. `autoload` (default false)
+ * marks the target `BOOT.BAT` loads at boot; the delivery writes the flag file for it.
  */
 function validateTargets(doc, file) {
   const fail = (message) => {
@@ -50,6 +51,9 @@ function validateTargets(doc, file) {
     if (t.deploy !== undefined && (typeof t.deploy !== 'string' || !DIR_83.test(t.deploy))) {
       fail(`${where}.deploy must be an 8.3 upper-case DOS folder name`);
     }
+    if (t.autoload !== undefined && typeof t.autoload !== 'boolean') {
+      fail(`${where}.autoload must be true or false`);
+    }
     const defines = t.defines ?? {};
     if (!isPlainObject(defines)) fail(`${where}.defines must be an object`);
     for (const [key, value] of Object.entries(defines)) {
@@ -58,7 +62,14 @@ function validateTargets(doc, file) {
         fail(`${where}.defines.${key} must be a string or a number`);
       }
     }
-    return { name: t.name, source: t.source, root: t.root ?? 'src', deploy: t.deploy ?? null, defines };
+    return {
+      name: t.name,
+      source: t.source,
+      root: t.root ?? 'src',
+      deploy: t.deploy ?? null,
+      autoload: t.autoload ?? false,
+      defines,
+    };
   });
 }
 
@@ -113,7 +124,13 @@ async function buildRun(ctx) {
     }
     const size = fs.statSync(output).size;
     ctx.log.ok(`${target.name}: ${size} bytes`);
-    built.push({ name: target.name, size, sha256: sha256(output), deploy: target.deploy });
+    built.push({
+      name: target.name,
+      size,
+      sha256: sha256(output),
+      deploy: target.deploy,
+      autoload: target.autoload,
+    });
   }
 
   const summary = {

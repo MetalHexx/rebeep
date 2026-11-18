@@ -4,7 +4,8 @@
       "name": "REBEEP.COM",
       "source": "rebeep.asm",
       "format": "bin",
-      "deploy": "REBEEP"
+      "deploy": "REBEEP",
+      "autoload": true
     },
     {
       "name": "QPICHK.COM",

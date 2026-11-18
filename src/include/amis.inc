@@ -8,7 +8,15 @@
 %define AMIS_SIG_MFR    "MetalHex"
 %define AMIS_SIG_PROD   "REBEEP  "
 
+; AMIS functions (AH = ReBeep's multiplex number, AL = function). Anything else returns AL = 00h.
+AMIS_FN_INSTALLED equ 00h       ; AL = FFh, CX = version (major << 8 | minor), DX:DI -> signature
+                                ; then ASCIZ "ReBeep <version>"
+AMIS_FN_HOOKS   equ 04h         ; AL = 04h, DX:BX -> hooked interrupts: db number, dw handler (09h, 2Dh)
 AMIS_FN_STATE   equ 10h         ; private function: AL = FFh, DX:BX -> RB_STATE
+AMIS_FN_APPLY   equ 11h         ; apply RB_STATE's voice, volume and translation flag; AL = FFh
+AMIS_FN_TRAPS_ON  equ 12h       ; AL = FFh, or AL = 00h and BL = exit code; a no-op when already on
+AMIS_FN_TRAPS_OFF equ 13h       ; the same, releasing the OPL
+AMIS_FN_UNINSTALL equ 14h       ; AL = FFh and BX = PSP segment to free, or AL = 00h and BL = 8
 
 ; RB_STATE, layout version 1: byte offsets.
 RBS_VERSION     equ 0           ; db layout version

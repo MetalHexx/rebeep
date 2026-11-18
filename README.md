@@ -23,8 +23,8 @@ game ──OUT 42h/43h/61h──▶ Jemm + QPIEMU ──▶ ReBeep ──▶ OPL
                                                └──────▶ PC speaker (fallback)
 ```
 
-> **Status:** the dev environment works. The TSR itself is in progress; today `REBEEP.COM` is a
-> placeholder that prints its version.
+> **Status:** the dev environment works. `REBEEP.COM` loads, unloads and answers its hotkeys, but
+> it passes the speaker through unchanged: it doesn't play on the OPL yet.
 
 ## What you need
 

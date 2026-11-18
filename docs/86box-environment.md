@@ -89,8 +89,8 @@ Check the output of `rebeep disk deploy` (or `rebeep disk list`) when a game mis
    - calls `D:\ENV\BOOT.BAT`.
 3. **BOOT.BAT**, on the dev entry:
    - runs `JLOAD QPIEMU.DLL`, then `QPICHK`;
-   - `LH D:\REBEEP\REBEEP` if `D:\REBEEP\AUTOLOAD.FLG` exists. Nothing writes that flag yet; it
-     arrives with the first real ReBeep build.
+   - `LH D:\REBEEP\REBEEP` if `D:\REBEEP\AUTOLOAD.FLG` exists. `rebeep build run --deploy` writes
+     that flag for every build target marked `"autoload": true` in `src/targets.json` (`REBEEP.COM` is).
 
 Because `BOOT.BAT` lives on D:, changing the boot steps needs only a deploy, never an edit on C:.
 

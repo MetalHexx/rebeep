@@ -1,19 +1,21 @@
-; ReBeep - plays PC-speaker tones on a Sound Blaster's OPL2/OPL3.
-; Placeholder entry point: prints its version and exits.
+; ReBeep - plays PC-speaker tones on a Sound Blaster's OPL2/OPL3. A TSR: the resident part
+; comes first, then the startup part, which is freed when ReBeep goes resident. Everything
+; the resident part touches lives below resident_end.
+; Build with "rebeep build run": it defines REBEEP_VERSION and REBEEP_VER_MAJOR/MINOR/PATCH.
 ; SPDX-License-Identifier: MIT
 
-        cpu     8086
-        org     100h
-
 %ifndef REBEEP_VERSION
-%define REBEEP_VERSION "0.1.0"
+%fatal REBEEP_VERSION is not defined: build with "rebeep build run"
 %endif
 
-start:
-        mov     dx, banner
-        mov     ah, 09h             ; DOS: print $-terminated string
-        int     21h
-        mov     ax, 4C00h           ; DOS: exit with code 0
-        int     21h
-
-banner  db      "ReBeep ", REBEEP_VERSION, " - scaffold", 13, 10, "$"
+        org     100h
+image_start:
+        jmp     startup_entry
+%include "resident/data.asm"            ; RB_STATE first, then variables and the private stack
+%include "capture/trap.asm"             ; cpu 386
+%include "engine/interp.asm"            ; cpu 8086
+%include "engine/opl.asm"               ; cpu 8086
+%include "hotkey/kbd.asm"
+%include "resident/amis.asm"
+resident_end:
+%include "startup/main.asm"             ; freed when going resident

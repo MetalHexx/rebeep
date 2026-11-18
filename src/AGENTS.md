@@ -1,57 +1,56 @@
 # src
 
-> ReBeep's NASM source. `engine/` and `include/` are written; the other module folders are empty until the TSR is.
+> ReBeep's NASM source: the resident TSR, its startup code, the speaker interpreter and the OPL target.
 
 ## What's here
 
 | Path | Role |
 |---|---|
-| `targets.json` | What `rebeep build run` assembles: name, source, output format, optional `root` (`src`, the default, or `tests`) |
-| `rebeep.asm` | Entry point. A placeholder that prints its version today |
-| `include/` | Shared constants and macros. `speaker.inc`: port numbers, port `61h` bits, interpreter modes and events, the translatable divisor range. `opl.inc`: OPL ports, register bases, channel 8's operator offsets. `amis.inc`: ReBeep's AMIS signature and `RB_STATE` offsets |
-| `startup/` | Checks, option parsing, help, going resident. Freed before going resident |
-| `capture/` | QPI trap handler and port masking |
-| `engine/` | Interpreter, OPL target and their state. `interp.asm` is the speaker interpreter, `opl.asm` the OPL render target |
-| `hotkey/` | Keyboard hook |
-| `resident/` | TSR identification and unload |
-| `diag/qpichk.asm` | `QPICHK.COM`: reports whether Jemm's QPIEMU is up. Deployed to `D:\ENV\` and run by `BOOT.BAT` |
+| `targets.json` | What `rebeep build run` assembles: name, source, format, optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it) |
+| `rebeep.asm` | `REBEEP.COM`: the resident part, then `resident_end`, then the startup part |
+| `resident/` | `data.asm`: `RB_STATE`, saved vectors, the private stack. `amis.asm`: the `INT 2Dh` handler and uninstall |
+| `capture/trap.asm` | QPI trap install and remove, and the callback |
+| `engine/` | `interp.asm` the speaker interpreter, `opl.asm` the OPL render target |
+| `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
+| `startup/main.asm` | Options, checks, load, change, unload, messages. Freed when going resident |
+| `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [exitcode.inc](include/exitcode.inc): the exit codes. Neither is restated elsewhere |
+| `diag/qpichk.asm` | `QPICHK.COM`: reports whether Jemm's QPIEMU is up. Run by `BOOT.BAT` |
 
 ## Rules
 
-- `engine/` assembles under `CPU 8086`. Only `capture/` and `startup/` may use 386 instructions.
-- The source must assemble on NASM 3.02 and on NASM ≥ 2.16.
-- Output names are 8.3, uppercase (`REBEEP.COM`).
-- A new build target goes in `targets.json`, not in the CLI.
+- **Resident below `resident_end`.** The engine's state, `RB_STATE`, the hook variables and the
+  private stack all live in the resident part. Startup code and its data are freed.
+- **Nothing resident calls DOS.** Uninstall reads the IVT directly; the command-line copy frees the memory.
+- **QPI-only I/O.** On 42h, 43h and 61h the resident part uses QPI `1A00h`/`1A01h`/`1A04h`, never
+  `IN`/`OUT` (a direct access traps again). The hotkey path never touches 61h and never executes `STI`.
+- The callback saves every register: QPIEMU restores only `ECX`, `EDX` and the flags.
+- `engine/` assembles under `CPU 8086`; only `capture/` and `startup/` may use 386 (the CPU check must run on any CPU).
+- NASM 3.02 and ≥ 2.16. Output names are 8.3, uppercase. A new build target goes in `targets.json`.
+- The build defines `REBEEP_VERSION` and `REBEEP_VER_MAJOR/MINOR/PATCH`; `rebeep.asm` stops without them.
+- **Manually verified only** (the VM can't produce them): CPU below 386 (exit 2), no OPL (4), speaker ports
+  already trapped (5), a refused `/ON`. Each is its own short routine: `check_cpu`, `opl_detect`, `capture_install`.
 
 ## Pitfalls
 
-- Module files in `engine/` are included, not assembled alone: no `org`, state bytes live in the
-  module, and each file sets its own `cpu` and includes `speaker.inc` (guarded, safe to repeat).
-  The caller's `DS` must be the module's segment.
-- The interpreter (`engine/interp.asm`) is register-based: `interp_reset`, `interp_sync`,
-  `interp_write` (AL = byte, DX = port; out AL = event, AH = mode, BX = divisor). Each preserves
-  every register but its outputs. It is 8086-only: a 386 instruction there fails the build.
-  `interp_sync` reports no event: if a tone was playing, the caller must call `opl_note_off`.
-  Its stack use is at most 8 bytes, return address included.
-- The OPL target (`engine/opl.asm`) plays one voice on channel 8 and writes only that channel's
-  registers, global `01h` and (OPL3) `105h`. `opl_write` is the single path to the chip: define
-  `OPL_TEST_SINK` as a label before the include and it jumps there instead of the ports. Stack use
-  is at most 16 bytes, return address included (measured, and checked by `T_OPL`'s `stack_depth`);
-  keep the call chains flat.
-- OPL3 pitfalls: `C0h` must carry the left/right bits (`OPL3_OUT` in [include/opl.inc](include/opl.inc))
-  or the channel is silent in NEW mode, and `opl_pitch` must never clear the key bit or a glide
-  retriggers. OPL2 has no square waveform, so the faithful voice is a 2:1 FM approximation (values
-  documented in the file). Write delays are status reads, picked by chip (`OPL2_*`/`OPL3_*` in `opl.asm`).
-- A PIT control word never changes the current tone or verdict. The new counting mode and pitch
-  apply only when the count completes, and the first byte of an LSB-then-MSB count leaves the
-  pitch alone. Without that, a mid-tone control word or half-written count would cut a tone.
-- A count of 0 means 65536, which is out of the translatable range, so it is RAW.
-- NASM rejects an out-of-range short conditional jump under `cpu 8086`; keep branches local.
+- Included modules have no `org`, keep their state inside and set their own `cpu`. The caller's `DS`
+  is the module's segment. `interp.asm` and `opl.asm` preserve every register but their outputs.
+- `interp_sync` reports no event: if a tone was playing, call `opl_note_off`. Stack use: interpreter at most
+  8 bytes, OPL target at most 16 (`T_OPL` checks). `opl_write` is the one path to the chip (`OPL_TEST_SINK`).
+- OPL3: `C0h` must carry the left/right bits or the channel is silent, and `opl_pitch` must never
+  clear the key bit or a glide retriggers. OPL2 has no square wave, so the faithful voice is a 2:1 FM
+  approximation. Write delays are status reads, picked by chip.
+- A PIT control word never changes the current tone; the new mode and pitch apply when the count
+  completes. A count of 0 means 65536, out of range, so RAW.
+- While the traps are off the OPL belongs to the game: no OPL or `61h` write, and uninstall skips
+  `opl_shutdown`. The hotkey then only updates `RB_STATE`.
+- A command-line change writes only the fields it names. Defaults apply on a plain load alone.
+- NASM rejects an out-of-range short jump under `cpu 8086`; keep branches local. DOS `09h` returns `AL = '$'`.
 
 ## Run / test
 
 ```sh
 rebeep build run --deploy
+rebeep test run --suite vm --probe P_TSR
 ```
 
 ## Related

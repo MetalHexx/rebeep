@@ -126,6 +126,34 @@ describe('disk deploy', () => {
     assert.deepEqual(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
   });
 
+  test('writes AUTOLOAD.FLG next to an autoload target that was built, and only then', () => {
+    const ctx = context();
+    fs.mkdirSync(path.dirname(s.paths.vm('mirror-msdos').dImg), { recursive: true });
+    writeFile(path.join(ctx.repo.build, 'REBEEP.COM'), 'com bytes');
+    writeFile(path.join(ctx.repo.build, 'RBTEST.COM'), 'test bytes');
+    const manifest = (targets) =>
+      writeFile(path.join(ctx.repo.build, 'build.json'), JSON.stringify({ builtAt: '', nasm: '3.02', targets }));
+
+    manifest([
+      { name: 'REBEEP.COM', size: 9, sha256: 'x', deploy: 'REBEEP', autoload: true },
+      { name: 'RBTEST.COM', size: 10, sha256: 'x', deploy: 'REBEEP', autoload: false },
+    ]);
+    deployDisk(ctx, 'mirror-msdos');
+    assert.equal(readD().readFile('REBEEP/AUTOLOAD.FLG').toString(), 'autoload\r\n');
+
+    manifest([
+      { name: 'REBEEP.COM', size: 9, sha256: 'x', deploy: 'REBEEP', autoload: false },
+      { name: 'RBTEST.COM', size: 10, sha256: 'x', deploy: 'REBEEP' },
+    ]);
+    deployDisk(ctx, 'mirror-msdos');
+    assert.ok(!readD().exists('REBEEP/AUTOLOAD.FLG'));
+
+    manifest([{ name: 'GONE.COM', size: 1, sha256: 'x', deploy: 'REBEEP', autoload: true }]);
+    const report = deployDisk(ctx, 'mirror-msdos');
+    assert.ok(report.warnings.some((w) => /GONE\.COM.*missing/.test(w)));
+    assert.ok(!readD().exists('REBEEP/AUTOLOAD.FLG'));
+  });
+
   test('without JEMM fetched the disk is still built, with a warning', () => {
     fs.rmSync(path.join(s.paths.tool('jemm', '5.87'), '.rebeep-tool.json'));
     const ctx = context();
