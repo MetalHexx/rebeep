@@ -4,7 +4,8 @@
 //   DONE <n>               the last line; n is the number of PASS and FAIL lines
 // A program fails when DONE is missing, is not last, or disagrees with the count, when no results
 // were written, when a FAIL line is present, when RESULT.TXT is missing, or when it ran to the
-// DOSBox time limit. The protocol is copied into tests/AGENTS.md.
+// DOSBox time limit. The protocol is copied into tests/AGENTS.md. A VM probe (a batch file, which
+// cannot count) may end with a bare `DONE`; see `evaluateResults`.
 import fs from 'node:fs';
 import path from 'node:path';
 import { CliError } from '../lib/cli.mjs';
@@ -13,13 +14,17 @@ import { readPackageVersion } from './build.mjs';
 
 const TOOLS_GLOB = 'tools/test/**/*.test.mjs';
 const INTERPRETER_PROGRAM = /^t_.+\.asm$/i;
+const VM_PROBE = /^p_.+\.bat$/i;
 const DOS_NAME = /^[A-Z0-9_]{1,8}$/;
 const RESULT_FILE = 'RESULT.TXT';
 const DOSBOX_TIME_LIMIT_S = 60;
 const DOSBOX_TIMEOUT_MS = 120_000;
 const ANSI = /\x1b\[[0-9;]*[A-Za-z]/g;
 
-/** Parses RESULT.TXT. `done` is the DONE count when DONE is the last line, else null. */
+/**
+ * Parses RESULT.TXT. `done` is the count when `DONE <n>` is the last line, `'bare'` when the last
+ * line is just `DONE`, else null.
+ */
 export function parseResults(text) {
   const passed = [];
   const failed = [];
@@ -39,8 +44,23 @@ export function parseResults(text) {
       failed.push({ name: name || '(unnamed)', detail });
     }
   }
-  const last = /^DONE\s+(\d+)$/.exec(lines[lines.length - 1] ?? '');
-  return { passed, failed, done: last ? Number(last[1]) : null };
+  const last = /^DONE(?:\s+(\d+))?$/.exec(lines[lines.length - 1] ?? '');
+  const done = last ? (last[1] === undefined ? 'bare' : Number(last[1])) : null;
+  return { passed, failed, done };
+}
+
+/**
+ * Judges a RESULT.TXT and returns `{ ok, problem, passed, failed }`. The final DONE must carry the
+ * count of PASS and FAIL lines; with `bareDone` a final `DONE` without a count is accepted too.
+ */
+export function evaluateResults(text, { bareDone = false } = {}) {
+  const { passed, failed, done } = parseResults(text);
+  const count = passed.length + failed.length;
+  let problem = null;
+  if (done === null || (done === 'bare' && !bareDone)) problem = `${RESULT_FILE} has no final DONE line`;
+  else if (done !== 'bare' && done !== count) problem = `DONE ${done} but ${count} result lines`;
+  else if (count === 0) problem = `${RESULT_FILE} has no results`;
+  return { ok: problem === null && failed.length === 0, problem, passed, failed };
 }
 
 /** Pulls the `tests`, `pass` and `fail` totals from Node's test summary. */
@@ -79,6 +99,13 @@ export function interpreterPrograms(root) {
     .sort();
 }
 
+/** The VM suite's probes: `P_*.BAT` directly under tests/vm, in name order. */
+export function vmProbes(root) {
+  return listFiles(path.join(root, 'tests', 'vm'), (n) => VM_PROBE.test(n), false)
+    .map((full) => path.basename(full))
+    .sort((a, b) => a.toUpperCase().localeCompare(b.toUpperCase()));
+}
+
 async function runTools(ctx, repo) {
   const run = await runProcess(process.execPath, ['--test', TOOLS_GLOB], {
     cwd: repo.root,
@@ -104,13 +131,7 @@ function programResult(name, run, resultFile) {
   if (!fs.existsSync(resultFile)) {
     return { ...base, ok: false, problem: `no ${RESULT_FILE} written` };
   }
-  const { passed, failed, done } = parseResults(fs.readFileSync(resultFile, 'utf8'));
-  const count = passed.length + failed.length;
-  let problem = null;
-  if (done === null) problem = `${RESULT_FILE} has no final DONE line`;
-  else if (done !== count) problem = `DONE ${done} but ${count} result lines`;
-  else if (count === 0) problem = `${RESULT_FILE} has no results`;
-  return { program: name, ok: problem === null && failed.length === 0, problem, passed, failed };
+  return { program: name, ...evaluateResults(fs.readFileSync(resultFile, 'utf8')) };
 }
 
 async function runInterpreter(ctx, repo) {
@@ -176,7 +197,16 @@ async function runInterpreter(ctx, repo) {
 
 async function runSuite(ctx, repo, suite) {
   ctx.log.step(`Running the ${suite} suite`);
-  const result = suite === 'tools' ? await runTools(ctx, repo) : await runInterpreter(ctx, repo);
+  let result;
+  if (suite === 'tools') {
+    result = await runTools(ctx, repo);
+  } else if (suite === 'vm') {
+    // Loaded on demand: the VM suite imports this module for the shared result evaluation.
+    const { runVmSuite } = await import('../lib/vmtest.mjs');
+    result = await runVmSuite(ctx, repo, { probe: ctx.opts.probe, skipBuild: ctx.opts['skip-build'] });
+  } else {
+    result = await runInterpreter(ctx, repo);
+  }
   if (result.ok) ctx.log.ok(`${suite} tests passed`);
   else ctx.log.error(`${suite} tests failed${result.problem ? `: ${result.problem}` : ''}`);
   return result;
@@ -196,6 +226,7 @@ export default {
       run: async (ctx) => {
         const tools = toolTestFiles(ctx.repo.root).length;
         const interpreter = interpreterPrograms(ctx.repo.root).length;
+        const vm = vmProbes(ctx.repo.root).length;
         return {
           suites: [
             { suite: 'tools', files: tools, runs: `node --test "${TOOLS_GLOB}"` },
@@ -203,6 +234,11 @@ export default {
               suite: 'interpreter',
               files: interpreter,
               runs: 'DOSBox-X runs each T_*.ASM in tests/interpreter',
+            },
+            {
+              suite: 'vm',
+              files: vm,
+              runs: 'boots mirror-freedos in 86Box for each P_*.BAT in tests/vm (not part of all)',
             },
             { suite: 'all', files: tools + interpreter, runs: 'tools, then interpreter' },
           ],
@@ -224,14 +260,28 @@ export default {
           name: 'suite',
           type: 'string',
           valueName: 'name',
-          choices: ['tools', 'interpreter', 'all'],
+          choices: ['tools', 'interpreter', 'vm', 'all'],
           default: 'all',
-          description: 'Which suite to run',
+          description: 'Which suite to run (all is tools and interpreter; vm opens 86Box and is run on its own)',
+        },
+        {
+          name: 'probe',
+          type: 'string',
+          valueName: 'name',
+          description: 'vm suite only: run just this probe, such as P_SMOKE',
+        },
+        {
+          name: 'skip-build',
+          type: 'boolean',
+          description: 'vm suite only: do not run build first',
         },
       ],
       destructive: false,
-      examples: ['rebeep test run', 'rebeep test run --suite tools'],
+      examples: ['rebeep test run', 'rebeep test run --suite tools', 'rebeep test run --suite vm --probe P_SMOKE'],
       run: async (ctx) => {
+        if ((ctx.opts.probe !== undefined || ctx.opts['skip-build']) && ctx.opts.suite !== 'vm') {
+          throw new CliError('--probe and --skip-build only apply to --suite vm');
+        }
         const suites = ctx.opts.suite === 'all' ? ['tools', 'interpreter'] : [ctx.opts.suite];
         if (ctx.env.NODE_TEST_CONTEXT && suites.includes('tools')) {
           throw new CliError('the tools suite cannot run inside a node test (recursion guard)', {

@@ -8,6 +8,7 @@
 |---|---|
 | `interpreter/` | Feeds scripted port-write sequences to the interpreter and checks the events. Runs headless in DOSBox-X |
 | `exerciser/` | Plays known speaker cases through the real ports, for listening checks in 86Box |
+| `vm/` | Unattended probes that boot `mirror-freedos` and report through `RESULT.TXT`. See [vm/AGENTS.md](vm/AGENTS.md) |
 
 ## Rules
 
@@ -29,8 +30,10 @@ _None recorded yet._
 
 ```sh
 rebeep test run --suite interpreter
+rebeep test run --suite vm      # opens 86Box; not part of --suite all
 ```
 
 ## Related
 
 - [src/AGENTS.md](../src/AGENTS.md)
+- [vm/AGENTS.md](vm/AGENTS.md)

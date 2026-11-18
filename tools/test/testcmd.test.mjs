@@ -74,7 +74,7 @@ describe('test list', () => {
     assert.match(tools.runs, /node --test/);
     assert.deepEqual(
       suites.map((s) => s.suite),
-      ['tools', 'interpreter', 'all'],
+      ['tools', 'interpreter', 'vm', 'all'],
     );
   });
 

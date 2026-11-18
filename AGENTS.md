@@ -89,6 +89,8 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM → run `D
 
 - `rebeep test run --suite tools` runs the CLI's `node --test` suites in `tools/test/`.
 - `rebeep test run --suite interpreter` runs the DOS interpreter tests headless in DOSBox-X.
+- `rebeep test run --suite vm` boots `mirror-freedos` for each `tests/vm/P_*.BAT` probe, unattended
+  (see [tests/vm/AGENTS.md](tests/vm/AGENTS.md)). It opens 86Box and is not part of `--suite all`.
 - Tests build their own fixtures (small zips and images) in a temp folder. No binary fixtures are
   committed.
 - In the VMs: `CHKDSK D:` must be clean after a deploy.
