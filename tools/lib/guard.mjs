@@ -33,9 +33,9 @@ export const FLOPPY_SIZES = Object.freeze([
   163840, 184320, 327680, 368640, 737280, 1228800, 1474560, 2949120,
 ]);
 
-/** DOS boot text lives here; `.SYS` and `.BAT` files are allowed under it when they are text. */
-const DOS_BOOT_DIR = 'env/86box/dos/';
-const DOS_BOOT_EXTENSIONS = ['.sys', '.bat'];
+/** DOS text folders: `.SYS` and `.BAT` files are allowed under them when they are text. */
+const DOS_TEXT_DIRS = ['env/86box/dos/', 'release/'];
+const DOS_TEXT_EXTENSIONS = ['.sys', '.bat'];
 const GITLINK_MODE = '160000';
 const CONECTIX = Buffer.from('conectix', 'latin1');
 const USTAR = Buffer.from('ustar', 'latin1');
@@ -83,8 +83,8 @@ function ruleHits(entry) {
   const head = entry.head ?? NO_BYTES;
   const tail = entry.tail ?? NO_BYTES;
   const bootText =
-    p.startsWith(DOS_BOOT_DIR) &&
-    DOS_BOOT_EXTENSIONS.includes(ext) &&
+    DOS_TEXT_DIRS.some((dir) => p.startsWith(dir)) &&
+    DOS_TEXT_EXTENSIONS.includes(ext) &&
     entry.size <= TEXT_EXEMPT_LIMIT_BYTES &&
     isPlainText(head) &&
     isPlainText(tail);

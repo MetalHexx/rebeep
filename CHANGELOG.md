@@ -14,5 +14,8 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
   switch between the two is immediate. `/OFF` and the hotkey hand a sounding tone back to the speaker
   without a gap, and `/ON` picks the game's speaker state up again.
 - In the dev VMs, ReBeep now loads at boot on the "ReBeep dev" menu entry.
+- Setup files: `INSTALL.BAT` copies ReBeep to a folder and prints the lines to add, `RBPLAY.BAT` runs
+  one game with ReBeep loaded, and `SAMPLES\` holds ready-made MS-DOS and FreeDOS boot configs with a
+  ReBeep menu entry.
 - RBTEST, a speaker exerciser: it plays test sounds, checks that ReBeep handles the speaker correctly,
   and measures free memory and the cost of ReBeep's speaker handling. Run `RBTEST /?` for the options.

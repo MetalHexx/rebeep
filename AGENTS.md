@@ -20,6 +20,7 @@ everything to vanilla.
 | `src/` | ReBeep's NASM source and its build targets | [src/AGENTS.md](src/AGENTS.md) |
 | `tests/` | DOS test programs: interpreter tests and the speaker exerciser | [tests/AGENTS.md](tests/AGENTS.md) |
 | `env/` | The 86Box environment definition: tool manifest, VM profiles, DOS boot files | [env/AGENTS.md](env/AGENTS.md) |
+| `release/` | The package's hand-made files: the manual, `INSTALL.BAT`, `RBPLAY.BAT`, sample configs | [release/AGENTS.md](release/AGENTS.md) |
 | `tools/` | The `rebeep` CLI, its libraries and its unit tests | [tools/AGENTS.md](tools/AGENTS.md) |
 | `docs/` | Human docs: getting started, the environment guide, contributing | [docs/AGENTS.md](docs/AGENTS.md) |
 | `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI) and `update-docs` (doc health) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) |
@@ -78,7 +79,7 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM → run `D
 - **The game is untrusted.** It runs only inside 86Box or on real hardware, never on the host. The
   CLI writes game files from the zip straight into the D: image and never extracts them.
 - **D: is disposable.** It is regenerated on every deploy. Names on it are 8.3, uppercase.
-- **DOS text files are CRLF.** `.BAT`, `.SYS` and `.TXT` under `env/86box/dos/` (see
+- **DOS text files are CRLF.** `.BAT`, `.SYS` and `.TXT` under `env/86box/dos/` and `release/` (see
   `.gitattributes`).
 - **Zero npm dependencies.** Tooling is Node ≥ 22 built-ins only.
 - **Cross-platform.** Windows, Linux and macOS. Use `path.join`; never hard-code separators or

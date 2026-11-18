@@ -3,6 +3,7 @@
 
 # DOS files must stay CRLF, whatever the host's git settings
 env/86box/dos/** text eol=crlf
+release/**/*.TXT text eol=crlf
 *.BAT text eol=crlf
 *.bat text eol=crlf
 *.SYS text eol=crlf
