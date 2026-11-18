@@ -596,7 +596,7 @@ describe('install floppies', () => {
     assert.doesNotMatch(result.stderr, /bytes, not the/);
   });
 
-  test('an image that is not floppy-sized is warned about, and a missing one is an error', () => {
+  test('an image that is not floppy-sized is warned about, and a missing one is an error', async () => {
     const dir = seedFloppyTool();
     useBuilder();
     fs.writeFileSync(path.join(dir, '144m', 'x86DSK03.img'), Buffer.alloc(1000));
@@ -604,7 +604,10 @@ describe('install floppies', () => {
     assert.equal(result.code, 0, result.stderr);
     assert.match(result.stderr, /x86DSK03\.img is 1000 bytes, not the 1474560/);
 
-    fs.rmSync(vmPaths('mirror-freedos').pid);
+    // Stop the fake 86Box for real. Deleting only its pid file is not enough on Linux and macOS,
+    // where the running-VM check also finds a VM by its `-P <vm dir>` command line.
+    await s.fakeRecord();
+    await s.kill();
     fs.rmSync(path.join(dir, '144m', 'x86DSK05.img'));
     result = s.rebeep('vm', 'run', 'mirror-freedos', '--install');
     assert.equal(result.code, 1);
