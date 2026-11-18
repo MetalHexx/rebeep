@@ -1,14 +1,16 @@
 /**
- * FAT16 hard-disk images in pure JavaScript.
+ * FAT16 hard-disk images and FAT12 floppy images in pure JavaScript.
  *
  * `buildImage` writes a raw disk (MBR plus one FAT16 partition) from an in-memory file tree,
- * `readImage` reads such images (including ones this module did not write), `checkImage` is a
- * small fsck, and `toCrlf` / `to83` are the text and name helpers the CLI needs around them.
+ * `buildFloppy` writes a 1.44 MB FAT12 floppy (no MBR), `readImage` reads both (including images
+ * this module did not write), `checkImage` is a small fsck, and `toCrlf` / `to83` are the text and
+ * name helpers the CLI needs around them.
  * Everything works on Buffers; nothing here touches the file system.
  *
  * Disk layout (sector size 512): LBA 0 is the MBR, the single partition starts at LBA 63 and runs
  * to the end of the disk. Inside it: 1 reserved sector (the boot sector), 2 FATs, a 512-entry
- * root directory, then the data area whose first cluster is number 2.
+ * root directory, then the data area whose first cluster is number 2. The floppy is the same
+ * layout starting at LBA 0, with a 12-bit FAT.
  */
 
 export const SECTOR = 512;
@@ -27,6 +29,15 @@ const MAX_DIR_ENTRIES = 65536;
 const FAT_EOC = 0xffff;
 const FAT_EOC_MIN = 0xfff8;
 const FAT_BAD = 0xfff7;
+const FAT12_EOC = 0xfff;
+const FAT12_EOC_MIN = 0xff8;
+const FAT12_BAD = 0xff7;
+const FLOPPY_SECTORS = 2880;
+const FLOPPY_SECTORS_PER_FAT = 9;
+const FLOPPY_ROOT_ENTRIES = 224;
+const FLOPPY_MEDIA = 0xf0;
+const FLOPPY_SECTORS_PER_TRACK = 18;
+const FLOPPY_HEADS = 2;
 const ATTR_VOLUME = 0x08;
 const ATTR_DIRECTORY = 0x10;
 const ATTR_ARCHIVE = 0x20;
@@ -416,6 +427,121 @@ function writeBpb(bs, { geo, layout, label, volumeId }) {
 }
 
 /**
+ * Builds the tree, orders the boot files and checks capacity: first against the sizes already
+ * known, then as each lazy read() returns, so an oversized tree fails without calling every read().
+ * Shared by the hard-disk and floppy builders.
+ */
+function loadTree({ files, dirs, bootFiles, onInvalid, volumeLabel, clusterBytes, clusterCount, rootEntries, fatName }) {
+  const { root, skipped } = buildTree(files, dirs, onInvalid);
+  const bootNodes = orderBootFiles(root, bootFiles);
+  const { fileNodes, dirNodes } = collect(root);
+
+  let needed = 0;
+  const addClusters = (count) => {
+    needed += count;
+    if (needed > clusterCount) {
+      throw new Error(`The contents need at least ${needed} clusters of ${clusterBytes} bytes ` +
+        `but the volume has ${clusterCount}`);
+    }
+  };
+  for (const dir of dirNodes) {
+    if (!dir.parent) {
+      const entries = dir.children.size + (volumeLabel ? 1 : 0);
+      if (entries > rootEntries) {
+        throw new Error(`The root directory needs ${entries} entries (including the volume label) ` +
+          `but a ${fatName} root holds ${rootEntries}`);
+      }
+      continue;
+    }
+    const entries = dir.children.size + 2;
+    if (entries > MAX_DIR_ENTRIES) {
+      throw new Error(`Directory ${nodePath(dir)} needs ${entries} entries; the FAT limit is ${MAX_DIR_ENTRIES}`);
+    }
+    dir.clusters = Math.max(1, Math.ceil((entries * DIR_ENTRY) / clusterBytes));
+    addClusters(dir.clusters);
+  }
+
+  const lazy = [];
+  for (const node of fileNodes) {
+    const size = knownSize(node);
+    if (size !== null) {
+      node.clusters = Math.ceil(size / clusterBytes);
+      addClusters(node.clusters);
+    }
+    if (!node.bytes) lazy.push(node);
+  }
+  for (const node of lazy) {
+    const data = asBuffer(node.item.read(), `${node.source}: file content`);
+    const declared = node.item.size;
+    if (declared === undefined) {
+      node.clusters = Math.ceil(data.length / clusterBytes);
+      addClusters(node.clusters);
+    } else if (data.length !== declared) {
+      throw new RangeError(`${node.source}: read() returned ${data.length} bytes but size is ${declared}`);
+    }
+    node.bytes = data;
+  }
+  return { root, skipped, bootNodes, fileNodes, dirNodes };
+}
+
+/**
+ * Allocates clusters (boot files first, then the tree in directory order), writes file data and
+ * directory contents into `image` and records chains through `setFat(cluster, value)`.
+ * Returns how many clusters were used.
+ */
+function placeTree(tree, { image, setFat, eoc, volumeLabel, stamp, clusterBytes, rootSectors, rootOffset, dataOffset }) {
+  const { root, bootNodes, fileNodes, dirNodes } = tree;
+  let next = 2;
+  const allocate = (count) => {
+    if (count === 0) return 0;
+    const first = next;
+    for (let i = 0; i < count; i++) setFat(first + i, i === count - 1 ? eoc : first + i + 1);
+    next += count;
+    return first;
+  };
+  const placeFile = (node) => {
+    node.cluster = allocate(node.clusters);
+    node.placed = true;
+  };
+  const placeDir = (dir) => {
+    for (const child of dir.children.values()) {
+      if (child.isDir) {
+        child.cluster = allocate(child.clusters);
+        placeDir(child);
+      } else if (!child.placed) {
+        placeFile(child);
+      }
+    }
+  };
+  for (const node of bootNodes) placeFile(node);
+  placeDir(root);
+
+  const clusterOffset = (cluster) => dataOffset + (cluster - 2) * clusterBytes;
+  for (const node of fileNodes) if (node.bytes.length) image.set(node.bytes, clusterOffset(node.cluster));
+  for (const dir of dirNodes) {
+    const isRoot = !dir.parent;
+    const out = Buffer.alloc(isRoot ? rootSectors * SECTOR : dir.clusters * clusterBytes);
+    let at = 0;
+    const put = (name11, attr, cluster, size) => {
+      writeEntry(out, at, name11, attr, cluster, size, stamp);
+      at += DIR_ENTRY;
+    };
+    if (isRoot) {
+      if (volumeLabel) put(volumeLabel.padEnd(11), ATTR_VOLUME, 0, 0);
+    } else {
+      put('.'.padEnd(11), ATTR_DIRECTORY, dir.cluster, 0);
+      put('..'.padEnd(11), ATTR_DIRECTORY, dir.parent.cluster, 0);
+    }
+    for (const child of dir.children.values()) {
+      put(pack83(child.name), child.isDir ? ATTR_DIRECTORY : ATTR_ARCHIVE, child.cluster,
+        child.isDir ? 0 : child.bytes.length);
+    }
+    image.set(out, isRoot ? rootOffset : clusterOffset(dir.cluster));
+  }
+  return next - 2;
+}
+
+/**
  * Builds a complete hard-disk image: MBR, one active FAT16 partition (type 0x06) at LBA 63,
  * two FATs, a 512-entry root and the file tree. Output is byte-for-byte reproducible for the
  * same input.
@@ -475,115 +601,29 @@ export function buildImage(options = {}) {
     throw new RangeError(`bootSectorTemplate must be ${SECTOR} bytes, got ${template.length}`);
   }
 
-  const { root, skipped } = buildTree(files, dirs, onInvalid);
-  const bootNodes = orderBootFiles(root, bootFiles);
-  const { fileNodes, dirNodes } = collect(root);
-
   const { clusterCount, sectorsPerFat, rootSectors } = layout;
-  const clusterBytes = clusterSize;
-  let needed = 0;
-  const addClusters = (count) => {
-    needed += count;
-    if (needed > clusterCount) {
-      throw new Error(`The contents need at least ${needed} clusters of ${clusterBytes} bytes ` +
-        `but the volume has ${clusterCount}`);
-    }
-  };
-  for (const dir of dirNodes) {
-    if (!dir.parent) {
-      const entries = dir.children.size + (volumeLabel ? 1 : 0);
-      if (entries > ROOT_ENTRIES) {
-        throw new Error(`The root directory needs ${entries} entries (including the volume label) ` +
-          `but a FAT16 root holds ${ROOT_ENTRIES}`);
-      }
-      continue;
-    }
-    const entries = dir.children.size + 2;
-    if (entries > MAX_DIR_ENTRIES) {
-      throw new Error(`Directory ${nodePath(dir)} needs ${entries} entries; the FAT limit is ${MAX_DIR_ENTRIES}`);
-    }
-    dir.clusters = Math.max(1, Math.ceil((entries * DIR_ENTRY) / clusterBytes));
-    addClusters(dir.clusters);
-  }
-
-  // Capacity is enforced before and while content is loaded, so an oversized tree fails without
-  // calling every read(): first against the sizes already known, then as each read() returns.
-  const lazy = [];
-  for (const node of fileNodes) {
-    const size = knownSize(node);
-    if (size !== null) {
-      node.clusters = Math.ceil(size / clusterBytes);
-      addClusters(node.clusters);
-    }
-    if (!node.bytes) lazy.push(node);
-  }
-  for (const node of lazy) {
-    const data = asBuffer(node.item.read(), `${node.source}: file content`);
-    const declared = node.item.size;
-    if (declared === undefined) {
-      node.clusters = Math.ceil(data.length / clusterBytes);
-      addClusters(node.clusters);
-    } else if (data.length !== declared) {
-      throw new RangeError(`${node.source}: read() returned ${data.length} bytes but size is ${declared}`);
-    }
-    node.bytes = data;
-  }
+  const tree = loadTree({
+    files, dirs, bootFiles, onInvalid, volumeLabel, clusterBytes: clusterSize, clusterCount,
+    rootEntries: ROOT_ENTRIES, fatName: 'FAT16',
+  });
+  const { skipped } = tree;
 
   const image = Buffer.alloc(geo.totalSectors * SECTOR);
   const partitionOffset = PARTITION_START * SECTOR;
   const fat = Buffer.alloc(sectorsPerFat * SECTOR);
   fat.writeUInt16LE(0xff00 | MEDIA, 0);
   fat.writeUInt16LE(FAT_EOC, 2);
-
-  let next = 2;
-  const allocate = (count) => {
-    if (count === 0) return 0;
-    const first = next;
-    for (let i = 0; i < count; i++) fat.writeUInt16LE(i === count - 1 ? FAT_EOC : first + i + 1, (first + i) * 2);
-    next += count;
-    return first;
-  };
-  const placeFile = (node) => {
-    node.cluster = allocate(node.clusters);
-    node.placed = true;
-  };
-  const placeDir = (dir) => {
-    for (const child of dir.children.values()) {
-      if (child.isDir) {
-        child.cluster = allocate(child.clusters);
-        placeDir(child);
-      } else if (!child.placed) {
-        placeFile(child);
-      }
-    }
-  };
-  for (const node of bootNodes) placeFile(node);
-  placeDir(root);
-
-  const dataOffset = partitionOffset + layout.dataStart * SECTOR;
-  const clusterOffset = (cluster) => dataOffset + (cluster - 2) * clusterBytes;
-
-  for (const node of fileNodes) if (node.bytes.length) image.set(node.bytes, clusterOffset(node.cluster));
-  for (const dir of dirNodes) {
-    const isRoot = !dir.parent;
-    const out = Buffer.alloc(isRoot ? rootSectors * SECTOR : dir.clusters * clusterBytes);
-    let at = 0;
-    const put = (name11, attr, cluster, size) => {
-      writeEntry(out, at, name11, attr, cluster, size, stamp);
-      at += DIR_ENTRY;
-    };
-    if (isRoot) {
-      if (volumeLabel) put(volumeLabel.padEnd(11), ATTR_VOLUME, 0, 0);
-    } else {
-      put('.'.padEnd(11), ATTR_DIRECTORY, dir.cluster, 0);
-      put('..'.padEnd(11), ATTR_DIRECTORY, dir.parent.cluster, 0);
-    }
-    for (const child of dir.children.values()) {
-      put(pack83(child.name), child.isDir ? ATTR_DIRECTORY : ATTR_ARCHIVE, child.cluster,
-        child.isDir ? 0 : child.bytes.length);
-    }
-    image.set(out, isRoot ? partitionOffset + layout.rootStart * SECTOR : clusterOffset(dir.cluster));
-  }
+  const used = placeTree(tree, {
+    image,
+    setFat: (cluster, value) => fat.writeUInt16LE(value, cluster * 2),
+    eoc: FAT_EOC,
+    volumeLabel,
+    stamp,
+    clusterBytes: clusterSize,
+    rootSectors,
+    rootOffset: partitionOffset + layout.rootStart * SECTOR,
+    dataOffset: partitionOffset + layout.dataStart * SECTOR,
+  });
 
   fat.copy(image, partitionOffset + SECTOR);
   fat.copy(image, partitionOffset + SECTOR + sectorsPerFat * SECTOR);
@@ -609,7 +649,6 @@ export function buildImage(options = {}) {
   image.writeUInt32LE(layout.partitionSectors, entry + 12);
   image.writeUInt16LE(0xaa55, 510);
 
-  const used = next - 2;
   return {
     image,
     skipped,
@@ -619,6 +658,116 @@ export function buildImage(options = {}) {
       clusterCount,
       sectorsPerFat,
       sectorsPerCluster: layout.sectorsPerCluster,
+      usedClusters: used,
+      freeClusters: clusterCount - used,
+    },
+  };
+}
+
+function writeFloppyBpb(bs, { label, volumeId }) {
+  bs.write('MSDOS5.0', 3, 8, 'latin1');
+  bs.writeUInt16LE(SECTOR, 0x0b);
+  bs[0x0d] = 1;
+  bs.writeUInt16LE(1, 0x0e);
+  bs[0x10] = FAT_COUNT;
+  bs.writeUInt16LE(FLOPPY_ROOT_ENTRIES, 0x11);
+  bs.writeUInt16LE(FLOPPY_SECTORS, 0x13);
+  bs[0x15] = FLOPPY_MEDIA;
+  bs.writeUInt16LE(FLOPPY_SECTORS_PER_FAT, 0x16);
+  bs.writeUInt16LE(FLOPPY_SECTORS_PER_TRACK, 0x18);
+  bs.writeUInt16LE(FLOPPY_HEADS, 0x1a);
+  bs.writeUInt32LE(0, 0x1c);
+  bs.writeUInt32LE(0, 0x20);
+  bs[0x24] = 0;
+  bs[0x25] = 0;
+  bs[0x26] = 0x29;
+  bs.writeUInt32LE(volumeId, 0x27);
+  bs.write((label ?? 'NO NAME').padEnd(11), 0x2b, 11, 'latin1');
+  bs.write('FAT12   ', 0x36, 8, 'latin1');
+}
+
+/**
+ * Builds a raw 1,474,560-byte FAT12 floppy with no MBR: 1 reserved sector, 2 FATs of 9 sectors, a
+ * 224-entry root, 1 sector per cluster (data clusters 2-2848), media 0xF0, 18 sectors per track and
+ * 2 heads. Output is byte-for-byte reproducible for the same input. Paths and file options are as
+ * for `buildImage`; paths that are not valid 8.3 names are an error.
+ *
+ * @param {object} options
+ * @param {{path: string, bytes?: Buffer, read?: () => Buffer, size?: number}[]} [options.files]
+ * @param {string[]} [options.dirs] Extra (possibly empty) directories to create.
+ * @param {string} [options.label] Volume label, up to 11 characters.
+ * @param {number} [options.volumeId] Volume serial number; derived from the label when omitted.
+ * @param {Date} [options.date] Timestamp for every entry; defaults to 1996-01-01 12:00:00.
+ * @param {Buffer} [options.bootSectorTemplate] A 512-byte boot sector whose code is kept; only
+ *   its BPB area (bytes 0x03-0x3D) is replaced. Without one the code is a bare `INT 18h`.
+ * @returns {{image: Buffer, skipped: string[], stats: object}}
+ * @throws {Error} when the contents do not fit
+ */
+export function buildFloppy(options = {}) {
+  const { files = [], dirs = [], label, volumeId, date, bootSectorTemplate } = options;
+  const volumeLabel = normalizeLabel(label);
+  const serial = volumeId === undefined ? volumeIdFromLabel(volumeLabel) : volumeId;
+  if (!Number.isInteger(serial) || serial < 0 || serial > 0xffffffff) {
+    throw new RangeError('volumeId must be an unsigned 32-bit integer');
+  }
+  const stamp = dosStamp(date);
+  const template = bootSectorTemplate === undefined ? null : asBuffer(bootSectorTemplate, 'bootSectorTemplate');
+  if (template && template.length !== SECTOR) {
+    throw new RangeError(`bootSectorTemplate must be ${SECTOR} bytes, got ${template.length}`);
+  }
+
+  const rootSectors = (FLOPPY_ROOT_ENTRIES * DIR_ENTRY) / SECTOR;
+  const rootStart = 1 + FAT_COUNT * FLOPPY_SECTORS_PER_FAT;
+  const dataStart = rootStart + rootSectors;
+  const clusterCount = FLOPPY_SECTORS - dataStart;
+
+  const tree = loadTree({
+    files, dirs, bootFiles: [], onInvalid: 'error', volumeLabel, clusterBytes: SECTOR, clusterCount,
+    rootEntries: FLOPPY_ROOT_ENTRIES, fatName: 'FAT12',
+  });
+
+  const image = Buffer.alloc(FLOPPY_SECTORS * SECTOR);
+  const fat = Buffer.alloc(FLOPPY_SECTORS_PER_FAT * SECTOR);
+  const setFat = (n, value) => {
+    const at = (n * 3) >> 1;
+    const word = fat.readUInt16LE(at);
+    fat.writeUInt16LE(n & 1 ? (word & 0x000f) | (value << 4) : (word & 0xf000) | value, at);
+  };
+  setFat(0, 0xf00 | FLOPPY_MEDIA);
+  setFat(1, FAT12_EOC);
+  const used = placeTree(tree, {
+    image,
+    setFat,
+    eoc: FAT12_EOC,
+    volumeLabel,
+    stamp,
+    clusterBytes: SECTOR,
+    rootSectors,
+    rootOffset: rootStart * SECTOR,
+    dataOffset: dataStart * SECTOR,
+  });
+
+  fat.copy(image, SECTOR);
+  fat.copy(image, SECTOR + fat.length);
+
+  const bs = image.subarray(0, SECTOR);
+  if (template) {
+    template.copy(bs);
+  } else {
+    bs.set([0xeb, 0x3c, 0x90]);
+    bs.set([0xcd, 0x18, 0xeb, 0xfe], 0x3e);
+  }
+  writeFloppyBpb(bs, { label: volumeLabel, volumeId: serial });
+  bs.writeUInt16LE(0xaa55, 510);
+
+  return {
+    image,
+    skipped: tree.skipped,
+    stats: {
+      totalSectors: FLOPPY_SECTORS,
+      clusterCount,
+      sectorsPerFat: FLOPPY_SECTORS_PER_FAT,
+      sectorsPerCluster: 1,
       usedClusters: used,
       freeClusters: clusterCount - used,
     },
@@ -669,14 +818,39 @@ function parseBpb(bs) {
   };
 }
 
-/** Locates the FAT16 partition in `buf` and validates its BPB; throws a clear error otherwise. */
+/**
+ * Whether `buf` is a partitionless volume (a floppy): sector 0 is a boot sector that starts with a
+ * jump, ends in 0x55AA, has a plausible BPB, and no MBR partition entry that fits in the image.
+ */
+function looksLikeFloppy(buf) {
+  if (buf.length < SECTOR || (buf[0] !== 0xeb && buf[0] !== 0xe9) || buf.readUInt16LE(510) !== 0xaa55) return false;
+  const bpb = parseBpb(buf.subarray(0, SECTOR));
+  const plausible = bpb.bytesPerSector === SECTOR && isPowerOfTwo(bpb.sectorsPerCluster) &&
+    bpb.sectorsPerCluster <= 128 && bpb.reservedSectors > 0 && bpb.fatCount > 0 && bpb.rootEntries > 0 &&
+    bpb.sectorsPerFat > 0 && bpb.totalSectors > 0;
+  if (!plausible) return false;
+  const fits = (p) => p.sectors > 0 && p.startLba > 0 && (p.startLba + p.sectors) * SECTOR <= buf.length;
+  return !parseMbr(buf).partitions.some(fits);
+}
+
+/**
+ * Locates the FAT volume in `buf` (a FAT16 partition, or the whole image when it is a FAT12
+ * floppy) and validates its BPB; throws a clear error otherwise.
+ */
 function openVolume(buf, partitionIndex) {
-  const mbr = parseMbr(buf);
-  const entry = mbr.partitions.find((p) => p.index === partitionIndex);
-  if (!entry) throw new Error(`Partition ${partitionIndex} is not defined in the MBR`);
-  if (!FAT16_TYPES.has(entry.type)) {
-    throw new Error(`Partition ${partitionIndex} has type ${hex(entry.type)}: unsupported ` +
-      '(only FAT16 types 0x04, 0x06 and 0x0E can be read)');
+  const floppy = partitionIndex === 0 && looksLikeFloppy(buf);
+  let mbr = null;
+  let entry;
+  if (floppy) {
+    entry = { index: 0, active: false, type: 0, startLba: 0, sectors: parseBpb(buf.subarray(0, SECTOR)).totalSectors };
+  } else {
+    mbr = parseMbr(buf);
+    entry = mbr.partitions.find((p) => p.index === partitionIndex);
+    if (!entry) throw new Error(`Partition ${partitionIndex} is not defined in the MBR`);
+    if (!FAT16_TYPES.has(entry.type)) {
+      throw new Error(`Partition ${partitionIndex} has type ${hex(entry.type)}: unsupported ` +
+        '(only FAT16 types 0x04, 0x06 and 0x0E can be read)');
+    }
   }
   const partitionOffset = entry.startLba * SECTOR;
   if (partitionOffset + SECTOR > buf.length) throw new Error('Image ends before the partition boot sector');
@@ -699,13 +873,18 @@ function openVolume(buf, partitionIndex) {
   const firstData = bpb.reservedSectors + bpb.fatCount * bpb.sectorsPerFat + rootSectors;
   if (bpb.totalSectors <= firstData) throw new Error('Invalid BPB: total sectors do not cover the FAT and root directory');
   const clusterCount = Math.floor((bpb.totalSectors - firstData) / bpb.sectorsPerCluster);
-  if (clusterCount < MIN_CLUSTERS) {
-    throw new Error(`Unsupported file system: ${clusterCount} clusters means FAT12, which is not supported`);
+  const fat12 = clusterCount < MIN_CLUSTERS;
+  if (fat12 && !floppy) {
+    throw new Error(`Unsupported file system: ${clusterCount} clusters means FAT12, which is not supported in a partition`);
+  }
+  if (!fat12 && floppy) {
+    throw new Error(`Unsupported file system: a partitionless volume with ${clusterCount} clusters; only FAT12 floppies are supported`);
   }
   if (clusterCount > MAX_CLUSTERS) {
     throw new Error(`Unsupported file system: ${clusterCount} clusters means FAT32, which is not supported`);
   }
-  if (bpb.sectorsPerFat * (SECTOR / 2) < clusterCount + 2) {
+  const fatEntries = fat12 ? Math.floor((bpb.sectorsPerFat * SECTOR * 2) / 3) : bpb.sectorsPerFat * (SECTOR / 2);
+  if (fatEntries < clusterCount + 2) {
     throw new Error(`Invalid BPB: a ${bpb.sectorsPerFat}-sector FAT cannot cover ${clusterCount} clusters`);
   }
   if (partitionOffset + bpb.totalSectors * SECTOR > buf.length) {
@@ -730,7 +909,15 @@ function openVolume(buf, partitionIndex) {
     clusterBytes,
     clusterCount,
     maxCluster: clusterCount + 1,
-    fatEntry: (cluster) => buf.readUInt16LE(fatOffset + cluster * 2),
+    fatBits: fat12 ? 12 : 16,
+    eocMin: fat12 ? FAT12_EOC_MIN : FAT_EOC_MIN,
+    badCluster: fat12 ? FAT12_BAD : FAT_BAD,
+    fatEntry: fat12
+      ? (cluster) => {
+        const word = buf.readUInt16LE(fatOffset + ((cluster * 3) >> 1));
+        return cluster & 1 ? word >> 4 : word & 0xfff;
+      }
+      : (cluster) => buf.readUInt16LE(fatOffset + cluster * 2),
     clusterOffset: (cluster) => dataOffset + (cluster - 2) * clusterBytes,
   };
 }
@@ -751,8 +938,8 @@ function followChain(vol, first, claim) {
     if (clusters.length >= vol.clusterCount) return { clusters, problem: 'cluster chain loops' };
     clusters.push(cluster);
     const next = vol.fatEntry(cluster);
-    if (next >= FAT_EOC_MIN) return { clusters, problem: null };
-    if (next === FAT_BAD) return { clusters, problem: `cluster ${cluster} continues into a bad cluster` };
+    if (next >= vol.eocMin) return { clusters, problem: null };
+    if (next === vol.badCluster) return { clusters, problem: `cluster ${cluster} continues into a bad cluster` };
     if (next === 0) return { clusters, problem: `cluster ${cluster} continues into a free cluster` };
     cluster = next;
   }
@@ -812,12 +999,13 @@ function validDateWord(word) {
 }
 
 /**
- * Reads a FAT16 disk image: an MBR with a FAT16 partition of type 0x04, 0x06 or 0x0E and any
- * cluster size. Long-file-name entries and deleted entries are skipped.
+ * Reads a FAT16 disk image (an MBR with a FAT16 partition of type 0x04, 0x06 or 0x0E and any
+ * cluster size) or a partitionless FAT12 floppy image. Long-file-name entries and deleted entries
+ * are skipped.
  *
  * @param {Buffer} buf The whole disk image.
  * @param {{partition?: number}} [options] MBR slot (0-3) of the partition to open.
- * @returns {object} `mbr`, `partitionOffset`, `bootSector`, `bpb` (its `label` and `fsType` have
+ * @returns {object} `mbr` (null for a floppy), `partitionOffset`, `bootSector`, `bpb` (its `label` and `fsType` have
  *   trailing spaces trimmed), plus `list()`, `readFile(path)` and `exists(path)`; paths use `/` or
  *   `\` and ignore case.
  */
@@ -906,7 +1094,7 @@ export function readImage(buf, { partition = 0 } = {}) {
 // Checking
 
 /**
- * A small fsck for the first partition of an image: signatures, BPB sanity, identical FATs,
+ * A small fsck for the first partition of an image, or for a partitionless FAT12 floppy: signatures, BPB sanity, identical FATs,
  * FAT[0]/FAT[1], every chain in range with no loops or cross-links, chain length matching file
  * size, correct `.` and `..` entries, no duplicate names in a directory, no directory with a
  * non-zero size, valid month and day in every timestamp (an unset zero date is fine), and no lost
@@ -930,9 +1118,13 @@ export function checkImage(buf) {
   let vol;
   try {
     const image = asBuffer(buf, 'image');
-    const [first] = parseMbr(image).partitions;
-    if (!first) throw new Error('MBR has no partitions');
-    vol = openVolume(image, first.index);
+    if (looksLikeFloppy(image)) {
+      vol = openVolume(image, 0);
+    } else {
+      const [first] = parseMbr(image).partitions;
+      if (!first) throw new Error('MBR has no partitions');
+      vol = openVolume(image, first.index);
+    }
   } catch (err) {
     report(err.message);
     return finish();
@@ -958,11 +1150,13 @@ export function checkImage(buf) {
       report(`FAT ${n + 1} differs from FAT 1 (first difference at FAT entry ${at >> 1})`);
     }
   }
-  if (vol.fatEntry(0) !== (0xff00 | bpb.media)) {
-    report(`FAT[0] is ${hex(vol.fatEntry(0), 4)}; expected ${hex(0xff00 | bpb.media, 4)} (media byte ${hex(bpb.media)})`);
+  const fatMask = vol.fatBits === 12 ? 0xfff : 0xffff;
+  const media0 = (fatMask & ~0xff) | bpb.media;
+  if (vol.fatEntry(0) !== media0) {
+    report(`FAT[0] is ${hex(vol.fatEntry(0), 4)}; expected ${hex(media0, 4)} (media byte ${hex(bpb.media)})`);
   }
-  if ((vol.fatEntry(1) & 0x3fff) !== 0x3fff) {
-    report(`FAT[1] is ${hex(vol.fatEntry(1), 4)}; expected an end-of-chain value such as 0xFFFF`);
+  if ((vol.fatEntry(1) & (fatMask >> 2)) !== fatMask >> 2) {
+    report(`FAT[1] is ${hex(vol.fatEntry(1), 4)}; expected an end-of-chain value such as ${hex(fatMask, 4)}`);
   }
 
   const owner = new Int32Array(vol.maxCluster + 1);
@@ -1034,7 +1228,7 @@ export function checkImage(buf) {
   let firstLost = 0;
   for (let cluster = 2; cluster <= vol.maxCluster; cluster++) {
     const value = vol.fatEntry(cluster);
-    if (value !== 0 && value !== FAT_BAD && owner[cluster] === 0) {
+    if (value !== 0 && value !== vol.badCluster && owner[cluster] === 0) {
       if (lost === 0) firstLost = cluster;
       lost++;
     }

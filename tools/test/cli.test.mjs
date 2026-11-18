@@ -9,7 +9,7 @@ import { createLog } from '../lib/log.mjs';
 import { repoRoot } from '../lib/paths.mjs';
 import { captureStreams, runRebeep } from './helpers.mjs';
 
-const NOUN_NAMES = ['env', 'tool', 'media', 'vm', 'disk', 'build', 'test', 'repo'];
+const NOUN_NAMES = ['env', 'tool', 'media', 'vm', 'disk', 'build', 'test', 'release', 'repo'];
 const ROOT_SYNOPSIS = 'Usage: rebeep <noun> <verb> [args] [options]';
 
 async function drive(argv, { registry = nouns, tty = false, input, env = {}, cwd } = {}) {

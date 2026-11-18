@@ -13,6 +13,7 @@ commands and hard rules. Read it first, then the one reference that matches the 
 | Set up, check, reset or clean the environment; add or remove media | [references/environment.md](references/environment.md) |
 | Create a VM, install DOS, run it, snapshot it | [references/vms.md](references/vms.md) |
 | Build, deploy to D:, test | [references/build-and-test.md](references/build-and-test.md) |
+| Build the release package: zip, floppy image, checksums, notes | [references/release.md](references/release.md) |
 | Add or change a CLI noun, verb or option | [references/cli.md](references/cli.md) |
 | Update docs → `update-docs` skill | [update-docs](../update-docs/SKILL.md) |
 

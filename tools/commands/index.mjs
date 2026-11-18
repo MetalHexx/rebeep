@@ -5,7 +5,8 @@ import vm from './vm.mjs';
 import disk from './disk.mjs';
 import build from './build.mjs';
 import test from './test.mjs';
+import release from './release.mjs';
 import repo from './repo.mjs';
 
 /** Every noun, in the order help lists them. */
-export default [env, tool, media, vm, disk, build, test, repo];
+export default [env, tool, media, vm, disk, build, test, release, repo];

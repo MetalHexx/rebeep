@@ -14,6 +14,11 @@
       "deploy": "ENV"
     },
     {
+      "name": "FDBOOT.BIN",
+      "source": "diag/fdboot.asm",
+      "format": "bin"
+    },
+    {
       "name": "RBTEST.COM",
       "source": "exerciser/rbtest.asm",
       "root": "tests",

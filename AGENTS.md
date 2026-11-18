@@ -49,6 +49,7 @@ The environment lives **outside the repo**, in `~/.rebeep` (override with `REBEE
 | Run a VM | `rebeep vm run <vm>` |
 | Build | `rebeep build run` (`npm run build`) |
 | Build and put it on every D: | `rebeep build run --deploy` (`npm run deploy`) |
+| Release package (zip, floppy, sums, notes in `build/release/`) | `rebeep release create` |
 | Unit tests | `rebeep test run --suite tools` (`npm test`) |
 | Save a VM baseline | `rebeep vm snapshot <vm>` |
 | Back to the baseline | `rebeep vm reset <vm>` · `rebeep env reset` |
