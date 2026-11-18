@@ -167,6 +167,46 @@ describe('build run and build clean', () => {
     }
   });
 
+  test('a target with root "tests" resolves its source there and searches its own folder first', () => {
+    const root = makeRepo({
+      targets: {
+        targets: [{ name: 'EXER.COM', source: 'exerciser/exer.asm', root: 'tests', format: 'bin' }],
+      },
+    });
+    fs.mkdirSync(path.join(root, 'tests', 'exerciser'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'tests', 'exerciser', 'exer.asm'), SOURCE);
+    const { log, result } = run(root, ['build', 'run']);
+    assert.equal(result.code, 0, result.stderr);
+
+    const [args] = readCalls(log);
+    const dirs = args.flatMap((a, i) => (a === '-I' ? [args[i + 1]] : []));
+    assert.deepEqual(dirs, [
+      `${path.join(root, 'tests', 'exerciser')}${path.sep}`,
+      `${path.join(root, 'src')}${path.sep}`,
+      `${path.join(root, 'src', 'include')}${path.sep}`,
+    ]);
+    assert.equal(args[args.length - 1], path.join(root, 'tests', 'exerciser', 'exer.asm'));
+    removeDir(root);
+  });
+
+  test('a bad root, or a source that escapes its root, fails before NASM runs', () => {
+    const bad = [
+      { root: 'build', source: 'rebeep.asm' },
+      { root: 'tests', source: '../src/rebeep.asm' },
+      { root: 'tests', source: path.resolve('rebeep.asm') },
+    ];
+    for (const extra of bad) {
+      const root = makeRepo({
+        targets: { targets: [{ name: 'REBEEP.COM', format: 'bin', ...extra }] },
+      });
+      const { log, result } = run(root, ['build', 'run']);
+      assert.equal(result.code, 1, JSON.stringify(extra));
+      assert.match(result.stderr, /root|source/, JSON.stringify(extra));
+      assert.deepEqual(readCalls(log), [], JSON.stringify(extra));
+      removeDir(root);
+    }
+  });
+
   test('a malformed REBEEP_NASM_PREFIX_ARGS is a clear error', () => {
     const root = makeRepo();
     for (const bad of ['not json', '{"a":1}', '[1]']) {

@@ -30,6 +30,10 @@
 - Call FreeDOS tools by full path; a probe can't rely on `PATH`.
 - Use `IF ERRORLEVEL n` (at least n), never `%ERRORLEVEL%`. Pair it with `IF NOT ERRORLEVEL n+1` for an
   exact code.
+- Call ReBeep's programs by full path: `D:\REBEEP\REBEEP.COM`, `LH D:\REBEEP\REBEEP.COM`,
+  `D:\REBEEP\RBTEST.COM`, never bare names. They are not on `PATH`.
+- Memory checks: delete `RBMEM.DAT` before each `RBTEST /M:SAVE`, and append SAVE's output to the
+  results. Never `SET` a variable between a `SAVE` and its `SAME`: a larger environment copy shifts the number.
 - Check that a program exists (`IF NOT EXIST`) before using its errorlevel: a missing program leaves
   the previous errorlevel standing.
 - Run another batch file with `CALL`, or control never returns.

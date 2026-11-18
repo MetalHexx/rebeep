@@ -11,6 +11,13 @@
       "source": "diag/qpichk.asm",
       "format": "bin",
       "deploy": "ENV"
+    },
+    {
+      "name": "RBTEST.COM",
+      "source": "exerciser/rbtest.asm",
+      "root": "tests",
+      "format": "bin",
+      "deploy": "REBEEP"
     }
   ]
 }

@@ -6,9 +6,9 @@
 
 | Path | Role |
 |---|---|
-| `targets.json` | What `rebeep build run` assembles: name, source, output format |
+| `targets.json` | What `rebeep build run` assembles: name, source, output format, optional `root` (`src`, the default, or `tests`) |
 | `rebeep.asm` | Entry point. A placeholder that prints its version today |
-| `include/` | Shared constants and macros. `speaker.inc`: port numbers, port `61h` bits, interpreter modes and events, the translatable divisor range. `opl.inc`: OPL ports, register bases, channel 8's operator offsets |
+| `include/` | Shared constants and macros. `speaker.inc`: port numbers, port `61h` bits, interpreter modes and events, the translatable divisor range. `opl.inc`: OPL ports, register bases, channel 8's operator offsets. `amis.inc`: ReBeep's AMIS signature and `RB_STATE` offsets |
 | `startup/` | Checks, option parsing, help, going resident. Freed before going resident |
 | `capture/` | QPI trap handler and port masking |
 | `engine/` | Interpreter, OPL target and their state. `interp.asm` is the speaker interpreter, `opl.asm` the OPL render target |

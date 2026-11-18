@@ -7,6 +7,7 @@ import { assemble, nasmVersion, resolveBinary } from '../lib/nasm.mjs';
 const NAME_83 = /^[A-Z0-9_]{1,8}\.[A-Z0-9_]{1,3}$/;
 const DIR_83 = /^[A-Z0-9_]{1,8}$/;
 const DEFINE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const ROOTS = ['src', 'tests'];
 
 const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
@@ -14,7 +15,10 @@ export function readPackageVersion(repo) {
   return JSON.parse(fs.readFileSync(path.join(repo.root, 'package.json'), 'utf8')).version;
 }
 
-/** Validates `targets.json` and returns its targets with defaults filled in. */
+/**
+ * Validates `targets.json` and returns its targets with defaults filled in. `root` (`src`, the
+ * default, or `tests`) is the repo folder the source is resolved under.
+ */
 function validateTargets(doc, file) {
   const fail = (message) => {
     throw new CliError(`${file}: ${message}`);
@@ -37,7 +41,10 @@ function validateTargets(doc, file) {
       path.isAbsolute(t.source) ||
       t.source.split(/[\\/]/).includes('..')
     ) {
-      fail(`${where}.source must be a path inside src/`);
+      fail(`${where}.source must be a path inside its root folder`);
+    }
+    if (t.root !== undefined && !ROOTS.includes(t.root)) {
+      fail(`${where}.root must be one of ${ROOTS.map((r) => `"${r}"`).join(', ')}`);
     }
     if (t.format !== 'bin') fail(`${where}.format must be "bin"`);
     if (t.deploy !== undefined && (typeof t.deploy !== 'string' || !DIR_83.test(t.deploy))) {
@@ -51,7 +58,7 @@ function validateTargets(doc, file) {
         fail(`${where}.defines.${key} must be a string or a number`);
       }
     }
-    return { name: t.name, source: t.source, deploy: t.deploy ?? null, defines };
+    return { name: t.name, source: t.source, root: t.root ?? 'src', deploy: t.deploy ?? null, defines };
   });
 }
 
@@ -90,14 +97,16 @@ async function buildRun(ctx) {
   for (const target of targets) {
     const stem = target.name.slice(0, target.name.lastIndexOf('.'));
     const output = path.join(repo.build, target.name);
+    const source = path.join(repo[target.root], target.source);
+    const includes = [...new Set([path.dirname(source), repo.src, path.join(repo.src, 'include')])];
     ctx.log.step(`Assembling ${target.name}`);
     const stderr = await assemble(nasm, {
       version,
-      includes: [repo.src, path.join(repo.src, 'include')],
+      includes,
       defines: target.defines,
       listing: path.join(repo.build, `${stem}.LST`),
       output,
-      source: path.join(repo.src, target.source),
+      source,
     });
     for (const line of stderr.split(/\r?\n/).filter((l) => l.trim())) {
       ctx.log.warn(`nasm (${target.name}): ${line.trim()}`);
