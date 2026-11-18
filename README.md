@@ -23,8 +23,8 @@ game ──OUT 42h/43h/61h──▶ Jemm + QPIEMU ──▶ ReBeep ──▶ OPL
                                                └──────▶ PC speaker (fallback)
 ```
 
-> **Status:** the dev environment works. `REBEEP.COM` loads, unloads and answers its hotkeys, but
-> it passes the speaker through unchanged: it doesn't play on the OPL yet.
+> **Status:** the dev environment works. `REBEEP.COM` loads, unloads, answers its hotkeys and plays
+> the speaker's tones on the OPL, with anything it can't translate falling back to the real speaker.
 
 ## What you need
 

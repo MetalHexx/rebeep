@@ -31,6 +31,8 @@ rb_old09        dd      0               ; INT 09h and INT 2Dh as found at load (
 rb_old2d        dd      0
 rb_amis_id      db      0               ; ReBeep's AMIS multiplex number
 rb_cb_set       db      0               ; 1 while ReBeep's callback is QPIEMU's I/O callback
+game_61         db      0               ; the last byte the game wrote to 61h (what it reads back)
+masked          db      0               ; 1 while the real 61h bit 1 is held clear for the OPL
 
 ; The QPI callback runs on its own stack: the client's may be tiny. client_sp and client_ss
 ; must stay adjacent (LSS reads them as one pointer).

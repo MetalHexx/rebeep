@@ -9,7 +9,7 @@
 | `targets.json` | What `rebeep build run` assembles: name, source, format, optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it) |
 | `rebeep.asm` | `REBEEP.COM`: the resident part, then `resident_end`, then the startup part |
 | `resident/` | `data.asm`: `RB_STATE`, saved vectors, the private stack. `amis.asm`: the `INT 2Dh` handler and uninstall |
-| `capture/trap.asm` | QPI trap install and remove, and the callback |
+| `capture/trap.asm` | QPI trap install and remove, the callback, and the port semantics (masking, read view, OPL events) |
 | `engine/` | `interp.asm` the speaker interpreter, `opl.asm` the OPL render target |
 | `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
 | `startup/main.asm` | Options, checks, load, change, unload, messages. Freed when going resident |
@@ -18,11 +18,13 @@
 
 ## Rules
 
-- **Resident below `resident_end`.** The engine's state, `RB_STATE`, the hook variables and the
-  private stack all live in the resident part. Startup code and its data are freed.
+- **Resident below `resident_end`.** The engine's state, `RB_STATE`, the hook variables and the private stack
+  all live in the resident part. Startup code and its data are freed.
 - **Nothing resident calls DOS.** Uninstall reads the IVT directly; the command-line copy frees the memory.
-- **QPI-only I/O.** On 42h, 43h and 61h the resident part uses QPI `1A00h`/`1A01h`/`1A04h`, never
-  `IN`/`OUT` (a direct access traps again). The hotkey path never touches 61h and never executes `STI`.
+- **QPI-only I/O.** On 42h, 43h and 61h the resident part uses QPI `1A00h`/`1A01h`/`1A04h`, never `IN`/`OUT`
+  (a direct access traps again). The hotkey never executes `STI`; its one `61h` access is the speaker handoff.
+- **Masking.** While the OPL plays a tone (translation on, `M_TONE`) the real `61h` has bit 1 clear and `IN 61h`
+  returns the game's own bit 1. A `42h`/`43h` write that enters or leaves `M_TONE` re-issues `61h`: an instant handoff.
 - The callback saves every register: QPIEMU restores only `ECX`, `EDX` and the flags.
 - `engine/` assembles under `CPU 8086`; only `capture/` and `startup/` may use 386 (the CPU check must run on any CPU).
 - NASM 3.02 and ≥ 2.16. Output names are 8.3, uppercase. A new build target goes in `targets.json`.
@@ -36,13 +38,12 @@
   is the module's segment. `interp.asm` and `opl.asm` preserve every register but their outputs.
 - `interp_sync` reports no event: if a tone was playing, call `opl_note_off`. Stack use: interpreter at most
   8 bytes, OPL target at most 16 (`T_OPL` checks). `opl_write` is the one path to the chip (`OPL_TEST_SINK`).
-- OPL3: `C0h` must carry the left/right bits or the channel is silent, and `opl_pitch` must never
-  clear the key bit or a glide retriggers. OPL2 has no square wave, so the faithful voice is a 2:1 FM
-  approximation. Write delays are status reads, picked by chip.
+- OPL3: `C0h` must carry the left/right bits or the channel is silent, and `opl_pitch` must never clear the key
+  bit or a glide retriggers. OPL2 has no square wave, so the faithful voice is a 2:1 FM approximation.
 - A PIT control word never changes the current tone; the new mode and pitch apply when the count
   completes. A count of 0 means 65536, out of range, so RAW.
 - While the traps are off the OPL belongs to the game: no OPL or `61h` write, and uninstall skips
-  `opl_shutdown`. The hotkey then only updates `RB_STATE`.
+  `opl_shutdown`. The hotkey then only updates `RB_STATE`. `/OFF` first undoes any masking; `/ON` resyncs.
 - A command-line change writes only the fields it names. Defaults apply on a plain load alone.
 - NASM rejects an out-of-range short jump under `cpu 8086`; keep branches local. DOS `09h` returns `AL = '$'`.
 

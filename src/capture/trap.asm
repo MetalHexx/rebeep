@@ -1,5 +1,8 @@
 ; Speaker-port capture through Jemm's QPI: installs and removes the traps on 42h, 43h and
 ; 61h, and owns the callback QPIEMU calls on every trapped access. Resident code (386).
+; Every byte a game writes goes to the interpreter and on to the real port. While the OPL
+; plays a tone (translation on, mode M_TONE) the real 61h has bit 1 clear, and the game
+; reads back its own 61h. Anything else (M_RAW) plays on the real speaker.
 ; Port I/O on a trapped port goes through QPI 1A00h/1A01h/1A04h only: a direct IN/OUT
 ; would trap again.
 ; Near calls, DS = CS, and everything but the stack may be clobbered unless noted.
@@ -79,11 +82,20 @@ capture_install:
         stc
         ret
 
-; capture_remove: untrap the three ports and clear the traps flag. The callback stays
-; installed until uninstall. A port that was not trapped is ignored.
+; capture_remove: with the traps on, first undo any masking (OPL key off, then the real 61h
+; with the game's own bit 1); then untrap the three ports and clear the traps flag, set the
+; mode in RB_STATE to M_SILENT and clear `masked`, so nothing stale survives until /ON
+; resyncs. With the traps already off the game's 61h is stale: nothing is written to the OPL
+; or 61h. The callback stays installed until uninstall. A port that was not trapped is ignored.
 capture_remove:
         pushf
         cli
+        test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
+        jz      .untrap
+        call    opl_note_off
+        mov     byte [masked], 0
+        call    sync_real_bit1
+.untrap:
         xor     si, si
 .next:
         mov     dx, [trap_ports + si]
@@ -95,6 +107,8 @@ capture_remove:
         cmp     si, TRAP_PORTS * 2
         jb      .next
         and     byte [RB_STATE + RBS_FLAGS], 0FFh ^ RBS_F_TRAPS
+        mov     byte [RB_STATE + RBS_MODE], M_SILENT
+        mov     byte [masked], 0
         popf
         ret
 
@@ -136,19 +150,161 @@ capture_owns_callback:
         ret
 
 ; Hooks for the port semantics, called with DS = CS and interrupts off.
-; capture_sync: the traps have just been installed; adopt the real port state.
-; capture_translation_changed, capture_voice_changed: the flag or the voice changed (or
-; is being re-applied, so these must be harmless to repeat).
+
+; capture_sync: the traps have just been installed; adopt the real 61h as the game's own and
+; refresh RB_STATE. The mode comes back M_SILENT or M_RAW, never M_TONE, so the OPL has
+; nothing to key off.
 capture_sync:
+        mov     dx, SYS_CTRL
+        call    qpi_in
+        mov     [game_61], bl
+        mov     al, bl
+        call    interp_sync
+        mov     [RB_STATE + RBS_MODE], ah
+        mov     word [RB_STATE + RBS_DIVISOR], 0
+        mov     byte [masked], 0
+        ret
+
+; capture_translation_changed: the translation flag changed (or is being re-applied, which
+; changes nothing). Moves a tone that is sounding between the OPL and the real speaker.
+; The hotkey calls this inside INT 09h: the speaker-bit handoff through QPI is the only 61h
+; access allowed there, and deferring it would leave a sustained tone silent.
+; Does nothing while the traps are off. Preserves every register.
 capture_translation_changed:
+        test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
+        jz      .ret
+        pusha
+        call    mask_wanted
+        cmp     al, [masked]
+        je      .done
+        mov     [masked], al
+        or      al, al
+        jz      .off
+        mov     bx, [RB_STATE + RBS_DIVISOR]
+        call    opl_note_on
+        jmp     .real
+.off:
+        call    opl_note_off
+.real:
+        call    sync_real_bit1
+.done:
+        popa
+.ret:
+        ret
+
+; capture_voice_changed: the voice changed (or is being re-applied): a tone that is sounding
+; on the OPL restarts with the new voice. Does nothing while the traps are off.
+; Preserves every register.
 capture_voice_changed:
+        test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
+        jz      .ret
+        pusha
+        call    mask_wanted
+        or      al, al
+        jz      .done
+        call    opl_note_off
+        mov     bx, [RB_STATE + RBS_DIVISOR]
+        call    opl_note_on
+.done:
+        popa
+.ret:
+        ret
+
+; mask_wanted: Out: AL = 1 when the OPL should be playing the tone (translation on, mode
+; M_TONE), else 0. Preserves every other register.
+mask_wanted:
+        xor     al, al
+        test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRANSLATE
+        jz      .ret
+        cmp     byte [RB_STATE + RBS_MODE], M_TONE
+        jne     .ret
+        inc     al
+.ret:
+        ret
+
+; sync_real_bit1: write the real 61h with bit 1 clear when `masked`, else the game's own.
+; Preserves every register.
+sync_real_bit1:
+        push    ax
+        push    bx
+        push    dx
+        mov     dx, SYS_CTRL
+        call    qpi_in
+        and     bl, 0FFh ^ SC_SPKR
+        cmp     byte [masked], 0
+        jne     .write
+        mov     al, [game_61]
+        and     al, SC_SPKR
+        or      bl, al
+.write:
+        call    qpi_out
+        pop     dx
+        pop     bx
+        pop     ax
+        ret
+
+; qpi_in: the real value of a port, bypassing the traps.
+; In:  DX = port.  Out: BL = value.  Clobbers AX; DX, ES and DI survive.
+qpi_in:
+        push    dx
+        push    es
+        push    di
+        mov     ax, QPI_READ
+        call    far [cs:rb_qpi]
+        pop     di
+        pop     es
+        pop     dx
+        ret
+
+; qpi_out: write a port, bypassing the traps.
+; In:  DX = port, BL = byte.  Clobbers AX; DX, ES and DI survive.
+qpi_out:
+        push    dx
+        push    es
+        push    di
+        mov     ax, QPI_WRITE
+        call    far [cs:rb_qpi]
+        pop     di
+        pop     es
+        pop     dx
+        ret
+
+; play_event: drive the OPL from an interpreter event while translation is on.
+; In:  AL = event, BX = divisor
+play_event:
+        test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRANSLATE
+        jz      .ret
+        cmp     al, EV_TONE_ON
+        je      opl_note_on
+        cmp     al, EV_PITCH
+        je      opl_pitch
+        cmp     al, EV_TONE_OFF
+        je      opl_note_off
+.ret:
+        ret
+
+; note_state: record what interp_write reported in RB_STATE: the mode and divisor, and the
+; tone-on and raw counts (a raw count is an entry into M_RAW). Preserves every register.
+; In:  AL = event, AH = mode, BX = divisor
+note_state:
+        cmp     al, EV_TONE_ON
+        jne     .raw
+        inc     word [RB_STATE + RBS_TONE_ON]
+.raw:
+        cmp     ah, M_RAW
+        jne     .store
+        cmp     byte [RB_STATE + RBS_MODE], M_RAW
+        je      .store
+        inc     word [RB_STATE + RBS_RAW]
+.store:
+        mov     [RB_STATE + RBS_MODE], ah
+        mov     [RB_STATE + RBS_DIVISOR], bx
         ret
 
 ; qpi_callback: a far procedure QPIEMU calls on a trapped access. AL/AX/EAX is the
 ; client's EAX (OUT data in AL), BX the client's BX, CL the access type, DX the port;
 ; IF and TF are clear. QPIEMU restores only ECX, EDX and the flags, so every other
-; register is saved and restored here. For now every access to our ports is forwarded
-; unchanged.
+; register is saved and restored here. Accesses to our ports go through handle_access.
 qpi_callback:
         cmp     dx, PIT_CH2
         je      .ours
@@ -183,10 +339,10 @@ qpi_callback:
         mov     al, [es:di + IMG_ECX]
         and     al, TYPE_OUT | TYPE_SIZE
         cmp     al, TYPE_OUT            ; a byte OUT
-        jne     .forward
+        jne     .handle
         inc     word [RB_STATE + RBS_TRAPPED]
-.forward:
-        call    forward_access
+.handle:
+        call    handle_access
         lss     sp, [client_sp]
         pop     es
         pop     ds
@@ -208,6 +364,69 @@ qpi_callback:
         pop     ds
         popad
         retf
+
+; handle_access: the port semantics for one trapped access.
+;   OUT 42h/43h: interpreter, forward the byte, drive the OPL; when that moves the tone
+;                between OPL and speaker, re-issue 61h.
+;   OUT 61h:     interpreter, remember the game's byte, forward it with bit 1 cleared while
+;                the OPL plays the tone, drive the OPL.
+;   IN 61h:      the real value with bit 1 replaced by the game's own.
+; Anything else (IN 42h/43h, word and dword accesses) is forwarded unchanged.
+; In:  ES:DI -> the saved frame
+handle_access:
+        mov     dx, [es:di + IMG_EDX]
+        mov     cl, [es:di + IMG_ECX]
+        test    cl, TYPE_SIZE
+        jnz     forward_access
+        test    cl, TYPE_OUT
+        jnz     .out
+        cmp     dx, SYS_CTRL
+        jne     forward_access
+        call    qpi_in
+        mov     al, bl
+        and     al, 0FFh ^ SC_SPKR
+        mov     ah, [game_61]
+        and     ah, SC_SPKR
+        or      al, ah
+        mov     [es:di + IMG_EAX], al
+        ret
+
+.out:
+        mov     al, [es:di + IMG_EAX]
+        call    interp_write            ; AL = event, AH = mode, BX = divisor
+        call    note_state
+        cmp     dx, SYS_CTRL
+        je      .sys
+        push    ax
+        push    bx
+        mov     bl, [es:di + IMG_EAX]
+        call    qpi_out
+        pop     bx
+        pop     ax
+        call    play_event
+        call    mask_wanted
+        cmp     al, [masked]
+        je      .done
+        mov     [masked], al
+        jmp     sync_real_bit1
+.done:
+        ret
+
+.sys:
+        push    ax
+        push    bx
+        mov     bl, [es:di + IMG_EAX]
+        mov     [game_61], bl
+        call    mask_wanted
+        mov     [masked], al
+        or      al, al
+        jz      .send
+        and     bl, 0FFh ^ SC_SPKR
+.send:
+        call    qpi_out
+        pop     bx
+        pop     ax
+        jmp     play_event
 
 ; forward_access: pass the trapped access through QPI unchanged. An IN stores the value
 ; into the frame's EAX, in the accessed width, leaving the rest of EAX alone.

@@ -32,8 +32,8 @@
 - Listening check: `T_OPL /L` plays each voice for a second at 440 Hz. Run `build/tests/T_OPL.COM /L`
   in DOSBox-X with sound on, once per `oplmode` (`-set sblaster,oplmode=opl2`, then `opl3`).
 - `RBTEST.COM` plays speaker cases for listening, runs PASS/FAIL behaviour checks (optionally against
-  ReBeep's state through AMIS), probes free memory and times a trapped write. `P_EXER` tests it;
-  options: `RBTEST /?`.
+  ReBeep's state through AMIS), probes free memory and times a trapped write. `P_EXER` tests it without
+  ReBeep, `P_CAPT` with it (loaded, `/OFF`, `/ON`); options: `RBTEST /?`.
 - The CLI's own unit tests live in `tools/test/`, not here.
 
 ## Pitfalls
