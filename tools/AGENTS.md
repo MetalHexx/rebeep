@@ -10,8 +10,7 @@
 | `lib/cli` · `paths` · `log` | Spec, parsing, help, envelope · home and repo layout · output |
 | `lib/manifest` · `download` · `zip` | Pinned tools (`resolveTool`), verified downloads, safe zip read/extract, `writeZip` |
 | `lib/fat` | FAT images: FAT16 disks `buildImage`, FAT12 floppies `buildFloppy`, and `readImage`, `checkImage` for both |
-| `lib/release` | The release package tree, `CHANGES.TXT` from the changelog, the text checks |
-| `lib/version` | SemVer, `CHANGELOG.md` entries, `checkVersions`, the bump's changelog edit |
+| `lib/release` · `lib/version` | Package tree, `CHANGES.TXT`, text checks · SemVer, changelog entries and rules, `checkVersions`, the bump's edit |
 | `lib/profiles` · `vmcfg` · `proc` | VM profiles, 86Box cfg rendering, launch and running-VM detection |
 | `lib/delivery` · `freedos` · `nasm` · `guard` | D: contents · scripted FreeDOS C: · assembling · payload guard |
 | `lib/suites` · `commands/vmtest` | RESULT.TXT judging and suite discovery · the `vm` suite: probe header, probe D:, boot-and-wait loop |

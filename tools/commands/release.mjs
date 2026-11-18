@@ -1,19 +1,17 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CliError } from '../lib/cli.mjs';
+import { sha256Buffer } from '../lib/download.mjs';
 import { SECTOR, buildFloppy, checkImage, readImage } from '../lib/fat.mjs';
 import { formatBytes, writeAtomic } from '../lib/fsx.mjs';
-import { composeRelease, readBuiltTarget, releaseNotes } from '../lib/release.mjs';
+import { PACKAGED_TARGETS, composeRelease, readBuiltTarget, releaseNotes } from '../lib/release.mjs';
+import { parseSemver } from '../lib/version.mjs';
 import { writeZip } from '../lib/zip.mjs';
 import { readPackageVersion } from './build.mjs';
 
 /** Every entry in the zip and on the floppy carries this stamp, so the outputs are reproducible. */
 const RELEASE_DATE = new Date(1996, 0, 1, 12, 0, 0);
 const FLOPPY_LABEL = 'REBEEP';
-const PACKAGED_TARGETS = ['REBEEP.COM', 'RBTEST.COM'];
-
-const sha256 = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 
 /** Runs the `build run` verb through the registry, as `build run --deploy` does for `disk deploy`. */
 async function buildAll(ctx) {
@@ -68,6 +66,7 @@ async function releaseCreate(ctx) {
   if (!ctx.opts['skip-build']) await buildAll(ctx);
 
   const version = readPackageVersion(repo);
+  if (!parseSemver(version)) throw new CliError(`package.json version '${version}' is not a valid X.Y.Z`);
   ctx.log.step(`Composing the ${version} package`);
   const composed = composeRelease(ctx, { version });
   if (composed.problems.length) {
@@ -83,7 +82,7 @@ async function releaseCreate(ctx) {
   const downloads = [
     { file: zipName, bytes: zip },
     { file: floppyName, bytes: floppy.image },
-  ].map((o) => ({ ...o, sha256: sha256(o.bytes) }));
+  ].map((o) => ({ ...o, sha256: sha256Buffer(o.bytes) }));
   const sums = downloads.map((o) => `${o.sha256}  ${o.file}\n`).join('');
 
   const buildJson = JSON.parse(fs.readFileSync(path.join(repo.build, 'build.json'), 'utf8'));
@@ -107,7 +106,7 @@ async function releaseCreate(ctx) {
   return {
     version,
     files: files.map((f) => ({ path: f.path, size: f.bytes.length })),
-    outputs: outputs.map((o) => ({ file: o.file, bytes: o.bytes.length, sha256: sha256(o.bytes) })),
+    outputs: outputs.map((o) => ({ file: o.file, bytes: o.bytes.length, sha256: sha256Buffer(o.bytes) })),
   };
 }
 

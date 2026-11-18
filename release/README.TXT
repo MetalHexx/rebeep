@@ -17,7 +17,7 @@ Contents
 --------------
   - A 386 or better.
   - MS-DOS 5 or later, or FreeDOS.
-  - Jemm 5.84 or later, with its QPIEMU module (section 2).
+  - Jemm 5.87 or later, with its QPIEMU module (section 2).
   - An OPL2 or OPL3 FM chip at port 388h. Sound Blaster cards and most
     clones have one.
 
@@ -28,8 +28,7 @@ Jemm is a free memory manager. ReBeep needs its QPIEMU module:
 
   https://github.com/Baron-von-Riedesel/Jemm/releases
 
-Use 5.84 or later. Version 5.84 is the first with QPIEMU. Version 5.87
-is the one this kit is tested with.
+Use 5.87 or later. It is the version this kit is tested with.
 
   1. Copy JEMMEX.EXE, JLOAD.EXE and QPIEMU.DLL to C:\JEMM.
 

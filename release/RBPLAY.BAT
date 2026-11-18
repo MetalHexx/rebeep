@@ -1,6 +1,8 @@
 @ECHO OFF
-REM RBPLAY [game [args]] runs a game with ReBeep loaded. It loads ReBeep and
-REM Jemm's QPIEMU only when they are not up, and unloads what it loaded.
+REM RBPLAY [game [args]] runs a game with ReBeep loaded.
+REM It loads ReBeep if it is not up, and Jemm's QPIEMU if
+REM none is up. After the game it unloads ReBeep only when
+REM it loaded it. QPIEMU stays loaded.
 REM RBJEMM names the Jemm folder. Set it when Jemm is not in C:\JEMM.
 IF "%RBJEMM%"=="" SET RBJEMM=C:\JEMM
 SET RBLOADED=

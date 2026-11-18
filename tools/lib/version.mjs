@@ -124,7 +124,8 @@ function hardCodedVersions(root, version) {
   return problems;
 }
 
-function changelogProblems(entries) {
+/** The rules a changelog's headings and their order must keep; empty means ok. */
+export function changelogProblems(entries) {
   const problems = [];
   if (entries[0]?.version !== 'Unreleased') {
     problems.push(

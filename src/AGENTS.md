@@ -14,8 +14,7 @@
 | `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
 | `startup/main.asm` | Options, checks, load, change, unload, messages. Freed when going resident |
 | `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [exitcode.inc](include/exitcode.inc): the exit codes. Neither is restated elsewhere |
-| `diag/qpichk.asm` | `QPICHK.COM`: reports whether Jemm's QPIEMU is up. Run by `BOOT.BAT` |
-| `diag/fdboot.asm` | `FDBOOT.BIN`: the release floppy's boot sector. Hands the boot to C:, and only asks for a key when C: has none |
+| `diag/` | `qpichk.asm` → `QPICHK.COM`, reports whether QPIEMU is up (run by `BOOT.BAT`). `fdboot.asm` → `FDBOOT.BIN`, the release floppy's boot sector: hands the boot to C:, asks for a key only when C: has none |
 
 ## Rules
 

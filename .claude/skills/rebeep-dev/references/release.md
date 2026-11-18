@@ -12,7 +12,7 @@ Everything lands in `build/release/` (replaced on each run):
 | `rebeep-<version>.zip` | The package, uppercase 8.3 paths, deflated |
 | `rebeep-<version>-floppy.img` | The same files on a 1.44 MB FAT12 floppy |
 | `SHA256SUMS.txt` | `<hex>  <file>` for both downloads |
-| `release.json` | `{ version, targets: [{ name, sha256 }] }`; the `vm` suite uses it to tell whether the floppy matches the current build |
+| `release.json` | `{ version, targets: [{ name, sha256 }] }`, the SHA-256s of the packaged programs. The `vm` suite does not read it yet |
 | `NOTES.md` | The changelog entry for the version (`Unreleased preview` when there is no dated entry), then a SHA-256 table |
 
 **The package** is `REBEEP.COM` and `RBTEST.COM` from `build/`, everything under `release/` except its

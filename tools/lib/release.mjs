@@ -2,20 +2,19 @@
  * The release package: what goes in it, the plain-text rendering of the changelog, and the
  * checks that keep every text file readable on a DOS machine. Nothing here writes to disk.
  */
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CliError } from './cli.mjs';
+import { sha256Buffer } from './download.mjs';
 import { to83, toCrlf } from './fat.mjs';
+import { changelogEntries, changelogProblems, compareSemver } from './version.mjs';
 
 const WIDTH = 78;
 const MAX_LINE = 80;
 const BINARY_EXTENSIONS = new Set(['COM']);
 const BOOT_CONFIGS = new Set(['CONFIG.SYS', 'AUTOEXEC.BAT', 'FDCONFIG.SYS', 'FDAUTO.BAT']);
-const PACKAGED_TARGETS = ['REBEEP.COM', 'RBTEST.COM'];
+export const PACKAGED_TARGETS = ['REBEEP.COM', 'RBTEST.COM'];
 const REQUIRED_FILES = ['README.TXT', 'INSTALL.BAT', 'RBPLAY.BAT'];
-
-const sha256 = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 
 // ---------------------------------------------------------------------------------------------
 // Changelog
@@ -54,46 +53,6 @@ function wrap(text, first, rest) {
   }
   lines.push(line);
   return lines;
-}
-
-/**
- * Splits a Keep a Changelog file into its `## ` entries: `{ title, version, date, lines }`, where
- * `version` is null for `[Unreleased]`. Link-reference lines are dropped.
- */
-export function parseChangelog(md) {
-  const entries = [];
-  let current = null;
-  for (const raw of md.split(/\r?\n/)) {
-    if (/^\[[^\]]+\]:\s/.test(raw)) continue;
-    const heading = /^## +(.*?)\s*$/.exec(raw);
-    if (heading) {
-      const dated = /^\[?(\d+\.\d+\.\d+[^\]\s]*)\]?\s+-\s+(\d{4}-\d{2}-\d{2})$/.exec(heading[1]);
-      current = {
-        title: heading[1],
-        version: dated ? dated[1] : null,
-        date: dated ? dated[2] : null,
-        unreleased: /^\[?unreleased\]?$/i.test(heading[1]),
-        lines: [],
-      };
-      entries.push(current);
-    } else if (current) {
-      current.lines.push(raw);
-    }
-  }
-  return entries;
-}
-
-function versionParts(version) {
-  const m = /^(\d+)\.(\d+)\.(\d+)/.exec(version);
-  if (!m) throw new CliError(`cannot compare version ${JSON.stringify(version)}: expected MAJOR.MINOR.PATCH`);
-  return [Number(m[1]), Number(m[2]), Number(m[3])];
-}
-
-function compareVersions(a, b) {
-  const pa = versionParts(a);
-  const pb = versionParts(b);
-  for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pa[i] - pb[i];
-  return 0;
 }
 
 /** One entry's body as indented, wrapped plain text. */
@@ -140,11 +99,11 @@ function entryText(lines) {
  */
 export function changesText(md, { version }) {
   const lines = ['ReBeep - Changes', '================', ''];
-  const entries = parseChangelog(md).filter((e) => e.version && compareVersions(e.version, version) <= 0);
+  const entries = changelogEntries(md).filter((e) => e.date && compareSemver(e.version, version) <= 0);
   if (!entries.length) lines.push('No released versions yet.', '');
   for (const entry of entries) {
     const title = `Version ${entry.version} (${entry.date})`;
-    lines.push(title, '-'.repeat(title.length), ...entryText(entry.lines), '');
+    lines.push(title, '-'.repeat(title.length), ...entryText(entry.body.split('\n')), '');
   }
   return lines.join('\n');
 }
@@ -156,13 +115,13 @@ export function changesText(md, { version }) {
  *   `ReBeep <version> - Unreleased preview`
  */
 export function releaseNotes(md, { version }) {
-  const entries = parseChangelog(md);
+  const entries = changelogEntries(md);
   const dated = entries.find((e) => e.version === version);
-  const entry = dated ?? entries.find((e) => e.unreleased);
+  const entry = dated ?? entries.find((e) => e.version === 'Unreleased');
   if (!entry) throw new CliError(`CHANGELOG.md has no entry for ${version} and no [Unreleased] section`);
   return {
     heading: dated ? `ReBeep ${version}` : `ReBeep ${version} - Unreleased preview`,
-    body: entry.lines.join('\n').trim(),
+    body: entry.body,
   };
 }
 
@@ -235,7 +194,7 @@ export function readBuiltTarget(repo, name, buildJson = readBuildJson(repo)) {
   const file = path.join(repo.build, name);
   if (!fs.existsSync(file)) throw new CliError(`${file} is missing`, { hint: 'rebeep build run' });
   const bytes = fs.readFileSync(file);
-  if (sha256(bytes) !== target.sha256) {
+  if (sha256Buffer(bytes) !== target.sha256) {
     throw new CliError(`${file} does not match build/build.json`, { hint: 'rebeep build run' });
   }
   return { bytes, sha256: target.sha256 };
@@ -244,7 +203,7 @@ export function readBuiltTarget(repo, name, buildJson = readBuildJson(repo)) {
 /**
  * Builds the package tree: the built programs, everything under `release/` except its AGENTS.md
  * (README.TXT with `@VERSION@` replaced) and a generated CHANGES.TXT. Paths use `/`. `problems` lists everything
- * `checkPackageText` found, plus any boot config file at the top level.
+ * `checkPackageText` found, any boot config file at the top level, and every CHANGELOG.md rule `version check` applies.
  * @param {{repo: object}} ctx
  * @param {{version: string}} options
  * @returns {{files: {path: string, bytes: Buffer}[], dirs: string[], problems: string[]}}
@@ -269,14 +228,12 @@ export function composeRelease(ctx, { version }) {
 
   const changelog = path.join(repo.root, 'CHANGELOG.md');
   if (!fs.existsSync(changelog)) throw new CliError(`${changelog} is missing`);
-  files.push({
-    path: 'CHANGES.TXT',
-    bytes: toCrlf(Buffer.from(changesText(fs.readFileSync(changelog, 'utf8'), { version }), 'latin1')),
-  });
+  const md = fs.readFileSync(changelog, 'utf8');
+  files.push({ path: 'CHANGES.TXT', bytes: toCrlf(Buffer.from(changesText(md, { version }), 'latin1')) });
 
   files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 
-  const problems = [];
+  const problems = changelogProblems(changelogEntries(md));
   for (const file of files) {
     problems.push(...checkPackageText(file.path, file.bytes));
     if (!file.path.includes('/') && BOOT_CONFIGS.has(file.path)) {

@@ -247,7 +247,6 @@ describe('release create', () => {
     put('release/INSTALL.BAT', Buffer.concat([Buffer.from('@echo off\r\necho caf'), Buffer.from([0xe9]), Buffer.from('\r\n')]));
     put('release/RBPLAY.BAT', text(`${'x'.repeat(81)}\n`));
     put('release/CONFIG.SYS', text('x\n'));
-    // A top-level CONFIG.SYS is not packaged by name, so add it through the sample folder rule instead.
     const result = create();
     assert.equal(result.code, 1);
     const { error } = JSON.parse(result.stdout);
@@ -256,6 +255,17 @@ describe('release create', () => {
     assert.match(message, /README\.TXT: line 2 does not end in CRLF/);
     assert.match(message, /INSTALL\.BAT: non-ASCII byte 0xE9/);
     assert.match(message, /RBPLAY\.BAT: line 1 is 81 columns/);
+    assert.match(message, /CONFIG\.SYS: a boot config file must not sit at the top level of the package/);
+    assert.ok(!fs.existsSync(path.join(root, 'build', 'release')));
+  });
+
+  test('refuses a changelog heading that version check would refuse', () => {
+    put('CHANGELOG.md', CHANGELOG.replace('## [1.1.0] - 2026-03-02', '## [1.1.0-rc1] - 2026-03-02'));
+    const result = create();
+    assert.equal(result.code, 1);
+    const { error } = JSON.parse(result.stdout);
+    const message = typeof error === 'string' ? error : error.message;
+    assert.match(message, /CHANGELOG\.md: heading "## \[1\.1\.0-rc1\] - 2026-03-02" is not/);
     assert.ok(!fs.existsSync(path.join(root, 'build', 'release')));
   });
 
