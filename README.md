@@ -1,2 +1,2 @@
-# rebeep
+# ReBeep
 ReBeep: hear your speaker-only DOS games through a real sound card. A small TSR that translates PC speaker tones to OPL2/OPL3.
