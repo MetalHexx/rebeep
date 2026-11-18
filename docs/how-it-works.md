@@ -1,0 +1,106 @@
+# How ReBeep works
+
+For the curious: how a speaker beep becomes an FM note, and what that costs. Options and fixes are
+in [usage](usage.md); the code-level rules are in [src/AGENTS.md](../src/AGENTS.md).
+
+```
+game ──OUT 42h/43h/61h──▶ Jemm + QPIEMU ──▶ ReBeep ──▶ OPL2/OPL3 at 388h
+                                               └──────▶ PC speaker (fallback)
+```
+
+## Catching the speaker: QPI
+
+A game makes a beep by loading a divisor into PIT channel 2 (`42h`, with a control word on `43h`)
+and switching the speaker on through port `61h`. Real-mode code can't be told when it does that, but
+Jemm's QPIEMU module can trap port accesses in V86 mode and hands each one to a callback through its
+QPI interface. ReBeep installs that callback and traps `42h`, `43h` and `61h`, so it needs a 386 and
+Jemm. It reads and writes those ports itself only through QPI, because a direct access would trap
+again.
+
+Every byte a game writes is forwarded to the real port, so **the timer is never faked**. Channel 2
+keeps counting, and a timing loop that reads the timer output on `61h` bit 5 sees real hardware.
+ReBeep only watches, and silences the real speaker while the FM chip plays the tone.
+
+## Port `61h`: masking and the game's view
+
+While the OPL plays a tone, ReBeep writes the real `61h` with bit 1 (speaker data) clear, so the PC
+speaker stays quiet. The game must not notice, so a read of `61h` returns the real value with bit 1
+replaced by the game's own last-written bit. A `42h` or `43h` write that moves a tone between the OPL
+and the speaker re-issues `61h` at once, so the handoff has no gap.
+
+## The interpreter
+
+The interpreter follows channel 2 and `61h` from the bytes written, and is always in one of three
+states:
+
+| State | When | Plays on |
+|---|---|---|
+| SILENT | Speaker data bit is off | Nothing |
+| TONE | Speaker on, gate on, a completed count in square-wave mode, divisor 193 to 59659 (about 20 to 6182 Hz) | The OPL |
+| RAW | Speaker on, but not a clean tone: gate off (direct toggling), another counting mode, an unknown or out-of-range count, divisor 0 (which means 65536) | The real speaker |
+
+It reports three events: tone on, pitch change and tone off. A new count or mode applies only when
+the count completes, as on the real chip.
+
+## The OPL voice
+
+ReBeep plays one voice on OPL channel 8 and touches nothing else. A divisor `d` is a frequency of
+1193182 / `d` Hz. The OPL wants a block `b` and an F-number `n`, with
+`f = n * 49716 / 2^(20-b)`, so
+
+```
+n = 3 * 2^(23-b) / d        (the smallest block b that keeps n ≤ 1023)
+```
+
+Changing pitch while a note sounds rewrites only the pitch, never the key bit, so a glide stays a
+glide. Volume (0 to 15) sets the carrier's attenuation. The faithful voice is a square wave on an
+OPL3. An OPL2 has no square wave, so it gets a two-operator FM approximation; the four patches
+(Organ, Flute, Brass, Bell) are plain FM settings. On an OPL3 the chip stays in OPL3 mode, with the
+channel routed to both outputs, while ReBeep is trapping.
+
+## The fallback
+
+Anything the interpreter calls RAW is never translated: the game's bytes reach the real speaker
+unchanged, including the speaker bit. That covers noise from direct toggling, pitches the FM chip
+can't reach and odd timer modes. The switch between OPL and speaker is immediate. `/OFF` and
+Ctrl+Alt+B take the same path for a sounding tone.
+
+## Residency, AMIS and the hotkey
+
+`REBEEP.COM` is a resident part followed by a startup part. When the program goes resident, the
+startup part is freed. Nothing resident calls DOS.
+
+The resident copy answers on `INT 2Dh` as an AMIS program (manufacturer `MetalHex`, product
+`REBEEP`, on a free multiplex number). The command line talks to it through that interface: `/S`
+reads its state, `/ON` and `/OFF` switch the traps, a change applies the new voice, volume and
+keys, and `/U` asks it to uninstall. A copy of another version answers too, which is how exit code 6
+is found. Uninstall is refused if another program hooked an interrupt after ReBeep (exit code 8),
+because removing ReBeep would break that chain.
+
+The hotkey hooks `INT 09h`. It tracks Ctrl and Alt from the raw scan codes, so it still works when a
+game replaces the BIOS keyboard handler, but not when a game takes over the interrupt entirely.
+
+## Performance
+
+Each trapped write goes through QPIEMU and ReBeep's callback. `RBTEST /B` measures it by timing
+loops of `OUT 61h` and `OUT 80h` (a harmless port that is not trapped), doubling the number of
+writes until a run lasts at least a second. The cost of the trap is the difference.
+
+Measured by `rebeep test run --suite vm --probe P_BENCH` on `mirror-freedos`, an emulated Pentium
+MMX 233 in 86Box:
+
+| State | `OUT 61h` | One tone change (two `OUT 42h` writes) |
+|---|---|---|
+| ReBeep loaded and trapping | 6.7 µs | 21.7 µs |
+| After `/OFF` | 0.9 µs | 1.9 µs |
+| After unload | 0.9 µs | 1.9 µs |
+
+So the overhead is about 6 µs per `61h` write while ReBeep is trapping, and none after `/OFF`:
+releasing the traps returns the machine to its unloaded speed. A game that toggles the speaker
+thousands of times a second feels it; one that sets a tone and moves on does not. The emulated rows
+are indicative, not a real machine's.
+
+| Profile | `OUT 61h` loaded | `OUT 61h` after `/OFF` |
+|---|---|---|
+| `mirror-freedos` (86Box, Pentium MMX 233) | 6.7 µs | 0.9 µs |
+| `slow-386sx` (86Box, 386SX/16) | _filled in at release time_ | _filled in at release time_ |

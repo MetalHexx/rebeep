@@ -28,9 +28,10 @@ rebeep vm run mirror-freedos
 
 - **First boot:** the BIOS says "CMOS checksum error - Defaults loaded". Press **F1**. The VM keeps
   its CMOS from then on.
-- The boot menu picks **ReBeep dev** after 5 seconds. It loads Jemm, then QPIEMU, and prints
-  `QPICHK: QPI ready (QPIEMU), version 07.03`.
-- `D:\REBEEP\REBEEP` runs the latest build.
+- The boot menu picks **ReBeep dev** after 5 seconds. It loads Jemm, then QPIEMU, prints
+  `QPICHK: QPI ready (QPIEMU), version 07.03`, and loads the latest ReBeep build (autoload).
+- `REBEEP /S` shows its status. `D:\REBEEP\RBTEST` plays test sounds and checks ReBeep; see
+  [usage](usage.md#check-your-hardware-with-rbtest).
 
 When it looks right, save it as the VM's baseline:
 
@@ -94,8 +95,16 @@ Its 1990 Award BIOS forgets the disks when it loads defaults, so the first boot 
 
 ```sh
 rebeep build run --deploy      # edit src/, assemble, rewrite every VM's D:
-rebeep vm run mirror-freedos   # then run D:\REBEEP\REBEEP in the VM
+rebeep vm run mirror-freedos   # the dev entry autoloads the new REBEEP.COM
 rebeep test run --suite tools  # the CLI's own tests
+```
+
+In the VM, `REBEEP /U` unloads the autoloaded copy so you can load another with options, and
+`D:\REBEEP\RBTEST /A /R` checks it. The DOS-side tests run unattended:
+
+```sh
+rebeep test run --suite interpreter           # in DOSBox-X, no VM
+rebeep test run --suite vm [--probe P_TSR]    # boots mirror-freedos; opens 86Box
 ```
 
 Something broken? `rebeep vm reset <vm> --preview`, then `--yes`.

@@ -20,9 +20,9 @@
   purpose, so nothing here overwrites one.
 - `@VERSION@` is the only placeholder, and it appears only in `README.TXT`'s
   title block.
-- `README.TXT`'s option and hotkey tables mirror the `REBEEP /?` help in
+- `README.TXT`'s tables mirror `docs/usage.md`, the `REBEEP /?` help in
   `src/startup/main.asm`, and the RBTEST help in `tests/exerciser/rbtest.asm`.
-  Change both together.
+  Change them together.
 - Each sample is proven in a VM before each release.
 
 ## Pitfalls

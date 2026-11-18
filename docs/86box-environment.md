@@ -64,7 +64,7 @@ D:\ENV\MSDOS622\INSTALL.BAT  one-time C: setup for MS-DOS 6.22
 D:\ENV\FREEDOS\INSTALL.BAT   one-time C: setup after a FreeDOS installer
 D:\JEMM\                     Jemm 5.87, JLOAD, QPIEMU
 D:\GAMES\<NAME>\             your games
-D:\REBEEP\REBEEP.COM         the latest build
+D:\REBEEP\                   REBEEP.COM, RBTEST.COM and AUTOLOAD.FLG, the latest build
 ```
 
 D: is written by the CLI's own FAT16 writer, straight from the repo, the tool archives and your
@@ -101,6 +101,18 @@ Because `BOOT.BAT` lives on D:, changing the boot steps needs only a deploy, nev
 | Config files | `CONFIG.SYS`, `AUTOEXEC.BAT` | `FDCONFIG.SYS`, `FDAUTO.BAT` |
 | `%CONFIG%` on the dev entry | `REBEEP` (the block name) | `1` (the menu number) |
 | Shell line | ordinary | `SHELL=… /P=C:\FDAUTO.BAT` is required |
+
+## Where ReBeep loads
+
+On the **ReBeep dev** entry, `BOOT.BAT` loads ReBeep high (`LH D:\REBEEP\REBEEP.COM`) after QPIEMU,
+so every boot starts with the newest build resident. `REBEEP /U` unloads it. The **Clean** entry
+loads nothing. `RBTEST.COM` is deployed beside it.
+
+## The `vm` test suite
+
+`rebeep test run --suite vm` runs each `tests/vm/P_*.BAT` probe unattended on `mirror-freedos`. It
+writes a probe D: whose `ENV\BOOT.BAT` is the probe, boots, reads `RESULT.TXT` back and redeploys the
+normal D:. Probe format and rules: [tests/vm/AGENTS.md](../tests/vm/AGENTS.md).
 
 ## Snapshot and reset
 

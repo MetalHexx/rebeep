@@ -19,3 +19,5 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
   ReBeep menu entry.
 - RBTEST, a speaker exerciser: it plays test sounds, checks that ReBeep handles the speaker correctly,
   and measures free memory and the cost of ReBeep's speaker handling. Run `RBTEST /?` for the options.
+- Docs for players: a usage guide (options, hotkeys, exit codes, troubleshooting), how ReBeep works with
+  its measured cost, and a compatibility page with tested games and known conflicts.

@@ -22,7 +22,7 @@ everything to vanilla.
 | `env/` | The 86Box environment definition: tool manifest, VM profiles, DOS boot files | [env/AGENTS.md](env/AGENTS.md) |
 | `release/` | The package's hand-made files: the manual, `INSTALL.BAT`, `RBPLAY.BAT`, sample configs | [release/AGENTS.md](release/AGENTS.md) |
 | `tools/` | The `rebeep` CLI, its libraries and its unit tests | [tools/AGENTS.md](tools/AGENTS.md) |
-| `docs/` | Human docs: getting started, the environment guide, contributing | [docs/AGENTS.md](docs/AGENTS.md) |
+| `docs/` | Human docs: usage, how it works, compatibility, getting started, the environment guide, contributing | [docs/AGENTS.md](docs/AGENTS.md) |
 | `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI) and `update-docs` (doc health) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) |
 | `.github/` | CI workflow and PR template | — |
 | `build/` | Build output (ignored) | — |
@@ -52,6 +52,7 @@ The environment lives **outside the repo**, in `~/.rebeep` (override with `REBEE
 | Release package (zip, floppy, sums, notes in `build/release/`) | `rebeep release create` |
 | Version and release (show, check, date `[Unreleased]` and set `package.json`) | `rebeep version show` · `check` · `bump <major\|minor\|patch\|X.Y.Z>` |
 | Unit tests | `rebeep test run --suite tools` (`npm test`) |
+| DOS tests: interpreter (DOSBox-X) · unattended VM probes (opens 86Box) | `rebeep test run --suite interpreter` · `rebeep test run --suite vm [--probe P_TSR]` |
 | Save a VM baseline | `rebeep vm snapshot <vm>` |
 | Back to the baseline | `rebeep vm reset <vm>` · `rebeep env reset` |
 | Payload guard | `rebeep repo check` (`npm run check`) |
@@ -69,7 +70,8 @@ flowchart LR
   F --> H
 ```
 
-Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM → run `D:\REBEEP\REBEEP`.
+Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM (the dev entry autoloads the new
+`REBEEP.COM`; `REBEEP /U` unloads it) → `D:\REBEEP\RBTEST /A /R` or a `vm` probe.
 
 ## 6. Hard rules
 
@@ -125,8 +127,11 @@ doc has one job. When two docs need the same fact, one owns it and the others li
 
 | Doc | Job |
 |---|---|
-| `README.md` | The front door: pitch, what you need, quick start, links out |
+| `README.md` | The front door: pitch, run it on your DOS PC, then build and test it, links out |
 | `docs/README.md` | The index: one line per doc |
+| `docs/usage.md` | The player reference: options, hotkeys, voices, exit codes, `RBTEST`, troubleshooting. `release/README.TXT` mirrors its tables; change both together |
+| `docs/how-it-works.md` | The design for curious readers and the measured cost (`P_BENCH` numbers) |
+| `docs/compatibility.md` | Tested games and hardware, known conflicts |
 | `docs/getting-started.md` | Zero to first boot on both paths, plus the Verified-on table |
 | `docs/86box-environment.md` | VMs, disks, boot flow, snapshot and reset. Owns troubleshooting |
 | `docs/contributing.md` | Workflow, commits, PR rules, payload rules |
