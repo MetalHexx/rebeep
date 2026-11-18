@@ -58,6 +58,46 @@ Every user-visible change also adds a line under `## [Unreleased]` in [CHANGELOG
 2. Open a PR; CI runs `rebeep version check` and a package dry run.
 3. Squash-merge. On `main`, the release workflow tags `vX.Y.Z` and publishes the GitHub Release.
 
+## Before each release
+
+The probes run on the final files, so do these in order on the release branch.
+
+**Automatic:**
+
+1. `rebeep version bump <X.Y.Z>`
+2. `rebeep release create`, so the floppy carries the final `CHANGES.TXT`
+3. `rebeep test run`
+4. `rebeep test run --suite vm`: every probe, including the floppy and the samples
+5. `rebeep version check --release`
+
+**By a person.** These checks gate the merge. Run them before the release PR is marked ready, and
+commit their results (the GPC row, the `slow-386sx` numbers) to the branch first. A failed check
+means a fix on the branch, never a merge.
+
+- **`mirror-msdos`:**
+  - On the normal dev boot, which autoloads ReBeep, play Grand Prix Circuit
+    (`D:\GAMES\GPC\GPAUTO\GPEGA.EXE`): its engine and effects come out of the OPL with the real
+    speaker silent, in faithful mode and in a patch.
+  - Ctrl+Alt+B toggles between the OPL and the speaker. Ctrl+Alt+N cycles the voice.
+  - Update the GPC row in [compatibility.md](compatibility.md).
+  - Last, attach `build/release/rebeep-<v>-floppy.img` as A: from 86Box's Media menu, run
+    `A:\INSTALL`, copy the MS-DOS samples over C:'s configs and reboot. Check that ReBeep loads from
+    the sample config.
+  - Quit 86Box, then run `rebeep vm reset mirror-msdos --yes` to put the VM back on its dev configs.
+- **`mirror-freedos`:** GPC hangs there, so FreeDOS acceptance rests on RBTEST.
+  - With ReBeep autoloaded, play RBTEST cases 1 to 9 by ear (`RBTEST /C:n`), especially case 4, the
+    stepped beeps. Do it in faithful mode and in one patch.
+  - The real speaker stays silent while the OPL plays.
+  - Ctrl+Alt+B hands the tone to the speaker and back. Ctrl+Alt+N cycles the voice.
+- **DOSBox-X:** run `T_OPL /L` with `oplmode=opl2` and again with `oplmode=opl3`, and confirm the
+  OPL2 faithful voice sounds square-like. If you skip this, the `CHANGELOG.md` Known issues must say
+  the OPL2 voice hasn't been checked by ear.
+- **`slow-386sx`:** `RBTEST /B` with ReBeep loaded, then after `REBEEP /OFF`. Record the numbers in
+  [how-it-works.md](how-it-works.md).
+
+**After the merge publishes the release:** install the published zip or floppy on the real rig by
+following `README.TXT`, and repeat the GPC checks. A failure there is fixed in a 0.1.x patch release.
+
 ## Report your host
 
 The environment is verified on Windows. If you run it on Linux or macOS, add your result to the
