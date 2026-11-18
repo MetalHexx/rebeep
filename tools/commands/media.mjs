@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { CliError, UsageError } from '../lib/cli.mjs';
 import { sha256File } from '../lib/download.mjs';
+import { formatBytes, writeAtomic } from '../lib/fsx.mjs';
 import { checkEntryName, readZip, stripCommonRoot } from '../lib/zip.mjs';
 
 const FLOPPY_BYTES = 1474560;
@@ -41,14 +42,39 @@ function isRegularFile(file) {
   }
 }
 
-/** Writes through a temp name, so a failed write never leaves a half file behind. */
-function writeAtomic(to, bytes) {
-  const tmp = `${to}.tmp-${process.pid}`;
+/**
+ * Moves `staging` into place as `target`. An existing `target` is renamed aside first and put
+ * back if the move fails, so a failed swap never leaves the user without their media.
+ */
+function swapDir(staging, target) {
+  const aside = `${target}.old`;
+  fs.rmSync(aside, { recursive: true, force: true });
+  const hadOld = fs.existsSync(target);
+  if (hadOld) fs.renameSync(target, aside);
   try {
-    fs.writeFileSync(tmp, bytes);
-    fs.renameSync(tmp, to);
-  } finally {
-    fs.rmSync(tmp, { force: true });
+    fs.renameSync(staging, target);
+  } catch (err) {
+    if (hadOld) {
+      try {
+        fs.renameSync(aside, target);
+      } catch (restoreErr) {
+        throw new CliError(`could not replace ${target} (${err.message}) or restore it (${restoreErr.message})`, {
+          hint: `Your previous copy is kept at ${aside}.`,
+        });
+      }
+    }
+    throw new CliError(`could not replace ${target}: ${err.message}`, {
+      hint: 'Close anything using the folder (Explorer, antivirus) and try again. Your previous copy is untouched.',
+    });
+  }
+  fs.rmSync(aside, { recursive: true, force: true });
+}
+
+function readJsonQuiet(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
   }
 }
 
@@ -77,6 +103,7 @@ async function addMsdos(ctx, folder) {
   }
 
   const files = [];
+  let replaced = false;
   const staging = `${ctx.paths.mediaMsdos}.tmp-${process.pid}`;
   fs.rmSync(staging, { recursive: true, force: true });
   fs.mkdirSync(staging, { recursive: true });
@@ -91,13 +118,17 @@ async function addMsdos(ctx, folder) {
       files.push({ source: from, name, size, sha256: await sha256File(stored) });
     }
     writeJson(path.join(staging, 'media.json'), { kind: 'msdos622', addedAt: new Date().toISOString(), files });
-    fs.rmSync(ctx.paths.mediaMsdos, { recursive: true, force: true });
-    fs.renameSync(staging, ctx.paths.mediaMsdos);
+    const previous = readJsonQuiet(path.join(ctx.paths.mediaMsdos, 'media.json'));
+    replaced = fs.existsSync(ctx.paths.mediaMsdos);
+    if (replaced) {
+      ctx.log.info(`replacing the MS-DOS 6.22 disks already imported${previous?.addedAt ? ` (added ${previous.addedAt})` : ''}`);
+    }
+    swapDir(staging, ctx.paths.mediaMsdos);
   } finally {
     fs.rmSync(staging, { recursive: true, force: true });
   }
   ctx.log.ok(`imported ${DISK_COUNT} MS-DOS 6.22 disks into ${ctx.paths.mediaMsdos}`);
-  return { kind: 'msdos622', files };
+  return { kind: 'msdos622', files, replaced };
 }
 
 async function addGame(ctx, zipArg, rawName) {
@@ -116,7 +147,13 @@ async function addGame(ctx, zipArg, rawName) {
 
   fs.mkdirSync(ctx.paths.mediaGames, { recursive: true });
   const target = path.join(ctx.paths.mediaGames, `${name}.zip`);
-  writeAtomic(target, bytes);
+  const previous = readJsonQuiet(path.join(ctx.paths.mediaGames, `${name}.json`));
+  const replaced = fs.existsSync(target);
+  if (replaced) {
+    const what = previous ? ` (${formatBytes(previous.size)}, sha256 ${String(previous.sha256).slice(0, 12)})` : '';
+    ctx.log.info(`replacing game ${name} already imported${what}`);
+  }
+  writeAtomic(target, (tmp) => fs.writeFileSync(tmp, bytes));
   const size = fs.statSync(target).size;
   const sha256 = await sha256File(target);
   const meta = {
@@ -129,9 +166,9 @@ async function addGame(ctx, zipArg, rawName) {
     entries: fileEntries.length,
     topFolderStripped,
   };
-  writeJson(path.join(ctx.paths.mediaGames, `${name}.json`), meta);
+  writeAtomic(path.join(ctx.paths.mediaGames, `${name}.json`), (tmp) => writeJson(tmp, meta));
   ctx.log.ok(`imported game ${name} (${fileEntries.length} files, not extracted)`);
-  return meta;
+  return { ...meta, replaced };
 }
 
 function readJson(file, log) {

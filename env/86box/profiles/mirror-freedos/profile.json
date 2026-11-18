@@ -15,7 +15,9 @@
     "label": "REBEEP"
   },
   "install": {
-    "tool": "freedos-floppy"
+    "tool": "freedos-floppy",
+    "folder": "144m",
+    "floppies": ["x86BOOT.img", "x86DSK01.img", "x86DSK02.img", "x86DSK03.img", "x86DSK04.img", "x86DSK05.img", "x86DSK06.img"]
   },
   "tools": ["86box", "86box-roms", "jemm", "freedos"],
   "roms": [

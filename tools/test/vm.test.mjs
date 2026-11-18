@@ -3,9 +3,14 @@ import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, test } from 'node:test';
+import vmNoun from '../commands/vm.mjs';
 import { sha256File } from '../lib/download.mjs';
+import { createLog } from '../lib/log.mjs';
+import { repoLayout } from '../lib/paths.mjs';
+import { launchDetached } from '../lib/proc.mjs';
 import { hashTree } from '../lib/zip.mjs';
-import { alive, seedEnv, seedMsdosMedia, snapshotTree, waitFor, writeFile } from './vmenv.mjs';
+import { captureStreams } from './helpers.mjs';
+import { FAKE_86BOX, alive, seedEnv, seedMsdosMedia, snapshotTree, waitFor, writeFile } from './vmenv.mjs';
 
 const C_BYTES = 260 * 16 * 63 * 512;
 const real = (p) => fs.realpathSync.native(p);
@@ -259,7 +264,7 @@ describe('vm run', () => {
     assert.equal(result.code, 0, result.stderr);
     await s.fakeRecord();
 
-    assert.deepEqual(fs.readdirSync(vm.floppy).sort(), ['DISK1.IMA', 'DISK2.IMA', 'DISK3.IMA']);
+    assert.deepEqual(fs.readdirSync(vm.floppy).sort(), ['DISK1.IMA', 'DISK2.IMA', 'DISK3.IMA', 'source.json']);
     assert.equal(fs.readFileSync(path.join(vm.floppy, 'DISK1.IMA'), 'utf8'), 'mid-install');
     assert.equal(fs.readFileSync(path.join(vm.floppy, 'DISK2.IMA'))[0], 2);
     const cfg = fs.readFileSync(vm.cfg, 'utf8');
@@ -515,5 +520,179 @@ describe('read-only commands', () => {
     const reset = s.rebeep('vm', 'reset', 'mirror-msdos', '--yes');
     assert.equal(reset.code, 1);
     assert.match(reset.stderr, /meta\.json is unusable/);
+  });
+});
+
+/** A command context for running a verb in-process, so a test can act between its steps. */
+function context(overrides = {}) {
+  const streams = captureStreams();
+  return {
+    streams,
+    ctx: {
+      noun: 'vm',
+      args: {},
+      opts: {},
+      json: false,
+      preview: false,
+      yes: true,
+      confirm: async () => true,
+      paths: s.paths,
+      repo: repoLayout(),
+      log: createLog({ stdout: streams.stdout, stderr: streams.stderr, color: false }),
+      env: s.env,
+      ...overrides,
+    },
+  };
+}
+const verbOf = (name) => vmNoun.verbs.find((v) => v.name === name);
+const startFake = (name) => launchDetached(process.execPath, [FAKE_86BOX], { cwd: vmPaths(name).dir, pidFile: vmPaths(name).pid });
+
+describe('install floppies', () => {
+  const FLOPPY = 1474560;
+  const SETS = { '120m': 1228800, '144m': FLOPPY, '720k': 737280 };
+  const NAMES = ['x86BOOT.img', ...[1, 2, 3, 4, 5, 6].map((n) => `x86DSK0${n}.img`)];
+
+  /** A fetched freedos-floppy tool laid out like the real zip: 120m/, 144m/ and 720k/ with the same file names. */
+  function seedFloppyTool() {
+    const manifest = JSON.parse(fs.readFileSync(s.manifestFile, 'utf8'));
+    manifest.tools['freedos-floppy'] = {
+      version: '1.4',
+      description: 'test',
+      onDemand: true,
+      platforms: { any: { url: 'http://127.0.0.1:9/x.zip', sha256: 'a'.repeat(64), archive: 'zip' } },
+    };
+    fs.writeFileSync(s.manifestFile, JSON.stringify(manifest));
+    const dir = s.paths.tool('freedos-floppy', '1.4');
+    writeFile(path.join(dir, '.rebeep-tool.json'), JSON.stringify({ name: 'freedos-floppy', version: '1.4', sha256: 'a'.repeat(64), files: {} }));
+    for (const [set, size] of Object.entries(SETS)) {
+      for (const name of NAMES) writeFile(path.join(dir, set, name), Buffer.alloc(size, set.charCodeAt(0)));
+    }
+    return dir;
+  }
+
+  function useBuilder() {
+    const builder = path.join(s.tmp, 'builder.mjs');
+    fs.writeFileSync(builder, 'export async function buildFreedosC() {\n  return { image: Buffer.from("c"), warnings: [] };\n}\n');
+    s.env.REBEEP_FREEDOS_BUILDER = builder;
+    const created = s.rebeep('vm', 'create', 'mirror-freedos');
+    assert.equal(created.code, 0, created.stderr);
+  }
+
+  test('the listed 144m floppies are attached in order, and the other sets are left out', () => {
+    seedFloppyTool();
+    useBuilder();
+    const result = s.rebeep('vm', 'run', 'mirror-freedos', '--install');
+    assert.equal(result.code, 0, result.stderr);
+    const vm = vmPaths('mirror-freedos');
+    assert.deepEqual(fs.readdirSync(vm.floppy).sort(), [...NAMES, 'source.json'].sort());
+    for (const name of NAMES) {
+      const bytes = fs.readFileSync(path.join(vm.floppy, name));
+      assert.equal(bytes.length, FLOPPY, name);
+      assert.equal(bytes[0], '1'.charCodeAt(0), `${name} comes from 144m`);
+    }
+    assert.match(fs.readFileSync(vm.cfg, 'utf8'), /^fdd_01_fn = floppy\/x86BOOT\.img$/m);
+    const order = NAMES.map((n) => result.stdout.indexOf(path.join(vm.floppy, n)));
+    assert.ok(order.every((at, i) => at >= 0 && (i === 0 || at > order[i - 1])), 'the paths are printed in attach order');
+    assert.doesNotMatch(result.stderr, /bytes, not the/);
+  });
+
+  test('an image that is not floppy-sized is warned about, and a missing one is an error', () => {
+    const dir = seedFloppyTool();
+    useBuilder();
+    fs.writeFileSync(path.join(dir, '144m', 'x86DSK03.img'), Buffer.alloc(1000));
+    let result = s.rebeep('vm', 'run', 'mirror-freedos', '--install');
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stderr, /x86DSK03\.img is 1000 bytes, not the 1474560/);
+
+    fs.rmSync(vmPaths('mirror-freedos').pid);
+    fs.rmSync(path.join(dir, '144m', 'x86DSK05.img'));
+    result = s.rebeep('vm', 'run', 'mirror-freedos', '--install');
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /missing install media: x86DSK05\.img/);
+  });
+
+  test('a tool and folder without a list picks only that folder, sorted', async () => {
+    seedFloppyTool();
+    const profiles = path.join(s.tmp, 'profiles');
+    fs.cpSync(path.join(repoLayout().profiles, 'mirror-freedos'), path.join(profiles, 'mirror-freedos'), { recursive: true });
+    const file = path.join(profiles, 'mirror-freedos', 'profile.json');
+    const profile = JSON.parse(fs.readFileSync(file, 'utf8'));
+    profile.install = { tool: 'freedos-floppy', folder: '144m' };
+    fs.writeFileSync(file, JSON.stringify(profile));
+    writeFile(vmPaths('mirror-freedos').cImg, 'c');
+
+    const { ctx } = context({ args: { vm: 'mirror-freedos' }, opts: { install: true }, repo: { ...repoLayout(), profiles } });
+    const result = await verbOf('run').run(ctx);
+    assert.deepEqual(result.floppies.map((f) => path.basename(f)), [...NAMES].sort());
+    assert.equal(fs.readdirSync(vmPaths('mirror-freedos').floppy).filter((n) => n !== 'source.json').length, NAMES.length);
+  });
+});
+
+describe('install floppy copies', () => {
+  test('a re-imported disk replaces its copy; a copy whose source is unchanged is kept', async () => {
+    create();
+    const media = seedMsdosMedia(s.paths);
+    const vm = vmPaths('mirror-msdos');
+    assert.equal(s.rebeep('vm', 'run', 'mirror-msdos', '--install').code, 0);
+    await s.fakeRecord();
+    const record = JSON.parse(fs.readFileSync(path.join(vm.floppy, 'source.json'), 'utf8'));
+    assert.deepEqual(Object.keys(record).sort(), ['DISK1.IMA', 'DISK2.IMA', 'DISK3.IMA']);
+    assert.equal(record['DISK2.IMA'], await sha256File(path.join(media, 'DISK2.IMA')));
+    await stopVm('mirror-msdos');
+    s.clearFakeRecord();
+
+    fs.writeFileSync(path.join(media, 'DISK2.IMA'), Buffer.alloc(2048, 99));
+    fs.writeFileSync(path.join(vm.floppy, 'DISK3.IMA'), 'user progress');
+    const result = s.rebeep('vm', 'run', 'mirror-msdos', '--install');
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stdout, /replaced: DISK2\.IMA/);
+    assert.equal(fs.readFileSync(path.join(vm.floppy, 'DISK2.IMA'))[0], 99);
+    assert.equal(fs.readFileSync(path.join(vm.floppy, 'DISK3.IMA'), 'utf8'), 'user progress');
+    const after = JSON.parse(fs.readFileSync(path.join(vm.floppy, 'source.json'), 'utf8'));
+    assert.equal(after['DISK2.IMA'], await sha256File(path.join(media, 'DISK2.IMA')));
+  });
+});
+
+describe('a VM that starts while a verb waits for its confirmation', () => {
+  test('reset refuses and changes nothing', async () => {
+    create();
+    markC('mirror-msdos', 5);
+    assert.equal(s.rebeep('vm', 'snapshot', 'mirror-msdos', '--yes').code, 0);
+    markC('mirror-msdos', 0xee);
+    const vm = vmPaths('mirror-msdos');
+    const before = await sha256File(vm.cImg);
+
+    const { ctx } = context({
+      args: { vm: 'mirror-msdos' },
+      opts: { rebuild: false },
+      yes: false,
+      confirm: async () => {
+        await startFake('mirror-msdos');
+        return true;
+      },
+    });
+    await assert.rejects(verbOf('reset').run(ctx), /mirror-msdos is running/);
+    assert.equal(await sha256File(vm.cImg), before);
+    assert.deepEqual(fs.readdirSync(vm.floppy), []);
+  });
+
+  test('snapshot refuses and leaves the old baseline alone', async () => {
+    create();
+    assert.equal(s.rebeep('vm', 'snapshot', 'mirror-msdos', '--yes').code, 0);
+    const baseline = s.paths.baseline('mirror-msdos');
+    const before = fs.readFileSync(baseline.meta, 'utf8');
+    markC('mirror-msdos', 0xee);
+
+    const { ctx } = context({
+      args: { vm: 'mirror-msdos' },
+      yes: false,
+      confirm: async () => {
+        await startFake('mirror-msdos');
+        return true;
+      },
+    });
+    await assert.rejects(verbOf('snapshot').run(ctx), /mirror-msdos is running/);
+    assert.equal(fs.readFileSync(baseline.meta, 'utf8'), before);
+    assert.deepEqual(fs.readdirSync(s.paths.baselines), ['mirror-msdos']);
   });
 });

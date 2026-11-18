@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, test } from 'node:test';
+import media from '../commands/media.mjs';
 import { sha256Buffer } from '../lib/download.mjs';
 import { layout } from '../lib/paths.mjs';
 import { makeTempDir, removeDir, runRebeep } from './helpers.mjs';
@@ -208,5 +209,63 @@ describe('media list and remove', () => {
   test('remove of something not imported fails; game needs --name', () => {
     assert.equal(rebeep('media', 'remove', 'game', '--name', 'NOPE', '--yes').code, 1);
     assert.equal(rebeep('media', 'remove', 'game', '--yes').code, 2);
+  });
+});
+
+describe('replacing media safely', () => {
+  const quiet = { info() {}, ok() {}, warn() {}, step() {}, debug() {}, error() {} };
+  const addVerb = media.verbs.find((v) => v.name === 'add');
+  const ctxFor = (args, opts = {}, messages = []) => ({
+    args,
+    opts,
+    paths: paths(),
+    log: { ...quiet, info: (m) => messages.push(m) },
+  });
+
+  /** Runs `fn` with `fs.renameSync` failing for the staging move into `blocked` (the rollback may succeed). */
+  async function withRenameFailure(blocked, fn) {
+    const real = fs.renameSync;
+    fs.renameSync = (from, to) => {
+      if (to === blocked && String(from).includes('.tmp-')) throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
+      return real(from, to);
+    };
+    try {
+      return await fn();
+    } finally {
+      fs.renameSync = real;
+    }
+  }
+
+  test('a failed swap keeps the previous MS-DOS disks and leaves no staging folder', async () => {
+    assert.equal(rebeep('media', 'add', 'msdos622', makeDisks()).code, 0);
+    const before = fs.readFileSync(path.join(paths().mediaMsdos, 'DISK1.IMA'));
+    const other = path.join(tmp, 'other');
+    fs.mkdirSync(other);
+    ['x.ima', 'y.ima', 'z.ima'].forEach((n, i) => fs.writeFileSync(path.join(other, n), Buffer.alloc(FLOPPY, 90 + i)));
+
+    await withRenameFailure(paths().mediaMsdos, async () => {
+      await assert.rejects(addVerb.run(ctxFor({ kind: 'msdos622', path: other })), /could not replace/);
+    });
+
+    assert.deepEqual(fs.readFileSync(path.join(paths().mediaMsdos, 'DISK1.IMA')), before);
+    assert.equal(fs.existsSync(path.join(paths().mediaMsdos, 'media.json')), true);
+    assert.deepEqual(fs.readdirSync(paths().media).sort(), ['msdos622']);
+  });
+
+  test('re-adding says what it replaces, and reports replaced', async () => {
+    assert.equal(rebeep('media', 'add', 'msdos622', makeDisks()).code, 0);
+    const messages = [];
+    const result = await addVerb.run(ctxFor({ kind: 'msdos622', path: path.join(tmp, 'disks') }, {}, messages));
+    assert.equal(result.replaced, true);
+    assert.match(messages.join('\n'), /replacing the MS-DOS 6\.22 disks already imported \(added /);
+    assert.equal(fs.existsSync(`${paths().mediaMsdos}.old`), false);
+
+    const zip = makeGame([{ name: 'A.EXE', data: 'x' }]);
+    const first = await addVerb.run(ctxFor({ kind: 'game', path: zip }, { name: 'one' }, messages));
+    assert.equal(first.replaced, false);
+    const second = await addVerb.run(ctxFor({ kind: 'game', path: zip }, { name: 'one' }, messages));
+    assert.equal(second.replaced, true);
+    assert.match(messages.join('\n'), /replacing game ONE already imported \(\d+ B, sha256 [0-9a-f]{12}\)/);
+    assert.deepEqual(fs.readdirSync(paths().mediaGames).sort(), ['ONE.json', 'ONE.zip']);
   });
 });

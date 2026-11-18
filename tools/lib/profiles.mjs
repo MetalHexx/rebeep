@@ -56,8 +56,11 @@ function validate(name, p) {
   const { install } = p;
   if (install !== undefined) {
     const byMedia = typeof install?.media === 'string' && isStringList(install.floppies) && install.floppies.length > 0;
-    const byTool = typeof install?.tool === 'string';
-    if (!byMedia && !byTool) throw bad(name, "install needs { media, floppies } or { tool }");
+    const byTool =
+      typeof install?.tool === 'string' &&
+      (install.folder === undefined || (typeof install.folder === 'string' && install.folder !== '')) &&
+      (install.floppies === undefined || (isStringList(install.floppies) && install.floppies.length > 0));
+    if (!byMedia && !byTool) throw bad(name, "install needs { media, floppies } or { tool, folder?, floppies? }");
   }
   if (!isStringList(p.tools)) throw bad(name, "'tools' must be a list of names");
   if (!isStringList(p.roms)) throw bad(name, "'roms' must be a list of paths");

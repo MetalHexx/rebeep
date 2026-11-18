@@ -252,25 +252,89 @@ async function createVerb(ctx) {
   return createVm(ctx, name, { force: ctx.opts.force });
 }
 
-/** Floppies to attach in install mode, as `[{ name, source }]` in attach order. */
+/** The size of a 1.44 MB floppy image, which is what the cfg templates' `35_2hd` drive reads. */
+const FLOPPY_BYTES = 1474560;
+const IMAGE_FILE = /\.(img|ima)$/i;
+
+/**
+ * Floppies to attach in install mode, as `[{ name, source }]` in attach order. From imported
+ * media (`install.media`) or from a fetched tool (`install.tool`, in `install.folder` when set,
+ * as the explicit `install.floppies` list or else the images found there, sorted). Every image
+ * must exist; one that is not floppy-sized is warned about.
+ */
 function installFloppies(ctx, profile) {
   const { install } = profile;
   if (!install) throw new CliError(`${profile.name} has no install media`, { hint: 'It is cloned from another VM; run that one with --install.' });
+  let dir;
+  let names;
+  let hint;
   if (install.media) {
-    const dir = path.join(ctx.paths.media, install.media);
-    const floppies = install.floppies.map((name) => ({ name, source: path.join(dir, name) }));
-    const missing = floppies.filter((f) => !fs.existsSync(f.source));
-    if (missing.length) {
-      throw new CliError(`missing install media: ${missing.map((f) => f.name).join(', ')}`, {
-        hint: install.media === 'msdos622' ? 'rebeep media add msdos622 <folder>' : undefined,
-      });
+    dir = path.join(ctx.paths.media, install.media);
+    names = install.floppies;
+    hint = install.media === 'msdos622' ? 'rebeep media add msdos622 <folder>' : undefined;
+  } else {
+    const tool = resolveTool(ctx, install.tool).dir;
+    dir = install.folder ? path.resolve(tool, ...install.folder.split('/')) : tool;
+    const inside = path.relative(tool, dir);
+    if (inside === '..' || inside.startsWith(`..${path.sep}`) || path.isAbsolute(inside)) {
+      throw new CliError(`install folder '${install.folder}' is outside ${install.tool}`);
     }
-    return floppies;
+    hint = `rebeep tool fetch ${install.tool} --force`;
+    if (install.floppies) {
+      names = install.floppies;
+    } else if (install.folder) {
+      names = fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isFile() && IMAGE_FILE.test(e.name)).map((e) => e.name).sort() : [];
+    } else {
+      names = listFiles(dir).filter((rel) => IMAGE_FILE.test(rel));
+    }
+    if (!names.length) throw new CliError(`${install.tool} has no floppy images in ${dir}`, { hint });
   }
-  const { dir } = resolveTool(ctx, install.tool);
-  const images = listFiles(dir).filter((rel) => /\.(img|ima)$/i.test(rel));
-  if (!images.length) throw new CliError(`${install.tool} contains no floppy images`);
-  return images.map((rel) => ({ name: path.basename(rel), source: path.join(dir, ...rel.split('/')) }));
+
+  const floppies = names.map((name) => ({ name: path.basename(name), source: path.join(dir, ...name.split('/')) }));
+  const missing = floppies.filter((f) => !fs.existsSync(f.source));
+  if (missing.length) throw new CliError(`missing install media: ${missing.map((f) => f.name).join(', ')}`, { hint });
+  const seen = new Set();
+  for (const f of floppies) {
+    if (seen.has(f.name.toLowerCase())) throw new CliError(`two install floppies are both named ${f.name}`);
+    seen.add(f.name.toLowerCase());
+    const size = fs.statSync(f.source).size;
+    if (size !== FLOPPY_BYTES) ctx.log.warn(`${f.name} is ${size} bytes, not the ${FLOPPY_BYTES} of a 1.44 MB floppy; the drive may not read it`);
+  }
+  return floppies;
+}
+
+const SOURCE_RECORD = 'source.json';
+
+/**
+ * Copies the install floppies into `floppy/` and records each source's SHA-256 in `source.json`.
+ * A copy whose source is unchanged is kept, because the user may be mid-install. A copy whose
+ * source changed (media re-imported) is replaced, and that is reported. A copy with no record is kept.
+ */
+async function copyInstallFloppies(ctx, floppies, folder) {
+  const recordFile = path.join(folder, SOURCE_RECORD);
+  let record = {};
+  try {
+    record = JSON.parse(fs.readFileSync(recordFile, 'utf8'));
+  } catch {
+    // no record yet, or an unreadable one: nothing is known about the copies
+  }
+  const replaced = [];
+  for (const floppy of floppies) {
+    const target = path.join(folder, floppy.name);
+    const sha = await sha256File(floppy.source);
+    if (!fs.existsSync(target)) {
+      fs.copyFileSync(floppy.source, target);
+    } else if (record[floppy.name] && record[floppy.name] !== sha) {
+      fs.copyFileSync(floppy.source, target);
+      replaced.push(floppy.name);
+    } else {
+      continue;
+    }
+    record[floppy.name] = sha;
+  }
+  writeAtomic(recordFile, (tmp) => fs.writeFileSync(tmp, `${JSON.stringify(record, null, 2)}\n`));
+  if (replaced.length) ctx.log.info(`the install media changed, so these floppy copies were replaced: ${replaced.join(', ')}`);
+  return replaced;
 }
 
 function launchSettings(ctx) {
@@ -305,10 +369,7 @@ async function runVm(ctx, name, { install }) {
   fs.mkdirSync(ctx.paths.box86, { recursive: true });
   if (!fs.existsSync(ctx.paths.globalCfg)) fs.writeFileSync(ctx.paths.globalCfg, globalCfgText());
   fs.mkdirSync(vm.floppy, { recursive: true });
-  for (const floppy of floppies) {
-    const target = path.join(vm.floppy, floppy.name);
-    if (!fs.existsSync(target)) fs.copyFileSync(floppy.source, target);
-  }
+  if (floppies.length) await copyInstallFloppies(ctx, floppies, vm.floppy);
   const cfg = renderVmCfg(profile, fs.readFileSync(templatePath(ctx.repo, name), 'utf8'), {
     install,
     floppy: floppies[0]?.name,
@@ -378,12 +439,14 @@ export async function applyReset(ctx, plan, { composition, verified = false } = 
   if (plan.action === 'restore') {
     const baseline = ctx.paths.baseline(name);
     if (!verified) await verifyPlan(ctx, plan);
+    assertNotRunning(vm, name);
     fs.mkdirSync(vm.dir, { recursive: true });
     copyAtomic(baseline.cImg, vm.cImg);
     replaceDir(baseline.nvr, vm.nvr);
     emptyDir(vm.floppy);
     deployAndWarn(ctx, name, composition);
   } else {
+    assertNotRunning(vm, name);
     await createVm(ctx, name, { force: true, composition });
     emptyDir(vm.nvr);
     emptyDir(vm.floppy);
@@ -418,6 +481,7 @@ async function snapshotVm(ctx, name) {
     return { vm: name, saved: false, cancelled: true };
   }
 
+  assertNotRunning(vm, name);
   const staging = `${baseline.dir}.new`;
   const old = `${baseline.dir}.old`;
   fs.rmSync(staging, { recursive: true, force: true });
@@ -438,6 +502,7 @@ async function snapshotVm(ctx, name) {
     };
     writeAtomic(path.join(staging, 'meta.json'), (tmp) => fs.writeFileSync(tmp, `${JSON.stringify(meta, null, 2)}\n`));
 
+    assertNotRunning(vm, name);
     fs.rmSync(old, { recursive: true, force: true });
     const hadOld = fs.existsSync(baseline.dir);
     if (hadOld) fs.renameSync(baseline.dir, old);

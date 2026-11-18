@@ -34,11 +34,32 @@ export function copyAtomic(from, to) {
   writeAtomic(to, (tmp) => fs.copyFileSync(from, tmp));
 }
 
-/** Replaces folder `to` with a copy of `from`, or with an empty folder when `from` is missing. */
-export function replaceDir(from, to) {
-  fs.rmSync(to, { recursive: true, force: true });
-  if (fs.existsSync(from)) fs.cpSync(from, to, { recursive: true });
-  else fs.mkdirSync(to, { recursive: true });
+/**
+ * Replaces folder `to` with a copy of `from`, or with an empty folder when `from` is missing. The
+ * copy is made beside `to` first and swapped in by renames, so a failed copy leaves `to` as it
+ * was, and a failed swap puts it back. `ops` replaces the copy and rename calls (for tests).
+ */
+export function replaceDir(from, to, ops = { cpSync: fs.cpSync, renameSync: fs.renameSync }) {
+  const fresh = `${to}.new-${process.pid}`;
+  const old = `${to}.old-${process.pid}`;
+  const remove = (dir) => fs.rmSync(dir, { recursive: true, force: true });
+  remove(fresh);
+  remove(old);
+  try {
+    if (fs.existsSync(from)) ops.cpSync(from, fresh, { recursive: true });
+    else fs.mkdirSync(fresh, { recursive: true });
+    const hadOld = fs.existsSync(to);
+    if (hadOld) ops.renameSync(to, old);
+    try {
+      ops.renameSync(fresh, to);
+    } catch (err) {
+      if (hadOld) fs.renameSync(old, to);
+      throw err;
+    }
+    remove(old);
+  } finally {
+    remove(fresh);
+  }
 }
 
 /** Leaves `dir` existing and empty. */
