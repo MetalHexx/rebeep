@@ -1,6 +1,6 @@
 # src
 
-> ReBeep's NASM source. The module folders are empty until the TSR is written.
+> ReBeep's NASM source. `engine/` and `include/` are written; the other module folders are empty until the TSR is.
 
 ## What's here
 
@@ -31,13 +31,17 @@
 - The interpreter (`engine/interp.asm`) is register-based: `interp_reset`, `interp_sync`,
   `interp_write` (AL = byte, DX = port; out AL = event, AH = mode, BX = divisor). Each preserves
   every register but its outputs. It is 8086-only: a 386 instruction there fails the build.
+  `interp_sync` reports no event: if a tone was playing, the caller must call `opl_note_off`.
+  Its stack use is at most 8 bytes, return address included.
 - The OPL target (`engine/opl.asm`) plays one voice on channel 8 and writes only that channel's
   registers, global `01h` and (OPL3) `105h`. `opl_write` is the single path to the chip: define
-  `OPL_TEST_SINK` as a label before the include and it jumps there instead of the ports.
-- OPL3 pitfalls: `C0h` must carry `30h` (left/right) or the channel is silent in NEW mode, and
-  `opl_pitch` must never clear the key bit or a glide retriggers. OPL2 has no square waveform, so the
-  faithful voice is a 2:1 FM approximation (values documented in the file). Write delays are status
-  reads, picked by chip (OPL2 6/35, OPL3 2/2).
+  `OPL_TEST_SINK` as a label before the include and it jumps there instead of the ports. Stack use
+  is at most 16 bytes, return address included (measured, and checked by `T_OPL`'s `stack_depth`);
+  keep the call chains flat.
+- OPL3 pitfalls: `C0h` must carry the left/right bits (`OPL3_OUT` in [include/opl.inc](include/opl.inc))
+  or the channel is silent in NEW mode, and `opl_pitch` must never clear the key bit or a glide
+  retriggers. OPL2 has no square waveform, so the faithful voice is a 2:1 FM approximation (values
+  documented in the file). Write delays are status reads, picked by chip (`OPL2_*`/`OPL3_*` in `opl.asm`).
 - A PIT control word never changes the current tone or verdict. The new counting mode and pitch
   apply only when the count completes, and the first byte of an LSB-then-MSB count leaves the
   pitch alone. Without that, a mid-tone control word or half-written count would cut a tone.

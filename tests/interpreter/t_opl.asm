@@ -195,6 +195,92 @@ wait_ticks:
         call    t_check
 %endmacro
 
+STACK_MAX       equ 16          ; bytes, return address included
+STK_AREA        equ 64
+PROBES          equ 10
+
+; STK_FILL: sentinel-fill the STK_AREA bytes below SP. Clobbers AX, CX, DI.
+%macro STK_FILL 0
+        cld
+        mov     di, sp
+        sub     di, STK_AREA
+        mov     cx, STK_AREA / 2
+        mov     ax, 0A5A5h
+        rep stosw
+%endmacro
+
+; STK_DEPTH: AX = bytes below the fill's SP that were touched since it.
+%macro STK_DEPTH 0
+        mov     di, sp
+        sub     di, STK_AREA
+%%scan:
+        cmp     word [di], 0A5A5h
+        jne     %%done
+        add     di, 2
+        jmp     %%scan
+%%done:
+        mov     ax, sp
+        sub     ax, di
+%endmacro
+
+; PROBE setup, routine: the stack the routine touches, on the real ports.
+%macro PROBE 2
+        STK_FILL
+        %1
+        call    %2
+        STK_DEPTH
+        call    stk_note
+%endmacro
+
+; stk_note: AX = a depth; keeps it in deeps and tracks the largest in deep.
+stk_note:
+        mov     bx, [deep_n]
+        mov     [deeps + bx], ax
+        add     word [deep_n], 2
+        cmp     ax, [deep]
+        jbe     .done
+        mov     [deep], ax
+.done:
+        ret
+
+; PRES ax, bx, routine, check_al: load sentinels, call, and require every
+; register (AL only when check_al) to come back unchanged.
+%macro PRES 4
+        mov     ax, %1
+        mov     bx, %2
+        mov     cx, 1111h
+        mov     dx, 2222h
+        mov     si, 3333h
+        mov     di, 4444h
+        mov     bp, 5555h
+        call    %3
+        cmp     ah, (%1) >> 8
+        jne     %%bad
+%if %4
+        cmp     al, (%1) & 0FFh
+        jne     %%bad
+%endif
+        cmp     bx, %2
+        jne     %%bad
+        cmp     cx, 1111h
+        jne     %%bad
+        cmp     dx, 2222h
+        jne     %%bad
+        cmp     si, 3333h
+        jne     %%bad
+        cmp     di, 4444h
+        jne     %%bad
+        cmp     bp, 5555h
+        jne     %%bad
+        xor     ax, ax
+        jmp     %%chk
+%%bad:
+        mov     ax, 1
+%%chk:
+        xor     cx, cx
+        call    t_check
+%endmacro
+
 ; The checks that depend on the chip. %1 = 2 or 3, %2 = a name suffix.
 %macro REGCASES 2
 %strcat cname "init_writes_", %2
@@ -476,6 +562,60 @@ start:
         REGCASES 2, "opl2"
         REGCASES 3, "opl3"
 
+        CASE    "registers_preserved"
+        SINK_CLEAR
+        PRES    0AB00h, 1234h, opl_detect, 0
+        PRES    0AB03h, 1234h, opl_init, 1
+        PRES    0AB03h, 1234h, opl_set_voice, 1
+        PRES    0ABF7h, 1234h, opl_set_voice, 1
+        PRES    0AB07h, 1234h, opl_set_volume, 1
+        PRES    0ABF0h, 1234h, opl_set_volume, 1
+        PRES    0AB66h, 1193, opl_note_on, 1
+        PRES    0AB66h, A4, opl_pitch, 1
+        PRES    0AB66h, 1234h, opl_note_off, 1
+        PRES    0AB66h, 1234h, opl_shutdown, 1
+        ENDCASE
+
+        ; Through the real ports, so the deepest call chain is the one measured.
+        CASE    "stack_depth"
+        mov     byte [sink_on], 0
+        mov     word [deep], 0
+        mov     word [deep_n], 0
+        cli
+        PROBE   {nop}, opl_detect
+        PROBE   {mov al, 3}, opl_init
+        PROBE   {mov al, 2}, opl_init
+        PROBE   {mov al, 1}, opl_set_voice
+        PROBE   {xor al, al}, opl_set_voice
+        PROBE   {mov al, 7}, opl_set_volume
+        PROBE   {mov bx, 1193}, opl_note_on
+        PROBE   {mov bx, A4}, opl_pitch
+        PROBE   {nop}, opl_note_off
+        PROBE   {nop}, opl_shutdown
+        sti
+        mov     byte [sink_on], 1
+        mov     dx, s_stack
+        call    t_print
+        mov     si, deeps
+.stkp:
+        mov     ax, [si]
+        call    t_printdec
+        mov     dl, ' '
+        call    t_putc
+        add     si, 2
+        cmp     si, deeps + PROBES * 2
+        jb      .stkp
+        mov     dx, s_crlf
+        call    t_print
+        mov     ax, [deep]
+        mov     cx, STACK_MAX
+        cmp     ax, cx
+        ja      .stkcheck
+        mov     ax, cx
+.stkcheck:
+        call    t_check
+        ENDCASE
+
         jmp     t_done
 
 ; Listening mode: the faithful voice, then each patch, a second each at 440 Hz.
@@ -532,9 +672,13 @@ s_opl3          db      "INFO OPL3 detected", 13, 10, '$'
 s_none          db      "No OPL detected", 13, 10, '$'
 s_listen        db      "Voices: 0 faithful, $"
 s_voice         db      "voice $"
+s_stack         db      "INFO stack bytes per probe: $"
 
 chip            db      0
 tv              db      0
+deep            dw      0
+deep_n          dw      0
+deeps           times PROBES dw 0
 sink_on         db      0
 sink_n          dw      0
 sink_buf        times SINK_MAX * 4 db 0

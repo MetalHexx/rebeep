@@ -25,6 +25,8 @@ interp_reset:
 ; interp_sync: adopt the real port 61h value after a pass-through.
 ; In:  AL = port 61h value
 ; Out: AH = mode (M_SILENT or M_RAW; the divisor is unknown)
+; No event is reported: if the previous mode was M_TONE, the caller must key the
+; OPL voice off (opl_note_off) itself.
 interp_sync:
         push    ax
         push    bx

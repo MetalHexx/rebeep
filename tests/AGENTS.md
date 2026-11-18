@@ -29,7 +29,9 @@
   edges, `interp_sync`, on/off/on, and a 20-beep stepped pattern.
 - `interpreter/t_opl.asm` (`T_OPL.COM`) covers the OPL target: real chip detection, block/F-number
   against the formula, and, through a recording sink, the key bit, channel-8-only writes, the OPL3
-  `C0h` bits, volume and shutdown, once as an OPL2 and once as an OPL3.
+  `C0h` bits, volume and shutdown, once as an OPL2 and once as an OPL3. It also checks that every
+  routine preserves its registers and that none touches more than 16 bytes of stack (measured on
+  the real ports, with a sentinel-filled stack; the per-routine depths print as an `INFO` line).
 - Listening check: `T_OPL /L` plays the faithful voice then each patch, one second each at 440 Hz.
   Build it with `rebeep test run --suite interpreter`, then run `build/tests/T_OPL.COM /L` in
   DOSBox-X once with `oplmode=opl2` and once with `opl3` (`-set sblaster,oplmode=opl2`), with sound on.
@@ -38,7 +40,7 @@
 ## Pitfalls
 
 - A test program is a `.COM`: `org 100h`, `jmp` past the included module and library, then the
-  cases. Both include paths come from the suite (`tests/interpreter`, `src`, `src/include`).
+  cases. The three include paths come from the suite (`tests/interpreter`, `src`, `src/include`).
 - The suite runs DOSBox-X with `-set mixer,nosound=true`, not `-silent`: `-silent` removes the Sound
   Blaster, so no OPL is found at `388h`.
 - CI runs the interpreter suite on `windows-latest` only, with `SDL_VIDEODRIVER` and
