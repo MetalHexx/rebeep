@@ -33,11 +33,12 @@ game ──OUT 42h/43h/61h──▶ Jemm + QPIEMU ──▶ ReBeep ──▶ OPL
 | Host | Windows, Linux or macOS | same |
 | Node.js | 22 or newer | same |
 | DOS | FreeDOS 1.4, fetched for you | your own MS-DOS 6.22 floppy images |
-| Games | ReBeep's own test programs | your own copy of a speaker-only game |
+| Games | ReBeep's own test programs (coming with the TSR) | your own copy of a speaker-only game |
 | Cost | nothing | what you already own |
 
-86Box, its ROMs, Jemm, NASM and DOSBox-X are downloaded at pinned versions and checked by SHA-256.
-Nothing is installed system-wide; everything lives in `~/.rebeep`.
+86Box, its ROMs, Jemm and FreeDOS are downloaded at pinned versions and checked by SHA-256, into
+`~/.rebeep`. So are NASM and DOSBox-X on Windows. On Linux and macOS, NASM comes from your package
+manager, and so does DOSBox-X on Linux.
 
 ## Quick start
 
@@ -89,6 +90,7 @@ Run it as `node tools/rebeep.mjs …`, or `npm link` once and type `rebeep …`.
 ```sh
 rebeep media add msdos622 path/to/folder-with-3-floppy-images
 rebeep media add game path/to/game.zip --name GPC
+rebeep vm create mirror-msdos              # skip if env setup already made it
 rebeep vm run mirror-msdos --install       # run DOS Setup, swap floppies from the Media menu
 ```
 

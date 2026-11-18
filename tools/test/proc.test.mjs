@@ -185,10 +185,15 @@ describe('isLocked', () => {
   test('a file another process holds open the way 86Box does (shared, not deletable) is locked', { skip: process.platform !== 'win32' }, async () => {
     const file = path.join(tmp, 'c.img');
     fs.writeFileSync(file, 'x');
-    const script = `$f = [System.IO.File]::Open('${file.replace(/'/g, "''")}', 'Open', 'ReadWrite', 'ReadWrite'); Start-Sleep -Seconds 60`;
+    // The holder writes a ready marker after it opens the file. Wait for that marker before probing,
+    // so the rename probe never races the holder's Open (an Open during a rename gap would fail).
+    const ready = path.join(tmp, 'holder.ready');
+    const q = (p) => p.replace(/'/g, "''");
+    const script = `$f = [System.IO.File]::Open('${q(file)}', 'Open', 'ReadWrite', 'ReadWrite'); Set-Content -Path '${q(ready)}' -Value ok; Start-Sleep -Seconds 60`;
     const holder = spawn('powershell', ['-NoProfile', '-Command', script], { stdio: 'ignore' });
     started.push(holder.pid);
-    await waitFor(() => isLocked(file, { rename: true }), { what: 'the holder to open the file', timeout: 60000 });
+    await waitFor(() => fs.existsSync(ready), { what: 'the holder to open the file', timeout: 60000 });
+    assert.equal(isLocked(file, { rename: true }), true);
 
     const vm = { dir: tmp, pid: pidFile, cImg: file, dImg: path.join(tmp, 'd.img') };
     assert.throws(() => assertNotRunning(vm, 'demo'), /demo is running/);

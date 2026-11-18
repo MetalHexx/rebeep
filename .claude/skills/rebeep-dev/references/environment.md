@@ -10,6 +10,7 @@ The environment home is `~/.rebeep` (override with `REBEEP_HOME` or `--home`).
 | Bring your own MS-DOS 6.22 | `rebeep media add msdos622 <folder with 3 .ima>` |
 | Bring your own game | `rebeep media add game <zip> --name <NAME>` |
 | Every VM back to its baseline | `rebeep env reset --preview`, then `--yes` |
-| Start from nothing (keeps media) | `rebeep env clean --preview`, then `--yes` |
+| Delete tools, cache and VMs (keeps media and baselines) | `rebeep env clean --preview`, then `--yes` |
+| Also delete media and baselines | `rebeep env clean --all --preview`, then `--yes` |
 
 `env setup` is safe to re-run. It skips anything already done and says why it skipped a VM.

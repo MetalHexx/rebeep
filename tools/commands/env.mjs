@@ -385,7 +385,7 @@ export default {
       name: 'setup',
       summary: 'Fetch tools, create every VM whose inputs exist, deploy D:',
       description:
-        'Safe to re-run. VMs whose media you have not imported yet are skipped and reported.',
+        'Safe to re-run. VMs whose inputs are not ready (a clone whose source has no baseline yet) are skipped and reported.',
       args: [],
       options: [],
       destructive: false,

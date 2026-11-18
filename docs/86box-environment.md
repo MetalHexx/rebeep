@@ -67,6 +67,14 @@ D:\REBEEP\REBEEP.COM         the latest build
 D: is written by the CLI's own FAT16 writer, straight from the repo, the tool archives and your
 game zips. Game files are never extracted onto your host.
 
+DOS needs 8.3 names, so the deploy handles awkward files like this:
+
+- **Long name** (more than 8.3 characters): **skipped**, with a warning that names the game.
+- **Two names that differ only by case:** the first is kept, with a warning.
+- **A game that doesn't fit on D:**: left out, with a warning.
+
+Check the output of `rebeep disk deploy` (or `rebeep disk list`) when a game misbehaves.
+
 ## How a boot fits together
 
 1. **CONFIG menu.** The default is **ReBeep dev**, which loads
@@ -78,8 +86,8 @@ game zips. Game files are never extracted onto your host.
    - calls `D:\ENV\BOOT.BAT`.
 3. **BOOT.BAT**, on the dev entry:
    - runs `JLOAD QPIEMU.DLL`, then `QPICHK`;
-   - later, it will also load `LH D:\REBEEP\REBEEP` once a deploy marks the build ready to
-     autoload.
+   - `LH D:\REBEEP\REBEEP` if `D:\REBEEP\AUTOLOAD.FLG` exists. Nothing writes that flag yet; it
+     arrives with the first real ReBeep build.
 
 Because `BOOT.BAT` lives on D:, changing the boot steps needs only a deploy, never an edit on C:.
 
@@ -98,7 +106,7 @@ Because `BOOT.BAT` lives on D:, changing the boot steps needs only a deploy, nev
 | `rebeep vm snapshot <vm>` | Saves C: and the CMOS (NVR) as the baseline |
 | `rebeep vm reset <vm>` | Restores the baseline and rewrites D: |
 | `rebeep env reset` | Resets every VM that has a baseline |
-| `rebeep env clean` | Deletes everything in home except your media (`--all` deletes media too) |
+| `rebeep env clean` | Deletes the tools, cache and VMs, and keeps your media and baselines (`--all` deletes both). Files it didn't create are never touched |
 
 All of these refuse while that VM is running. Add `--preview` to see what would change.
 

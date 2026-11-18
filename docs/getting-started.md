@@ -7,8 +7,9 @@ From a fresh clone to a booted DOS VM with ReBeep's environment loaded.
 | Need | Check |
 |---|---|
 | Node.js 22 or newer | `node --version` |
-| About 2 GB free | for 86Box, its ROMs and the VM disks |
+| About 4 GB free | for 86Box, its ROMs, the VM disks and their baselines (`env check` warns below 4 GB) |
 | Linux/macOS only: NASM ≥ 2.16 | `nasm -v` (`sudo apt install nasm`, `brew install nasm`) |
+| Linux only, for the DOS test suite: DOSBox-X | `dosbox-x --version` (distro package or Flatpak) |
 
 Then check the host:
 

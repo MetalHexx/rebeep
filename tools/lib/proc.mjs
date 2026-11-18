@@ -97,7 +97,12 @@ export function findExternalVm(vmDir) {
     const run = spawnSync('ps', ['-axo', 'pid=,args='], { encoding: 'utf8', timeout: TOOL_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
     for (const line of run.stdout?.split('\n') ?? []) {
       const match = /^\s*(\d+)\s+(.*)$/.exec(line);
-      if (match && !own.has(Number(match[1])) && match[2].includes(`-P ${wanted}`)) return Number(match[1]);
+      // Match `-P <dir>` as a whole argument: `-P /x/vm` must not match `-P /x/vm2 …`.
+      // ps joins argv with spaces, so the dir is followed by a space or the end of the line.
+      if (!match || own.has(Number(match[1]))) continue;
+      const args = match[2];
+      const at = args.indexOf(`-P ${wanted}`);
+      if (at >= 0 && (at + 3 + wanted.length === args.length || args[at + 3 + wanted.length] === ' ')) return Number(match[1]);
     }
   }
   return null;
