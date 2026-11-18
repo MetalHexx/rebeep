@@ -9,7 +9,7 @@ import { createLog } from '../lib/log.mjs';
 import { repoRoot } from '../lib/paths.mjs';
 import { captureStreams, runRebeep } from './helpers.mjs';
 
-const NOUN_NAMES = ['env', 'tool', 'media', 'vm', 'disk', 'build', 'test', 'release', 'repo'];
+const NOUN_NAMES = ['env', 'tool', 'media', 'vm', 'disk', 'build', 'test', 'release', 'version', 'repo'];
 const ROOT_SYNOPSIS = 'Usage: rebeep <noun> <verb> [args] [options]';
 
 async function drive(argv, { registry = nouns, tty = false, input, env = {}, cwd } = {}) {
@@ -247,7 +247,7 @@ describe('help', () => {
   });
 
   test('exactly the destructive verbs list --yes and --preview', async () => {
-    const expected = ['env clean', 'env reset', 'media remove', 'vm create', 'vm reset', 'vm snapshot'];
+    const expected = ['env clean', 'env reset', 'media remove', 'version bump', 'vm create', 'vm reset', 'vm snapshot'];
     const found = [];
     for (const noun of nouns) {
       for (const verb of noun.verbs) {

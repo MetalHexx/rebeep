@@ -28,5 +28,27 @@ to the package version, from `CHANGELOG.md`). The version is `package.json`'s.
 the boot to C: (it reads the first hard disk's boot sector and jumps to it) and asks for a key only
 when there is no bootable C:. Unattended probes can therefore keep it attached.
 
-Code: `tools/lib/release.mjs`, `tools/commands/release.mjs`; `buildFloppy` in `tools/lib/fat.mjs`,
-`writeZip` in `tools/lib/zip.mjs`.
+## Versioning and publishing
+
+`package.json` is the only place the version is written; the build, the package and `CHANGES.TXT` read it.
+
+```sh
+rebeep version show                  # version, tag, whether the changelog dates it
+rebeep version check                 # package.json, CHANGELOG.md and the tree agree
+rebeep version bump minor --preview  # major|minor|patch|X.Y.Z; --yes to write
+```
+
+`bump` moves `[Unreleased]` under `## [X.Y.Z] - <today>` and writes `package.json`. It never commits, tags or
+pushes. It refuses an empty `[Unreleased]`. An exact version equal to the current one is the first release,
+allowed only while it has no dated entry. `check --release --tag vX.Y.Z` also needs a dated, non-empty entry
+and a matching tag.
+
+Flow: bump on a branch, open a PR, squash-merge. `.github/workflows/release.yml` runs on every push to `main`
+(and `workflow_dispatch` there): with no dated entry for the version it does nothing; if the tag and both
+downloads already exist it does nothing; otherwise it checks, runs `release create`, runs `fsck.fat -n` on the
+floppy, tags the commit (failing if the tag is on another commit) and creates the GitHub Release, or uploads
+with `--clobber` when the release already exists. A re-run finishes a half-done release and never makes a
+second tag. PR CI (`ci.yml`) runs `version check` and `release create --skip-build` on every OS.
+
+Code: `tools/lib/version.mjs`, `tools/commands/version.mjs`, `tools/lib/release.mjs`,
+`tools/commands/release.mjs`; `buildFloppy` in `tools/lib/fat.mjs`, `writeZip` in `tools/lib/zip.mjs`.

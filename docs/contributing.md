@@ -52,6 +52,12 @@ Before you commit or open a PR, run the `update-docs` skill
 checks them against the rules and budgets in the root [AGENTS.md](../AGENTS.md#10-writing-docs).
 Every user-visible change also adds a line under `## [Unreleased]` in [CHANGELOG.md](../CHANGELOG.md).
 
+## Releasing
+
+1. On a branch, run `rebeep version bump <major|minor|patch|X.Y.Z>`. It dates `[Unreleased]` and sets `package.json`.
+2. Open a PR; CI runs `rebeep version check` and a package dry run.
+3. Squash-merge. On `main`, the release workflow tags `vX.Y.Z` and publishes the GitHub Release.
+
 ## Report your host
 
 The environment is verified on Windows. If you run it on Linux or macOS, add your result to the
