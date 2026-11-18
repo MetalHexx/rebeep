@@ -49,7 +49,10 @@ Each profile is two files in `env/86box/profiles/<vm>/`:
 | Drive | Size | Made by | Lifetime |
 |---|---|---|---|
 | **C:** | 128 MB (260 cylinders, 16 heads, 63 sectors) | DOS Setup, or the FreeDOS script | Kept. Snapshot it as the baseline |
-| **D:** | 64 MB (130 cylinders, 16 heads, 63 sectors) | `rebeep disk deploy`, every time | **Rewritten on every deploy.** Don't keep files there |
+| **D:** | 64 MB (130 cylinders, 16 heads, 63 sectors); 128 MB on `slow-386sx` | `rebeep disk deploy`, every time | **Rewritten on every deploy.** Don't keep files there |
+
+`slow-386sx`'s BIOS has one user-defined disk type, shared by both drives, so its D: uses C:'s
+geometry.
 
 The D: layout:
 
@@ -135,6 +138,9 @@ re-pin a tool, follow the procedure in [env/AGENTS.md](../env/AGENTS.md).
 |---|---|
 | "CMOS checksum error" at every boot | Press F1. Take a snapshot after the first good boot, so it's saved |
 | BIOS doesn't see a disk | Del → IDE HDD auto-detection (or set the type to Auto), then save |
+| `DISK BOOT FAILURE` on `slow-386sx` | Del → set Drive C: to the user type with 260 / 16 / 63, precomp 0, landzone 260. See [getting-started](getting-started.md#3-full-path-ms-dos-622-and-your-own-game) |
+| No sound at all, even `ECHO` + Ctrl+G | Check 86Box in the host's volume mixer, then **Action → Hard Reset** |
+| A game hangs on a black screen in `mirror-freedos` | Some old games don't run on FreeDOS. Grand Prix Circuit hangs there in both menu entries; use `mirror-msdos` |
 | `QPICHK: no QPI` | Boot the **ReBeep dev** entry. Clean has no Jemm |
 | `… is running. Quit 86Box first.` | Close the VM window, then retry |
 | Changes made in the 86Box settings dialog vanished | Expected. Edit the profile's `86box.cfg.tmpl` |

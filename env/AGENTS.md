@@ -32,6 +32,8 @@
   checks for.
 - A new VM's first boot stops at "CMOS checksum error". Someone has to press F1 (injected keys
   don't reach 86Box). The NVR keeps it, and `vm snapshot` saves the NVR.
+- `awardsx` (`slow-386sx`) loses its disk types with the defaults, and its one user-defined type
+  is shared by both drives. So its D: uses C:'s geometry (260/16/63, 4 KiB clusters).
 - FreeDOS's own `FREEDOS\BIN` has an older Jemm. `C:\JEMM` must stay first on `PATH`, and the boot
   files use full `C:\JEMM\` paths.
 - `FDAPM POWEROFF` closes a FreeDOS VM, so FreeDOS boot checks can run unattended. MS-DOS 6.22 has

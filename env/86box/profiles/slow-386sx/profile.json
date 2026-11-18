@@ -8,8 +8,8 @@
     "geometry": { "cylinders": 260, "heads": 16, "sectorsPerTrack": 63 }
   },
   "d": {
-    "geometry": { "cylinders": 130, "heads": 16, "sectorsPerTrack": 63 },
-    "clusterSize": 2048,
+    "geometry": { "cylinders": 260, "heads": 16, "sectorsPerTrack": 63 },
+    "clusterSize": 4096,
     "label": "REBEEP"
   },
   "tools": ["86box", "86box-roms", "jemm"],

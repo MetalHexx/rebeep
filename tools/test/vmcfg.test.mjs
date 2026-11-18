@@ -58,7 +58,10 @@ describe('the real profile templates', () => {
       const cfg = renderVmCfg(profile, template, {});
       assert.match(cfg, /^hdd_01_parameters = 63, 16, 260, 0, ide$/m);
       assert.match(cfg, /^hdd_01_fn = c\.img$/m);
-      assert.match(cfg, /^hdd_02_parameters = 63, 16, 130, 0, ide$/m);
+      const d = profile.d.geometry;
+      assert.match(cfg, new RegExp(`^hdd_02_parameters = 63, 16, ${d.cylinders}, 0, ide$`, 'm'));
+      // slow-386sx's BIOS shares one user disk type between both drives, so D: matches C: there.
+      assert.equal(d.cylinders, name === 'slow-386sx' ? 260 : 130);
       assert.match(cfg, /^hdd_02_fn = d\.img$/m);
       assert.doesNotMatch(cfg, /fdd_01_fn/);
       assert.doesNotMatch(cfg, /\{\{|\}\}/);

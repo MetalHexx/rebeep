@@ -68,8 +68,10 @@ rebeep vm run mirror-msdos
 C:\> D:\ENV\MSDOS622\INSTALL
 ```
 
-Restart (**Action → Ctrl+Alt+Del**), let the menu pick **ReBeep dev**, and run your game from
-`D:\GAMES\GPC\`. When it all works, quit 86Box and `rebeep vm snapshot mirror-msdos`.
+Restart (**Action → Ctrl+Alt+Del**), let the menu pick **ReBeep dev**, and run your game from its
+folder under `D:\GAMES\<NAME>\`. The deploy strips one wrapper folder from the zip and keeps the
+rest, so look inside: Grand Prix Circuit lands in `D:\GAMES\GPC\GPAUTO\`. When it all works, quit
+86Box and `rebeep vm snapshot mirror-msdos`.
 
 The slow profile clones that baseline:
 
@@ -77,6 +79,16 @@ The slow profile clones that baseline:
 rebeep vm create slow-386sx
 rebeep vm run slow-386sx
 ```
+
+Its 1990 Award BIOS forgets the disks when it loads defaults, so the first boot needs setup:
+
+1. Press **F1** at the CMOS message. It then stops at `DISK BOOT FAILURE`.
+2. **Action → Ctrl+Alt+Del**, and press **Del** while it counts memory.
+3. Set **Drive C:** to the user-defined type (the last one, 49) with **260** cylinders, **16** heads,
+   **63** sectors, precomp **0**, landzone **260**. Drive D: shares that type, which is why D: on
+   this VM is the same size as C:.
+4. Set **Drive A:** to **1.44M, 3½ in.**, then **F10** to save.
+5. Once it boots, quit 86Box and `rebeep vm snapshot slow-386sx`.
 
 ## 4. Everyday loop
 
@@ -92,7 +104,7 @@ Something broken? `rebeep vm reset <vm> --preview`, then `--yes`.
 
 | Host | Status |
 |---|---|
-| Windows 11 x64 | ✔ verified: tool fetch, FreeDOS VM boot with Jemm + QPIEMU, deploy, snapshot and reset, MS-DOS 6.22 install |
+| Windows 11 x64 | ✔ verified: tool fetch, FreeDOS VM boot with Jemm + QPIEMU, deploy, snapshot and reset, MS-DOS 6.22 install, Grand Prix Circuit with speaker sound on `mirror-msdos` and `slow-386sx` |
 | Linux x64 | unverified; CI runs the tools tests and build |
 | macOS (Apple Silicon / Intel) | unverified; CI runs the tools tests and build |
 
