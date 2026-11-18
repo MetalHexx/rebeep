@@ -1,8 +1,6 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { Readable, Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
 import { CliError } from './cli.mjs';
 
 const ATTEMPTS = 3;
@@ -79,11 +77,19 @@ async function transfer(url, part, { sha256, size, log, signal, touch }) {
   const hash = createHash('sha256');
   let received = 0;
   let nextStep = 10;
-  const meter = new Transform({
-    transform(chunk, _encoding, done) {
+  // Read the body in a tight loop and write each chunk synchronously. Piping it into a file
+  // stream lets backpressure pause undici's parser, and Node 22's undici can then crash with
+  // `assert(!this.paused)` when the connection closes while paused. Reading eagerly avoids that.
+  const reader = res.body.getReader();
+  const fd = fs.openSync(part, 'w');
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
       touch();
-      hash.update(chunk);
-      received += chunk.length;
+      hash.update(value);
+      fs.writeSync(fd, value);
+      received += value.length;
       if (total > 0 && log) {
         const pct = Math.min(100, Math.floor((received / total) * 100));
         while (pct >= nextStep) {
@@ -91,10 +97,13 @@ async function transfer(url, part, { sha256, size, log, signal, touch }) {
           nextStep += 10;
         }
       }
-      done(null, chunk);
-    },
-  });
-  await pipeline(Readable.fromWeb(res.body), meter, fs.createWriteStream(part), { signal });
+    }
+  } catch (err) {
+    await reader.cancel().catch(() => {});
+    throw signal?.aborted && signal.reason ? signal.reason : err;
+  } finally {
+    fs.closeSync(fd);
+  }
 
   const actual = hash.digest('hex');
   if (actual !== sha256.toLowerCase()) {
