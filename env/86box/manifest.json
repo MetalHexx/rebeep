@@ -1,0 +1,196 @@
+{
+  "$comment": "Pinned tools for the ReBeep dev environment. Platform keys are `${process.platform}-${process.arch}`, or `any`. sha256Source: publisher = matches the publisher's own digest or sums file; pinned = hashed by us on first download. See env/AGENTS.md for the pinning procedure.",
+  "schema": 1,
+  "tools": {
+    "86box": {
+      "version": "6.0",
+      "description": "86Box PC emulator, v6.0 build 9001",
+      "homepage": "https://86box.net",
+      "platforms": {
+        "win32-x64": {
+          "url": "https://github.com/86Box/86Box/releases/download/v6.0/86Box-Windows-64-b9001.zip",
+          "sha256": "b86722ed547089f095e8875805411f83c76aafd7d318f67286a5a69aecdd7644",
+          "sha256Source": "publisher",
+          "size": 60046519,
+          "archive": "zip",
+          "bin": "86Box.exe"
+        },
+        "win32-arm64": {
+          "url": "https://github.com/86Box/86Box/releases/download/v6.0/86Box-NDR-Windows-ARM64-b9001.zip",
+          "sha256": "4e97cc6a0b4b424f1bd75ea7dd442ead686890aa5a31ff1cc86be2102c39c5ad",
+          "sha256Source": "publisher",
+          "size": 41664468,
+          "archive": "zip",
+          "bin": "86Box.exe"
+        },
+        "linux-x64": {
+          "url": "https://github.com/86Box/86Box/releases/download/v6.0/86Box-Linux-x86_64-b9001.AppImage",
+          "sha256": "535d3c329f8c32b601103970c86d80aa80298f345452c3524ea2f433624727a4",
+          "sha256Source": "publisher",
+          "size": 93985272,
+          "archive": "appimage",
+          "bin": "squashfs-root/AppRun"
+        },
+        "linux-arm64": {
+          "url": "https://github.com/86Box/86Box/releases/download/v6.0/86Box-NDR-Linux-arm64-b9001.AppImage",
+          "sha256": "da1f0c733d7a35059f153398d9978574d38e80019256b336dda9aaca9453a143",
+          "sha256Source": "publisher",
+          "size": 89393672,
+          "archive": "appimage",
+          "bin": "squashfs-root/AppRun"
+        },
+        "darwin-x64": {
+          "url": "https://github.com/86Box/86Box/releases/download/v6.0/86Box-macOS-x86_64%2Barm64-b9001.zip",
+          "sha256": "fc66fc97225012af20145ae04193911bbf689fc75f89590774a904483140a5a9",
+          "sha256Source": "publisher",
+          "size": 124110592,
+          "archive": "zip",
+          "extractor": "ditto",
+          "bin": "86Box.app/Contents/MacOS/86Box"
+        },
+        "darwin-arm64": {
+          "url": "https://github.com/86Box/86Box/releases/download/v6.0/86Box-macOS-x86_64%2Barm64-b9001.zip",
+          "sha256": "fc66fc97225012af20145ae04193911bbf689fc75f89590774a904483140a5a9",
+          "sha256Source": "publisher",
+          "size": 124110592,
+          "archive": "zip",
+          "extractor": "ditto",
+          "bin": "86Box.app/Contents/MacOS/86Box"
+        }
+      }
+    },
+    "86box-roms": {
+      "version": "6.0",
+      "description": "86Box ROM set, tag v6.0 (source archive, re-pin if GitHub regenerates it)",
+      "homepage": "https://github.com/86Box/roms",
+      "platforms": {
+        "any": {
+          "url": "https://github.com/86Box/roms/archive/refs/tags/v6.0.zip",
+          "file": "86box-roms-v6.0.zip",
+          "sha256": "c0236ab19216d2cc8126222f4ba0cf3cfadd5161e56a38a43387a56f909463d4",
+          "sha256Source": "pinned",
+          "size": 74413652,
+          "archive": "zip",
+          "stripRoot": "roms-6.0",
+          "into": "roms"
+        }
+      }
+    },
+    "jemm": {
+      "version": "5.87",
+      "description": "Jemm memory manager with JLOAD and QPIEMU (DOS binaries)",
+      "homepage": "https://github.com/Baron-von-Riedesel/Jemm",
+      "platforms": {
+        "any": {
+          "url": "https://github.com/Baron-von-Riedesel/Jemm/releases/download/v5.87/JemmB_v587.zip",
+          "sha256": "2584e43d02b5ebfaecd1ecd734a8b79ebef37b7df54e211190aa29e6b469f073",
+          "sha256Source": "publisher",
+          "size": 114171,
+          "archive": "zip"
+        }
+      }
+    },
+    "freedos": {
+      "version": "1.4",
+      "description": "FreeDOS 1.4 LiteUSB (FD14LITE.img), source of the scripted FreeDOS C:",
+      "homepage": "https://www.freedos.org",
+      "platforms": {
+        "any": {
+          "url": "https://download.freedos.org/1.4/FD14-LiteUSB.zip",
+          "sha256": "857dcd2ebf9d3d094320154db5fb5b830acba6fb98f981a95a0ca7ab3350338b",
+          "sha256Source": "publisher",
+          "archive": "zip"
+        }
+      }
+    },
+    "freedos-floppy": {
+      "version": "1.4",
+      "description": "FreeDOS 1.4 FloppyEdition, the fallback interactive installer",
+      "homepage": "https://www.freedos.org",
+      "onDemand": true,
+      "platforms": {
+        "any": {
+          "url": "https://download.freedos.org/1.4/FD14-FloppyEdition.zip",
+          "sha256": "45b1fa7c52dd996c3bfa5e352ffcd410781b952a6ad629f15a4c9ec4bbaefc5a",
+          "sha256Source": "publisher",
+          "archive": "zip"
+        }
+      }
+    },
+    "nasm": {
+      "version": "3.02",
+      "description": "NASM assembler. The source must also assemble on NASM >= 2.16",
+      "homepage": "https://www.nasm.us",
+      "platforms": {
+        "win32-x64": {
+          "url": "https://www.nasm.us/pub/nasm/releasebuilds/3.02/win64/nasm-3.02-win64.zip",
+          "sha256": "161d0bfaff53c2f9e9f3e69fd0672323ebabafd1268976a5cec11be92a19aee7",
+          "sha256Source": "pinned",
+          "size": 641314,
+          "archive": "zip",
+          "stripRoot": "nasm-3.02",
+          "bin": "nasm.exe"
+        },
+        "linux-x64": {
+          "system": { "cmd": "nasm", "versionArgs": ["-v"], "minVersion": "2.16", "hint": "Install it with your package manager, e.g. sudo apt install nasm" }
+        },
+        "linux-arm64": {
+          "system": { "cmd": "nasm", "versionArgs": ["-v"], "minVersion": "2.16", "hint": "Install it with your package manager, e.g. sudo apt install nasm" }
+        },
+        "darwin-x64": {
+          "system": { "cmd": "nasm", "versionArgs": ["-v"], "minVersion": "2.16", "hint": "brew install nasm" }
+        },
+        "darwin-arm64": {
+          "system": { "cmd": "nasm", "versionArgs": ["-v"], "minVersion": "2.16", "hint": "brew install nasm" }
+        }
+      }
+    },
+    "dosbox-x": {
+      "version": "2026.10.01",
+      "description": "DOSBox-X, runs the DOS interpreter tests headless",
+      "homepage": "https://dosbox-x.com",
+      "platforms": {
+        "win32-x64": {
+          "url": "https://github.com/joncampbell123/dosbox-x/releases/download/dosbox-x-v2026.10.01/dosbox-x-vsbuild-win64-2026.10.01-portable.zip",
+          "sha256": "3c50915e63aefe35777d65ebb4391a06b4a2c2342e4c75cbee6bbda4c6916e33",
+          "sha256Source": "publisher",
+          "size": 44575207,
+          "archive": "zip",
+          "bin": "bin/x64/Release/dosbox-x.exe"
+        },
+        "win32-arm64": {
+          "url": "https://github.com/joncampbell123/dosbox-x/releases/download/dosbox-x-v2026.10.01/dosbox-x-vsbuild-arm64-2026.10.01-portable.zip",
+          "sha256": "f1a15bcad81610429aea07ac5b74c81b8f78b58527e34b2fabb19ffafb429614",
+          "sha256Source": "publisher",
+          "size": 40966368,
+          "archive": "zip",
+          "bin": "dosbox-x.exe"
+        },
+        "darwin-x64": {
+          "url": "https://github.com/joncampbell123/dosbox-x/releases/download/dosbox-x-v2026.10.01/dosbox-x-macosx-x86_64-2026.10.01.zip",
+          "sha256": "a0605348355ff4a45c781f124c44122e97156ae3f7d048637f545c9de641bedb",
+          "sha256Source": "publisher",
+          "size": 102364921,
+          "archive": "zip",
+          "extractor": "ditto",
+          "bin": "dosbox-x.app/Contents/MacOS/dosbox-x"
+        },
+        "darwin-arm64": {
+          "url": "https://github.com/joncampbell123/dosbox-x/releases/download/dosbox-x-v2026.10.01/dosbox-x-macosx-arm64-2026.10.01.zip",
+          "sha256": "8514ab856e8ac2611fbdac7adf334c34085c1e00d700a88711f842adec50240f",
+          "sha256Source": "publisher",
+          "size": 94369585,
+          "archive": "zip",
+          "extractor": "ditto",
+          "bin": "dosbox-x.app/Contents/MacOS/dosbox-x"
+        },
+        "linux-x64": {
+          "system": { "cmd": "dosbox-x", "versionArgs": ["--version"], "minVersion": "2024.0", "hint": "Install it from your distro, or Flatpak: flatpak install flathub com.dosbox_x.DOSBox-X" }
+        },
+        "linux-arm64": {
+          "system": { "cmd": "dosbox-x", "versionArgs": ["--version"], "minVersion": "2024.0", "hint": "Install it from your distro, or Flatpak: flatpak install flathub com.dosbox_x.DOSBox-X" }
+        }
+      }
+    }
+  }
+}
