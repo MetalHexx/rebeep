@@ -86,7 +86,8 @@ async function runInterpreter(ctx, repo) {
     fs.rmSync(resultFile, { force: true });
     ctx.log.step(`Running ${name}.COM in DOSBox-X`);
     const run = await runTool(dosbox, [
-      '-silent',
+      '-set',
+      'mixer,nosound=true', // unlike -silent, keeps the Sound Blaster and its OPL emulated
       '-exit',
       '-nogui',
       '-nomenu',

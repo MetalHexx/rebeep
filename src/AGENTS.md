@@ -8,10 +8,10 @@
 |---|---|
 | `targets.json` | What `rebeep build run` assembles: name, source, output format |
 | `rebeep.asm` | Entry point. A placeholder that prints its version today |
-| `include/` | Shared constants and macros. `speaker.inc`: port numbers, port `61h` bits, interpreter modes and events, the translatable divisor range |
+| `include/` | Shared constants and macros. `speaker.inc`: port numbers, port `61h` bits, interpreter modes and events, the translatable divisor range. `opl.inc`: OPL ports, register bases, channel 8's operator offsets |
 | `startup/` | Checks, option parsing, help, going resident. Freed before going resident |
 | `capture/` | QPI trap handler and port masking |
-| `engine/` | Interpreter, OPL target and their state. `interp.asm` is the speaker interpreter |
+| `engine/` | Interpreter, OPL target and their state. `interp.asm` is the speaker interpreter, `opl.asm` the OPL render target |
 | `hotkey/` | Keyboard hook |
 | `resident/` | TSR identification and unload |
 | `diag/qpichk.asm` | `QPICHK.COM`: reports whether Jemm's QPIEMU is up. Deployed to `D:\ENV\` and run by `BOOT.BAT` |
@@ -31,6 +31,13 @@
 - The interpreter (`engine/interp.asm`) is register-based: `interp_reset`, `interp_sync`,
   `interp_write` (AL = byte, DX = port; out AL = event, AH = mode, BX = divisor). Each preserves
   every register but its outputs. It is 8086-only: a 386 instruction there fails the build.
+- The OPL target (`engine/opl.asm`) plays one voice on channel 8 and writes only that channel's
+  registers, global `01h` and (OPL3) `105h`. `opl_write` is the single path to the chip: define
+  `OPL_TEST_SINK` as a label before the include and it jumps there instead of the ports.
+- OPL3 pitfalls: `C0h` must carry `30h` (left/right) or the channel is silent in NEW mode, and
+  `opl_pitch` must never clear the key bit or a glide retriggers. OPL2 has no square waveform, so the
+  faithful voice is a 2:1 FM approximation (values documented in the file). Write delays are status
+  reads, picked by chip (OPL2 6/35, OPL3 2/2).
 - A PIT control word never changes the current tone or verdict. The new counting mode and pitch
   apply only when the count completes, and the first byte of an LSB-then-MSB count leaves the
   pitch alone. Without that, a mid-tone control word or half-written count would cut a tone.

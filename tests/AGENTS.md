@@ -27,12 +27,20 @@
   divisor 0, LSB-only and MSB-only access, non-square mode, channel 0/1 and latch/read-back
   ignored, glide as a pitch event, control word mid-tone, direct toggling, the divisor range
   edges, `interp_sync`, on/off/on, and a 20-beep stepped pattern.
+- `interpreter/t_opl.asm` (`T_OPL.COM`) covers the OPL target: real chip detection, block/F-number
+  against the formula, and, through a recording sink, the key bit, channel-8-only writes, the OPL3
+  `C0h` bits, volume and shutdown, once as an OPL2 and once as an OPL3.
+- Listening check: `T_OPL /L` plays the faithful voice then each patch, one second each at 440 Hz.
+  Build it with `rebeep test run --suite interpreter`, then run `build/tests/T_OPL.COM /L` in
+  DOSBox-X once with `oplmode=opl2` and once with `opl3` (`-set sblaster,oplmode=opl2`), with sound on.
 - The CLI's own unit tests live in `tools/test/`, not here.
 
 ## Pitfalls
 
 - A test program is a `.COM`: `org 100h`, `jmp` past the included module and library, then the
   cases. Both include paths come from the suite (`tests/interpreter`, `src`, `src/include`).
+- The suite runs DOSBox-X with `-set mixer,nosound=true`, not `-silent`: `-silent` removes the Sound
+  Blaster, so no OPL is found at `388h`.
 - CI runs the interpreter suite on `windows-latest` only, with `SDL_VIDEODRIVER` and
   `SDL_AUDIODRIVER` set to `dummy`. Locally it opens a DOSBox-X window briefly.
 
