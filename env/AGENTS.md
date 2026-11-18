@@ -30,6 +30,12 @@
 - Install mode attaches no D:, so DOS Setup can't partition the wrong disk.
 - A missing ROM makes 86Box silently switch machines. `profile.json` lists the ROMs `vm run`
   checks for.
+- A new VM's first boot stops at "CMOS checksum error". Someone has to press F1 (injected keys
+  don't reach 86Box). The NVR keeps it, and `vm snapshot` saves the NVR.
+- FreeDOS's own `FREEDOS\BIN` has an older Jemm. `C:\JEMM` must stay first on `PATH`, and the boot
+  files use full `C:\JEMM\` paths.
+- `FDAPM POWEROFF` closes a FreeDOS VM, so FreeDOS boot checks can run unattended. MS-DOS 6.22 has
+  no equivalent.
 
 ## Run / test
 

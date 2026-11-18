@@ -14,6 +14,7 @@
 | `engine/` | Interpreter, OPL target and their state |
 | `hotkey/` | Keyboard hook |
 | `resident/` | TSR identification and unload |
+| `diag/qpichk.asm` | `QPICHK.COM`: reports whether Jemm's QPIEMU is up. Deployed to `D:\ENV\` and run by `BOOT.BAT` |
 
 ## Rules
 
