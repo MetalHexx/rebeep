@@ -54,5 +54,14 @@ jobs:
       - name: Build
         run: node tools/rebeep.mjs build run
 
+      - name: Interpreter tests (DOSBox-X, Windows only)
+        if: runner.os == 'Windows'
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          node tools/rebeep.mjs tool fetch dosbox-x
+          node tools/rebeep.mjs test run --suite interpreter
+
       - name: Payload guard
         run: node tools/rebeep.mjs repo check --range origin/main..HEAD --strict

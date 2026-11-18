@@ -1,6 +1,6 @@
 # tests
 
-> DOS test programs, assembled from the same source as ReBeep. Empty until the TSR is written.
+> DOS test programs, assembled from the same source as ReBeep.
 
 ## What's here
 
@@ -20,11 +20,21 @@
   - `DONE <n>` as the **last** line, where n is the number of PASS and FAIL lines
 
   A missing or miscounted `DONE`, any `FAIL`, no results, or hitting the time limit fails the run.
+- `interpreter/testlib.inc` is the shared helper library: `CASE "name"` ... `ENDCASE` brackets a
+  case, `t_check` (AX = CX) and `t_checkd` (also BX = SI) record the first mismatch, and `t_done`
+  prints `DONE <n>` last and exits. Only the first failed check of a case is reported, with its step number.
+- `interpreter/t_interp.asm` (`T_INTERP.COM`) covers the speaker interpreter: LSB/MSB sequencing,
+  divisor 0, LSB-only and MSB-only access, non-square mode, channel 0/1 and latch/read-back
+  ignored, glide as a pitch event, control word mid-tone, direct toggling, the divisor range
+  edges, `interp_sync`, on/off/on, and a 20-beep stepped pattern.
 - The CLI's own unit tests live in `tools/test/`, not here.
 
 ## Pitfalls
 
-_None recorded yet._
+- A test program is a `.COM`: `org 100h`, `jmp` past the included module and library, then the
+  cases. Both include paths come from the suite (`tests/interpreter`, `src`, `src/include`).
+- CI runs the interpreter suite on `windows-latest` only, with `SDL_VIDEODRIVER` and
+  `SDL_AUDIODRIVER` set to `dummy`. Locally it opens a DOSBox-X window briefly.
 
 ## Run / test
 
