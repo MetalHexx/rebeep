@@ -1,0 +1,30 @@
+# Build output
+build/
+
+# Local scratch (the environment itself lives in ~/.rebeep, outside the repo)
+.local/
+node_modules/
+
+# Payloads never belong in the repo: disk and floppy images, ROMs, archives
+*.img
+*.ima
+*.vhd
+*.hdi
+*.iso
+*.rom
+*.bin
+*.nvr
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.dmg
+*.AppImage
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+.vscode/
+.idea/

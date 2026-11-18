@@ -1,0 +1,10 @@
+{
+  "targets": [
+    {
+      "name": "REBEEP.COM",
+      "source": "rebeep.asm",
+      "format": "bin",
+      "deploy": "REBEEP"
+    }
+  ]
+}
