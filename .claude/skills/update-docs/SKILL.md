@@ -35,20 +35,16 @@ Find the owner of each fact in the doc map (AGENTS.md section 10), then:
 
 ## 4. Rewrite in place
 
-Fix the stale lines and delete the ones that are no longer true. Never append "Update:" or dated
-notes. History lives in git and `CHANGELOG.md`.
+Fix or delete each stale line, as AGENTS.md section 10 directs.
 
 ## 5. Hold altitude and budget
 
-Count lines with `wc -l <file>` and compare with the budget table in AGENTS.md section 10. Over
-budget means compress or link out. Split into a nested `AGENTS.md` only for a subfolder with its own
-invariants. Never raise a budget.
+Count lines with `wc -l <file>`, compare with the budget table in AGENTS.md section 10, and bring any
+over-budget doc back inside it the way section 10 allows.
 
 ## 6. Final pass
 
-- Each fact lives in one place. Link to it; don't copy it.
-- No planning-doc references, private paths, roadmap or marketing.
-- No agent attribution (`Co-Authored-By` or similar) in any file.
+- Check each touched doc against the rules in AGENTS.md section 10.
 - Re-run the line counts and link checks on every file you touched.
 
 ## Report

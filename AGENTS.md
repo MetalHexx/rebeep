@@ -103,7 +103,7 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM → run `D
   description.
 - PRs target `main` and open as drafts. Fill in the PR template.
 - Update the affected `AGENTS.md`, skill reference and docs in the same PR as the code.
-- Before a commit or PR, run the `update-docs` skill (or follow [section 10](#10-writing-docs) by hand).
+- Doc rules and the pre-commit `update-docs` run: [section 10](#10-writing-docs).
 - Every user-visible change adds a player-facing line under `## [Unreleased]` in
   [CHANGELOG.md](CHANGELOG.md), in the same PR. Write for players: "The hotkey now cycles instrument
   patches", not "refactored the trap handler".
@@ -117,8 +117,8 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM → run `D
 
 ## 10. Writing docs
 
-The `update-docs` skill applies these rules to a change. Each doc has one job. When two docs need
-the same fact, one owns it and the others link to it.
+Run the `update-docs` skill before every commit or PR; it applies these rules to the change. Each
+doc has one job. When two docs need the same fact, one owns it and the others link to it.
 
 | Doc | Job |
 |---|---|
@@ -126,8 +126,7 @@ the same fact, one owns it and the others link to it.
 | `docs/README.md` | The index: one line per doc |
 | `docs/getting-started.md` | Zero to first boot on both paths, plus the Verified-on table |
 | `docs/86box-environment.md` | VMs, disks, boot flow, snapshot and reset. Owns troubleshooting |
-| `docs/contributing.md` | Workflow, commits, PR rules, payload rules, releasing |
-| `docs/usage.md`, `docs/how-it-works.md`, `docs/compatibility.md` | Player usage, the design for curious readers, tested games and hardware |
+| `docs/contributing.md` | Workflow, commits, PR rules, payload rules |
 | `CHANGELOG.md` | Player-facing changes |
 | Folder `AGENTS.md` | That folder's rules and pitfalls |
 | CLI help | The source of truth for commands and options (`rebeep <noun> <verb> --help`) |
@@ -142,7 +141,7 @@ with its own invariants, split into a nested `AGENTS.md`. Never raise a budget.
 | `README.md` | Front door | ≤ 150 lines |
 | `docs/*.md` | Tasks and outcomes for people | ≤ 250 lines per page |
 | Skill `SKILL.md` · skill reference | Routing and procedure; points to `AGENTS.md` | ≤ 100 · ≤ 60 lines |
-| `CHANGELOG.md`, `release/README.TXT` | Player language only | Short entries; `README.TXT` lines ≤ 80 columns |
+| `CHANGELOG.md` | Player language only | Short entries |
 
 **Rules:**
 

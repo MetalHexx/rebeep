@@ -3,13 +3,13 @@
 // and rules are in tests/vm/AGENTS.md.
 import fs from 'node:fs';
 import path from 'node:path';
-import { applyReset, launchVm, planReset } from '../commands/vm.mjs';
-import { readPackageVersion } from '../commands/build.mjs';
-import { deliveryFor, deployDisk } from '../commands/disk.mjs';
-import { evaluateResults, vmProbes } from '../commands/test.mjs';
-import { CliError } from './cli.mjs';
-import { readImage, toCrlf } from './fat.mjs';
-import { assertNotRunning, isLocked, isRunning } from './proc.mjs';
+import build, { readPackageVersion } from './build.mjs';
+import { applyReset, launchVm, planReset } from './vm.mjs';
+import { deliveryFor, deployDisk } from './disk.mjs';
+import { CliError } from '../lib/cli.mjs';
+import { readImage, toCrlf } from '../lib/fat.mjs';
+import { assertNotRunning, isLocked, isRunning } from '../lib/proc.mjs';
+import { evaluateResults, vmProbes } from '../lib/suites.mjs';
 
 const VM_NAME = 'mirror-freedos';
 const DEFAULT_TIMEOUT_S = 150;
@@ -79,29 +79,10 @@ export function composeProbeDelivery(ctx, vm, probeBytes) {
   return { ...base, files, dirs: [...base.dirs, 'TESTS'] };
 }
 
-/** Whether `build/release/release.json` was made from the targets in the current `build/build.json`. */
-function floppyIsStale(repo) {
-  const read = (file) => {
-    try {
-      return JSON.parse(fs.readFileSync(file, 'utf8'));
-    } catch {
-      return null;
-    }
-  };
-  const release = read(path.join(repo.build, 'release', 'release.json'));
-  if (!Array.isArray(release?.targets)) return true;
-  const built = read(path.join(repo.build, 'build.json'));
-  if (!Array.isArray(built?.targets)) return false;
-  const released = new Map(release.targets.map((t) => [t.name, t.sha256]));
-  return built.targets.some((t) => released.get(t.name) !== t.sha256);
-}
-
-/** Runs `build run` through the registry, so probes never test stale binaries. */
+/** Runs `build run` first, so probes never test stale binaries. */
 async function buildFirst(ctx) {
-  const { default: nouns } = await import('../commands/index.mjs');
-  const build = nouns.find((n) => n.name === 'build')?.verbs.find((v) => v.name === 'run');
-  if (!build) throw new CliError('build run is not registered');
-  await build.run({ ...ctx, noun: 'build', verb: 'run', args: {}, opts: { deploy: false } });
+  const run = build.verbs.find((v) => v.name === 'run');
+  await run.run({ ...ctx, noun: 'build', verb: 'run', args: {}, opts: { deploy: false } });
 }
 
 /** Resolves `--probe` (with or without `.BAT`, any case) to a file name, or every probe. */
@@ -169,8 +150,11 @@ async function runProbe(ctx, repo, file) {
   let floppy;
   if (header.floppy) {
     floppy = path.join(repo.root, ...header.floppy.split(/[\\/]/));
-    if (!fs.existsSync(floppy)) throw new CliError(`${program}: the floppy ${header.floppy} does not exist`, { hint: 'rebeep release create' });
-    if (floppyIsStale(repo)) ctx.log.warn('the floppy is older than the build: run rebeep release create');
+    if (!fs.existsSync(floppy)) {
+      throw new CliError(`${program}: the floppy ${header.floppy} does not exist`, {
+        hint: 'The suite does not build floppy images: create the file at that path, or fix the VM-FLOPPY line.',
+      });
+    }
   }
   let resetPlan = null;
   if (header.reset) {

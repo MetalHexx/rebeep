@@ -67,6 +67,13 @@ describe('the real profile templates', () => {
       assert.doesNotMatch(cfg, /\{\{|\}\}/);
     });
 
+    test(`${name}: normal mode with a floppy keeps C: and D: and attaches the floppy as A:`, () => {
+      const cfg = renderVmCfg(profile, template, { floppy: 'REBEEP-1.2.3.img' });
+      assert.match(cfg, /^fdd_01_fn = floppy\/REBEEP-1\.2\.3\.img$/m);
+      assert.match(cfg, /^hdd_01_fn = c\.img$/m);
+      assert.match(cfg, /^hdd_02_fn = d\.img$/m);
+    });
+
     test(`${name}: install mode attaches the first floppy and no D:`, () => {
       const cfg = renderVmCfg(profile, template, { install: true, floppy: 'DISK1.IMA' });
       assert.match(cfg, /^fdd_01_fn = floppy\/DISK1\.IMA$/m);

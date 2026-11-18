@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, test } from 'node:test';
-import { evaluateResults, parseResults, vmProbes } from '../commands/test.mjs';
 import { deliveryFor } from '../commands/disk.mjs';
+import { composeProbeDelivery, parseProbeHeader } from '../commands/vmtest.mjs';
 import { readImage, toCrlf } from '../lib/fat.mjs';
 import { repoLayout } from '../lib/paths.mjs';
-import { composeProbeDelivery, parseProbeHeader } from '../lib/vmtest.mjs';
+import { evaluateResults, parseResults, vmProbes } from '../lib/suites.mjs';
 import { alive, seedEnv, waitFor, writeFile } from './vmenv.mjs';
 
 const VM = 'mirror-freedos';
@@ -185,6 +185,40 @@ describe('test run --suite vm (fake 86Box)', () => {
     assert.match(programs(r)[0].problem, /no RESULT.TXT written/);
   });
 
+  test('VM-FLOPPY attaches a copy of the floppy as A:, names it in the cfg, and never writes the source', () => {
+    const source = path.join(root, 'build', 'release', 'rebeep-1.2.3.img');
+    const bytes = Buffer.from([0xde, 0xad, 0xbe, 0xef]);
+    writeFile(source, bytes);
+    probes({ 'P_FLOP.BAT': 'REM VM-FLOPPY: build/release/rebeep-{version}.img\r\n' });
+    resultFile('PASS one\r\nDONE\r\n');
+    const r = run('--probe', 'P_FLOP');
+    assert.equal(r.code, 0, r.stderr);
+
+    const vm = s.paths.vm(VM);
+    assert.match(fs.readFileSync(vm.cfg, 'utf8'), /^fdd_01_fn = floppy\/rebeep-1\.2\.3\.img$/m);
+    assert.deepEqual(fs.readFileSync(path.join(vm.floppy, 'rebeep-1.2.3.img')), bytes);
+    assert.deepEqual(fs.readFileSync(source), bytes);
+  });
+
+  test('VM-RESET restores C:, empties floppy/ and leaves the normal D: behind', () => {
+    assert.equal(s.rebeep('vm', 'snapshot', VM, '--yes').code, 0);
+    const vm = s.paths.vm(VM);
+    const cleanC = fs.readFileSync(s.paths.baseline(VM).cImg);
+    fs.writeFileSync(vm.cImg, 'damaged by an earlier run');
+    writeFile(path.join(vm.floppy, 'LEFTOVER.IMA'), 'x');
+    probes({ 'P_RESET.BAT': 'REM VM-RESET\r\nECHO probe\r\n' });
+    resultFile('PASS one\r\nDONE\r\n');
+    const r = run('--probe', 'P_RESET');
+    assert.equal(r.code, 0, r.stderr);
+
+    assert.deepEqual(fs.readFileSync(vm.cImg), cleanC);
+    assert.equal(fs.existsSync(path.join(vm.floppy, 'LEFTOVER.IMA')), false);
+    const image = dImage();
+    assert.equal(image.exists('TESTS'), false);
+    const normalBoot = toCrlf(fs.readFileSync(path.join(root, 'env', '86box', 'dos', 'common', 'BOOT.BAT')));
+    assert.deepEqual(image.readFile('ENV/BOOT.BAT'), normalBoot);
+  });
+
   test('every probe runs in name order when none is named', () => {
     probes({ 'P_B.BAT': 'REM b\r\n', 'P_A.BAT': 'REM a\r\n', 'NOT_ONE.BAT': 'REM c\r\n' });
     assert.deepEqual(vmProbes(root), ['P_A.BAT', 'P_B.BAT']);
@@ -211,7 +245,7 @@ describe('test run --suite vm (fake 86Box)', () => {
     const floppy = run('--probe', 'P_FLOP');
     assert.equal(floppy.code, 1);
     assert.match(floppy.envelope.error.message, /none-1\.2\.3\.img/);
-    assert.match(floppy.envelope.error.hint, /rebeep release create/);
+    assert.match(floppy.envelope.error.hint, /VM-FLOPPY/);
 
     const reset = run('--probe', 'P_RESET');
     assert.equal(reset.code, 1);

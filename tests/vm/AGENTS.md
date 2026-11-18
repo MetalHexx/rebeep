@@ -19,7 +19,7 @@
   - `REM VM: mirror-freedos`: the default and the only value; only FreeDOS can power itself off.
   - `REM VM-TIMEOUT: <seconds>`: default 150.
   - `REM VM-FLOPPY: <repo-relative path>`: attached as A: from a copy, `{version}` is `package.json`'s
-    version; the original is never written. Make the image with `rebeep release create`.
+    version; the original is never written. The suite does not build the file; it must exist first.
   - `REM VM-RESET`: restore C: from the VM's baseline afterwards; needs a baseline.
 - **Results.** The interpreter protocol in [../AGENTS.md](../AGENTS.md), relaxed once: the last line may
   be a bare `DONE`, since a batch file can't count (`DONE <n>` must still match). Any `FAIL` fails;
