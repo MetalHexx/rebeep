@@ -87,7 +87,7 @@ Check the output of `rebeep disk deploy` (or `rebeep disk list`) when a game mis
    - sets `PATH` (with `C:\JEMM` first) and `BLASTER=A220 I5 D1 H5 T6`;
    - sets `RBDEV=1` on the dev entry;
    - calls `D:\ENV\BOOT.BAT`.
-3. **BOOT.BAT**, on the dev entry:
+3. **BOOT.BAT** adds `D:\REBEEP` to `PATH` on every boot, then, on the dev entry:
    - runs `JLOAD QPIEMU.DLL`, then `QPICHK`;
    - `LH D:\REBEEP\REBEEP` if `D:\REBEEP\AUTOLOAD.FLG` exists. `rebeep build run --deploy` writes
      that flag for every build target marked `"autoload": true` in `src/targets.json` (`REBEEP.COM` is).
