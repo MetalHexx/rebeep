@@ -17,6 +17,7 @@ CW_CH1          equ 076h
 CW_READBACK     equ 0C2h
 
 D1000           equ 04A9h       ; 1000 Hz
+GPC_ENGINE      equ 0BB8h       ; 3000, about 398 Hz: an engine pitch
 
         jmp     start
 
@@ -91,7 +92,13 @@ start:
         W       PIT_CTRL, CW_CH2_LSBMSB
         W       PIT_CH2, 00h
         W       PIT_CH2, 00h
-        EXPECT  EV_TONE_OFF, M_RAW
+        EXPECT  EV_TONE_OFF, M_REST
+        mov     byte [interp_low], 1
+        COUNT   D1000
+        EXPECTD EV_TONE_ON, M_TONE, D1000
+        COUNT   0
+        EXPECTD EV_PITCH, M_TONE, 0
+        mov     byte [interp_low], 0
         ENDCASE
 
         CASE    "lsb_only_access"
@@ -207,11 +214,52 @@ start:
         call    interp_reset
         W       SYS_CTRL, SC_GATE2 | SC_SPKR
         COUNT   DIV_MAX + 1
-        EXPECT  EV_NONE, M_RAW
+        EXPECT  EV_NONE, M_REST
         COUNT   DIV_MAX
         EXPECTD EV_TONE_ON, M_TONE, DIV_MAX
         COUNT   DIV_MAX + 1
+        EXPECT  EV_TONE_OFF, M_REST
+        ENDCASE
+
+        ; Below 20 Hz is a rest by default, whatever the count; it still needs the gate and
+        ; speaker bits, like a tone.
+        CASE    "low_counts_rest"
+        call    interp_reset
+        W       SYS_CTRL, SC_GATE2 | SC_SPKR
+        COUNT   0FFFFh
+        EXPECT  EV_NONE, M_REST
+        COUNT   0
+        EXPECT  EV_NONE, M_REST
+        COUNT   DIV_MAX + 1
+        EXPECT  EV_NONE, M_REST
+        W       SYS_CTRL, SC_SPKR
+        EXPECT  EV_NONE, M_RAW
+        W       SYS_CTRL, SC_GATE2
+        EXPECT  EV_NONE, M_SILENT
+        W       SYS_CTRL, SC_GATE2 | SC_SPKR
+        EXPECT  EV_NONE, M_REST
+        COUNT   D1000
+        EXPECTD EV_TONE_ON, M_TONE, D1000
+        COUNT   0FFFFh
+        EXPECT  EV_TONE_OFF, M_REST
+        ENDCASE
+
+        ; With interp_low set the same counts are tones, gliding like any other pitch.
+        CASE    "low_counts_play"
+        call    interp_reset
+        mov     byte [interp_low], 1
+        W       SYS_CTRL, SC_GATE2 | SC_SPKR
+        COUNT   0FFFFh
+        EXPECTD EV_TONE_ON, M_TONE, 0FFFFh
+        COUNT   DIV_MAX + 1
+        EXPECTD EV_PITCH, M_TONE, DIV_MAX + 1
+        COUNT   0
+        EXPECTD EV_PITCH, M_TONE, 0
+        COUNT   D1000
+        EXPECTD EV_PITCH, M_TONE, D1000
+        COUNT   DIV_MIN - 1
         EXPECT  EV_TONE_OFF, M_RAW
+        mov     byte [interp_low], 0
         ENDCASE
 
         CASE    "sync_speaker_on_is_raw"
@@ -365,6 +413,50 @@ start:
         sub     word [beep_pitch], 100
         dec     byte [beep_n]
         jnz     .gate
+        ENDCASE
+
+        ; Grand Prix Circuit's race engine: 40 ms of the engine pitch, then 20 ms of count
+        ; FFFFh as a rest, each slot a new count on 42h then 61h |= 3. 43h is never written.
+        CASE    "gpc_engine_loop"
+        call    interp_reset                    ; channel 2 as the BIOS leaves it: LSB/MSB, mode 3
+        W       SYS_CTRL, SC_GATE2 | SC_SPKR
+        mov     byte [beep_n], 5
+.engine:
+        W       PIT_CH2, GPC_ENGINE & 0FFh
+        W       PIT_CH2, GPC_ENGINE >> 8
+        EXPECTD EV_TONE_ON, M_TONE, GPC_ENGINE
+        W       SYS_CTRL, SC_GATE2 | SC_SPKR
+        EXPECTD EV_NONE, M_TONE, GPC_ENGINE
+        W       PIT_CH2, 0FFh
+        W       PIT_CH2, 0FFh
+        EXPECT  EV_TONE_OFF, M_REST
+        W       SYS_CTRL, SC_GATE2 | SC_SPKR
+        EXPECT  EV_NONE, M_REST
+        dec     byte [beep_n]
+        jnz     .engine
+        ENDCASE
+
+        ; The same loop with interp_low set: one note, gliding between the two pitches.
+        CASE    "gpc_engine_loop_low"
+        call    interp_reset
+        mov     byte [interp_low], 1
+        W       SYS_CTRL, SC_GATE2 | SC_SPKR
+        W       PIT_CH2, GPC_ENGINE & 0FFh
+        W       PIT_CH2, GPC_ENGINE >> 8
+        EXPECTD EV_TONE_ON, M_TONE, GPC_ENGINE
+        mov     byte [beep_n], 5
+.engineLow:
+        W       PIT_CH2, 0FFh
+        W       PIT_CH2, 0FFh
+        EXPECTD EV_PITCH, M_TONE, 0FFFFh
+        W       SYS_CTRL, SC_GATE2 | SC_SPKR
+        EXPECTD EV_NONE, M_TONE, 0FFFFh
+        W       PIT_CH2, GPC_ENGINE & 0FFh
+        W       PIT_CH2, GPC_ENGINE >> 8
+        EXPECTD EV_PITCH, M_TONE, GPC_ENGINE
+        dec     byte [beep_n]
+        jnz     .engineLow
+        mov     byte [interp_low], 0
         ENDCASE
 
         jmp     t_done

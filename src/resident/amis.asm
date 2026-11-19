@@ -53,6 +53,7 @@ amis_isr:
         jmp     .fail
 
 .apply:
+        call    rb_apply_low            ; the interpreter's: it applies with the traps off too
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
         jz      .ok
         call    rb_apply_config
@@ -116,6 +117,14 @@ rb_opl_start:
         call    opl_set_voice
         mov     al, [RB_STATE + RBS_VOLUME]
         jmp     opl_set_volume
+
+; rb_apply_low: hand RB_STATE's /L flag to the interpreter. It takes effect from the game's
+; next speaker write. Clobbers AL.
+rb_apply_low:
+        mov     al, [RB_STATE + RBS_FLAGS]
+        and     al, RBS_F_LOWFM
+        mov     [interp_low], al
+        ret
 
 ; rb_apply_config: push RB_STATE's voice, volume and translation flag to the engine.
 ; Only valid while the traps are on, when the OPL is ours.

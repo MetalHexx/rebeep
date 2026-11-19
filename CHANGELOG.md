@@ -11,7 +11,8 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 - First release. ReBeep is a TSR for DOS games that only know the PC speaker. It plays their speaker
   tones on the Sound Blaster's FM chip (OPL2 or OPL3) instead. Anything it can't translate, such as
   noise or a pitch the FM chip can't reach, still plays on the real speaker, and the switch between the
-  two is immediate.
+  two is immediate. Pitches below 20 Hz, which games use as rests, stay silent; `REBEEP /L:1` plays them
+  as a low FM note.
 - Load it with `REBEEP`, or `LH REBEEP` to keep it out of conventional memory. Ctrl+Alt+B toggles
   between the FM chip and the speaker, and Ctrl+Alt+N cycles the voice. `REBEEP /S` shows the status,
   `/OFF`, `/ON` and `/U` release, retake and unload it, and `REBEEP /?` lists every option and exit

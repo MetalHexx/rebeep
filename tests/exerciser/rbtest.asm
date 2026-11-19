@@ -1005,6 +1005,7 @@ run_auto:
         call    chk_masked
         call    chk_raw_unmasked
         call    chk_handoff
+        call    chk_rest_held
         call    chk_gate_masked
         call    chk_gate_rmw
         call    chk_gate_out2
@@ -1396,6 +1397,72 @@ chk_handoff:
 .ok:
         PASS    "handoff"
         call    spk_off
+        ret
+
+; AL = RBS_F_LOWFM or 0: set or clear the resident /L flag (interrupts off around the
+; byte), then apply it through AMIS 11h. Clobbers BX, CX, DX.
+set_low:
+        push    es
+        push    si
+        mov     es, [st_seg]
+        mov     si, [st_off]
+        pushf
+        cli
+        and     byte [es:si + RBS_FLAGS], 0FFh ^ RBS_F_LOWFM
+        or      [es:si + RBS_FLAGS], al
+        popf
+        pop     si
+        pop     es
+        mov     al, AMIS_FN_APPLY
+        jmp     amis_fn
+
+; A count below 20 Hz mid-tone is a rest by default: the real speaker stays held (01) and
+; the mode is REST. With the /L flag set it is a tone. The flag ends as it was found.
+chk_rest_held:
+        mov     bx, RBS_FLAGS
+        call    get_b
+        and     al, RBS_F_LOWFM
+        mov     [g_low], al
+        xor     al, al
+        call    set_low
+        call    spk_off
+        mov     ax, GOOD_DIV
+        call    pit_tone
+        call    spk_on
+        mov     ax, 0FFFFh
+        call    set_div
+        call    real_view
+        mov     [g_voff], ax
+        call    st_mode
+        mov     [g_mode], al
+        mov     al, RBS_F_LOWFM
+        call    set_low
+        mov     ax, 0FFFFh              ; the flag applies from the next write
+        call    set_div
+        call    st_mode
+        mov     [g_mode2], al
+        mov     al, [g_low]
+        call    set_low
+        call    spk_off
+        mov     ax, [g_voff]
+        cmp     ax, (3 << 8) | SC_GATE2
+        je      .mode
+        FAIL2B  "rest-held", "real 61h bits 0-1=", " own="
+        ret
+.mode:
+        mov     al, [g_mode]
+        cmp     al, M_REST
+        je      .low
+        FAILB   "rest-held", "mode="
+        ret
+.low:
+        mov     al, [g_mode2]
+        cmp     al, M_TONE
+        je      .ok
+        FAILB   "rest-held", "with /L:1, mode="
+        ret
+.ok:
+        PASS    "rest-held"
         ret
 
 ; --- gate-keyed notes (Grand Prix Circuit): the speaker bit stays on and the gate alone
@@ -1817,7 +1884,7 @@ s_menu      db "RBTEST - ReBeep speaker exerciser. Esc quits.", 13, 10
             db "  4  stepped beeps, 30 ms on / 20 ms off", 13, 10
             db "  5  direct toggling, gate off (noise)", 13, 10
             db "  6  out-of-range pitch (divisor 100)", 13, 10
-            db "  7  divisor 0", 13, 10
+            db "  7  divisor 0, below 20 Hz (silent unless REBEEP /L:1)", 13, 10
             db "  8  timing loop on 61h bit 5", 13, 10
             db "  9  silence and restore", 13, 10
             db "  0  stepped beeps keyed by the gate (Grand Prix Circuit)", 13, 10
@@ -1851,6 +1918,10 @@ cnt         db 0
 g_off       db 0
 g_on        db 0
 g_real      db 0
+g_low       db 0
+g_mode      db 0
+g_mode2     db 0
+g_voff      dw 0
 label_ptr   dw 0
 label_len   dw 0
 st_seg      dw 0

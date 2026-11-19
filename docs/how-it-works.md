@@ -23,8 +23,8 @@ silences the real speaker while the FM chip plays the tone.
 
 ## Port `61h`: masking and the game's view
 
-While the OPL plays a tone, ReBeep holds one bit of the real `61h` clear so the PC speaker stays
-quiet. It picks the bit that leaves the speaker where it rests, because a speaker that moves clicks:
+While the OPL plays a tone, or the game rests below 20 Hz (see the interpreter), ReBeep holds one
+bit of the real `61h` clear so the PC speaker stays quiet. It picks the bit that leaves the speaker where it rests, because a speaker that moves clicks:
 
 - Most games switch the timer gate (bit 0) and speaker data (bit 1) on and off together. Between
   notes the speaker rests at 0, so ReBeep holds bit 1 clear.
@@ -46,17 +46,23 @@ Neither happens in games that switch both bits together.
 
 ## The interpreter
 
-The interpreter follows channel 2 and `61h` from the bytes written, and is always in one of three
+The interpreter follows channel 2 and `61h` from the bytes written, and is always in one of four
 states:
 
 | State | When | Plays on |
 |---|---|---|
 | SILENT | Speaker data bit is off | Nothing |
 | TONE | Speaker on, gate on, a completed count in square-wave mode, divisor 193 to 59659 (about 20 to 6182 Hz) | The OPL |
-| RAW | Speaker on, but not a clean tone: gate off (direct toggling), another counting mode, an unknown or out-of-range count, divisor 0 (which means 65536) | The real speaker |
+| REST | As TONE, but a divisor above 59659, or 0 (which means 65536): 18.2 to 20 Hz | Nothing; the speaker stays held. With `/L:1` it is a TONE |
+| RAW | Speaker on, but not a clean tone: gate off (direct toggling), another counting mode, an unknown count, a divisor below 193 | The real speaker |
 
 It reports three events: tone on, pitch change and tone off. A new count or mode applies only when
 the count completes, as on the real chip.
+
+Games use the counts below 20 Hz as rests. On the real chip a new count takes over only at the end of
+a half-cycle, which at 18 Hz is 27 ms away, so a short slot of `FFFFh` leaves the speaker still.
+Grand Prix Circuit's engine rests like that for 20 ms in every 60. `/L:1` plays them as a low FM note
+instead.
 
 ## The OPL voice
 
@@ -72,17 +78,18 @@ n = 3 * 2^(23-b) / d        (the smallest block b that keeps n ≤ 1023)
 ```
 
 Changing pitch while a note sounds rewrites only the pitch, never the key bit, so a glide stays a
-glide. Volume (0 to 15) sets the carriers' attenuation. The faithful voice is a square wave on an
-OPL3. An OPL2 has no square wave, so it gets a two-operator FM approximation. The faithful voice
-fades in over about a millisecond and out over about ten, so a beep never starts or stops on a step.
-The four patches (Organ, Flute, Brass, Bell) are plain FM settings. On an OPL3 the chip stays in
-OPL3 mode, with both channels routed to both outputs, while ReBeep is trapping.
+glide. Volume (0 to 15) sets the carriers' attenuation. Divisor 0 plays as 65535, block 0.
+The faithful voice is a square wave on an OPL3. An OPL2 has no square
+wave, so it gets a two-operator FM approximation. The faithful voice fades in over about a
+millisecond and out over about ten, so a beep never starts or stops on a step. The four patches
+(Organ, Flute, Brass, Bell) are plain FM settings. On an OPL3 the chip stays in OPL3 mode, with
+both channels routed to both outputs, while ReBeep is trapping.
 
 ## The fallback
 
 Anything the interpreter calls RAW is never translated: the game's bytes reach the real speaker
-unchanged, including the speaker bit. That covers noise from direct toggling, pitches the FM chip
-can't reach and odd timer modes. The switch between OPL and speaker is immediate. `/OFF` and
+unchanged, including the speaker bit. That covers noise from direct toggling, pitches above the FM
+chip's 6182 Hz and odd timer modes. The switch between OPL and speaker is immediate. `/OFF` and
 Ctrl+Alt+B take the same path for a sounding tone.
 
 ## Residency, AMIS and the hotkey

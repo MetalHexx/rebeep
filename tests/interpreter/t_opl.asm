@@ -691,6 +691,35 @@ start:
         jb      .pitch
         ENDCASE
 
+        ; Divisor 0 means 65536; it plays as 65535, the nearest the OPL's block 0 holds.
+        CASE    "pitch_zero_is_lowest"
+        mov     bx, 0FFFFh
+        call    expect_pitch            ; CL = block, AX = F-number
+        mov     di, ax
+        shl     cl, 1
+        shl     cl, 1
+        mov     al, ah
+        or      al, cl
+        or      al, 20h
+        mov     [tv], al
+        SINK_CLEAR
+        xor     bx, bx
+        call    opl_note_on
+        mov     bx, 0A0h
+        add     bl, [opl_ch]
+        call    sink_last
+        mov     cx, di
+        xor     ch, ch
+        call    t_check
+        mov     bx, 0B0h
+        add     bl, [opl_ch]
+        call    sink_last
+        mov     cl, [tv]
+        xor     ch, ch
+        call    t_check
+        call    opl_note_off
+        ENDCASE
+
         REGCASES 2, "opl2"
         REGCASES 3, "opl3"
 
@@ -796,7 +825,7 @@ listen:
         mov     ax, 4C00h
         int     21h
 
-pf_divs         dw      193, 385, 1193, 1536, 1537, 24576, 24577, 59659
+pf_divs         dw      193, 385, 1193, 1536, 1537, 24576, 24577, 59659, 59660, 65535
 pf_end:
 
 s_opl2          db      "INFO OPL2 detected", 13, 10, '$'

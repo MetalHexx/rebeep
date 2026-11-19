@@ -74,11 +74,12 @@ PATH so that the newer copy is found.
 
 4 Options and hotkeys
 ---------------------
-  REBEEP [/F | /P:n] [/V:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
+  REBEEP [/F | /P:n] [/V:n] [/L:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
 
   /F      faithful square-wave voice (default)
   /P:n    built-in patch n, 1 to 4: 1 Organ, 2 Flute, 3 Brass, 4 Bell
   /V:n    volume, 0 to 15 (default 12)
+  /L:n    notes below 20 Hz: 0 silent (default), 1 played
   /K:xy   Ctrl+Alt+x toggles, Ctrl+Alt+y cycles the voice (default BN)
   /ON     trap the speaker again
   /OFF    stop trapping and release the OPL to the game
@@ -88,6 +89,10 @@ PATH so that the newer copy is found.
 
 /S, /U, /ON and /OFF act only on a loaded copy. On a loaded copy, any
 other option changes only what it names.
+
+Some games use a pitch below 20 Hz as a rest, as Grand Prix Circuit's
+engine does. /L:0 keeps those silent, close to what the real speaker
+does with them. /L:1 plays them as a low FM note.
 
 Hotkeys, with the defaults:
 

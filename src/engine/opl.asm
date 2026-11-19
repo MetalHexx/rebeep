@@ -137,7 +137,7 @@ opl_set_volume:
         jmp     opl_put_volume
 
 ; opl_note_on: key off the channel that played last (it may still be keyed), then
-; key the other one on. In: BX = divisor (DIV_MIN..DIV_MAX)
+; key the other one on. In: BX = divisor (0 = 65536; below DIV_MIN plays DIV_MIN)
 opl_note_on:
         mov     byte [opl_keyed], 0
         call    opl_put_keyblk
@@ -151,13 +151,13 @@ opl_pitch:
         push    bx
         push    cx
         push    dx
+        or      bx, bx
+        jnz     .nz
+        dec     bx                      ; 0 means 65536: 65535 is the nearest (18.2 Hz)
+.nz:
         cmp     bx, DIV_MIN
-        jae     .lo
+        jae     .hi
         mov     bx, DIV_MIN
-.lo:
-        cmp     bx, DIV_MAX
-        jbe     .hi
-        mov     bx, DIV_MAX
 .hi:
         ; Block b suits divisor d when (3 << (23 - b)) / d <= 1023, that is
         ; d > 24576 >> b. Take the smallest such block for the best resolution.

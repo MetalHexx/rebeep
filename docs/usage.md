@@ -25,13 +25,14 @@ Back up your own `CONFIG.SYS` and `AUTOEXEC.BAT` before copying a sample over th
 
 ## Options
 
-`REBEEP [/F | /P:n] [/V:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]`
+`REBEEP [/F | /P:n] [/V:n] [/L:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]`
 
 | Option | Does |
 |---|---|
 | `/F` | Faithful square-wave voice (default) |
 | `/P:n` | Built-in patch `n`, 1 to 4: 1 Organ, 2 Flute, 3 Brass, 4 Bell |
 | `/V:n` | Volume, 0 to 15 (default 12) |
+| `/L:n` | Notes below 20 Hz: 0 silent (default), 1 played as a low FM note |
 | `/K:xy` | Ctrl+Alt+`x` toggles, Ctrl+Alt+`y` cycles the voice (default `BN`) |
 | `/ON` | Trap the speaker again |
 | `/OFF` | Stop trapping and release the OPL to the game |
@@ -53,6 +54,10 @@ their defaults.
 The faithful voice is the nearest to the real speaker: a square wave on an OPL3, a close FM
 approximation on an OPL2. The four patches are Organ, Flute, Brass and Bell. Volume applies to
 every voice.
+
+Some games use a pitch below 20 Hz as a rest, as Grand Prix Circuit's engine does. `/L:0` keeps
+those silent, which is close to what the real speaker does with them. `/L:1` plays them as a low FM
+note.
 
 ## `/OFF` and `/ON`
 

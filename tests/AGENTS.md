@@ -24,7 +24,7 @@
   case, `t_check` (AX = CX) and `t_checkd` (also BX = SI) record the first mismatch (reported with its
   step number), and `t_done` prints `DONE <n>` last and exits.
 - `interpreter/t_interp.asm` (`T_INTERP.COM`) covers the speaker interpreter: port-write sequencing,
-  ignored channels and commands, glide, direct toggling, range edges and `interp_sync`.
+  ignored channels and commands, glide, direct toggling, range edges, rests below 20 Hz and `interp_sync`.
 - `interpreter/t_opl.asm` (`T_OPL.COM`) covers the OPL target: real chip detection, block/F-number
   against the formula, and, through a recording sink, the key bit, notes alternating over channels 7
   and 8 (and nothing else written), `C0h`, volume and shutdown, as an OPL2 and as an OPL3. It checks that every

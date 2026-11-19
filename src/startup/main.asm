@@ -17,7 +17,8 @@ OPT_OFF         equ 0020h
 OPT_S           equ 0040h
 OPT_U           equ 0080h
 OPT_HELP        equ 0100h
-OPT_CONFIG      equ OPT_F | OPT_P | OPT_V | OPT_K
+OPT_L           equ 0200h
+OPT_CONFIG      equ OPT_F | OPT_P | OPT_V | OPT_K | OPT_L
 OPT_CONTROL     equ OPT_ON | OPT_OFF | OPT_S | OPT_U
 
 ; Paragraphs kept resident, counted from the PSP: everything below resident_end.
@@ -76,6 +77,7 @@ load_path:
         pop     es
         mov     bx, RB_STATE
         call    apply_fields
+        call    rb_apply_low
         cmp     byte [load_opl], 3
         jne     .trap
         or      byte [RB_STATE + RBS_FLAGS], RBS_F_OPL3
@@ -379,11 +381,17 @@ apply_fields:
         mov     [es:bx + RBS_VOLUME], dl
 .keys:
         test    ax, OPT_K
-        jz      .done
+        jz      .low
         mov     dl, [opt_toggle]
         mov     [es:bx + RBS_TOGGLE_KEY], dl
         mov     dl, [opt_cycle]
         mov     [es:bx + RBS_CYCLE_KEY], dl
+.low:
+        test    ax, OPT_L
+        jz      .done
+        and     byte [es:bx + RBS_FLAGS], 0FFh ^ RBS_F_LOWFM
+        mov     dl, [opt_low]
+        or      [es:bx + RBS_FLAGS], dl
 .done:
         popf
         ret
@@ -434,9 +442,27 @@ parse_options:
         je      .volume
         cmp     al, 'k'
         je      .keys
+        cmp     al, 'l'
+        je      .low
 .bad:
         stc
         ret
+
+.low:
+        call    getc
+        cmp     al, ':'
+        jne     .bad
+        call    get_number
+        jc      .bad
+        mov     ah, RBS_F_LOWFM
+        cmp     al, 1
+        je      .lowset
+        ja      .bad
+        xor     ah, ah
+.lowset:
+        mov     [opt_low], ah
+        mov     bx, OPT_L
+        jmp     .flag
 
 .onoff:
         call    getc
@@ -751,6 +777,12 @@ print_config:
         call    putc
         mov     dx, msg_keys_3
         call    print
+        mov     dx, msg_low_0
+        test    byte [es:bx + RBS_FLAGS], RBS_F_LOWFM
+        jz      .low
+        mov     dx, msg_low_1
+.low:
+        call    print
         pop     dx
         pop     ax
         ret
@@ -799,6 +831,7 @@ opt_voice       db      0
 opt_volume      db      0
 opt_toggle      db      0
 opt_cycle       db      0
+opt_low         db      0               ; RBS_F_LOWFM or 0
 
 load_opl        db      0
 scan_id         db      0
@@ -845,14 +878,17 @@ msg_volume      db      ", volume $"
 msg_keys_1      db      ", Ctrl+Alt+$"
 msg_keys_2      db      " toggles, Ctrl+Alt+$"
 msg_keys_3      db      " cycles the voice.", 13, 10, '$'
+msg_low_0       db      "Notes below 20 Hz are silent (/L:0).", 13, 10, '$'
+msg_low_1       db      "Notes below 20 Hz are played (/L:1).", 13, 10, '$'
 
 msg_help_1      db      "ReBeep ", REBEEP_VERSION, " - plays PC-speaker beeps on a Sound Blaster's OPL2/OPL3.", 13, 10
                 db      "Needs a 386 or better and Jemm's QPIEMU (JLOAD QPIEMU.DLL).", 13, 10, 13, 10
-                db      "REBEEP [/F | /P:n] [/V:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]", 13, 10
+                db      "REBEEP [/F | /P:n] [/V:n] [/L:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]", 13, 10
                 db      "  /F     faithful square-wave voice (default)", 13, 10
                 db      "  /P:n   built-in patch n: $"
 msg_help_2      db      13, 10
                 db      "  /V:n   volume 0-15 (default 12)", 13, 10
+                db      "  /L:n   notes below 20 Hz: 0 silent (default), 1 played", 13, 10
                 db      "  /K:xy  Ctrl+Alt+x toggles, Ctrl+Alt+y cycles the voice (default BN)", 13, 10
                 db      "  /OFF   stop trapping and release the OPL    /ON  trap again", 13, 10
                 db      "  /S     status                               /U   unload", 13, 10

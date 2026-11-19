@@ -1,9 +1,10 @@
 ; Speaker-port capture through Jemm's QPI: installs and removes the traps on 42h, 43h and
 ; 61h, and owns the callback QPIEMU calls on every trapped access. Resident code (386).
 ; Every byte a game writes goes to the interpreter and on to the real port. While the OPL
-; plays a tone (translation on, mode M_TONE) one bit of the real 61h is held clear, chosen
-; so the speaker stays where it rests (see mask_update), and the game reads back its own
-; bits 0-1. Anything else (M_RAW) plays on the real speaker.
+; plays a tone (translation on, mode M_TONE) or the game rests below 20 Hz (M_REST), one bit
+; of the real 61h is held clear, chosen so the speaker stays where it rests (see
+; mask_update), and the game reads back its own bits 0-1. Anything else (M_RAW) plays on
+; the real speaker.
 ; Port I/O on a trapped port goes through QPI 1A00h/1A01h/1A04h only: a direct IN/OUT
 ; would trap again.
 ; Near calls, DS = CS, and everything but the stack may be clobbered unless noted.
@@ -171,7 +172,8 @@ capture_sync:
         ret
 
 ; capture_translation_changed: the translation flag changed (or is being re-applied, which
-; changes nothing). Moves a tone that is sounding between the OPL and the real speaker.
+; changes nothing). Moves a tone that is sounding between the OPL and the real speaker; a
+; rest only holds the speaker, so the OPL keys nothing for it.
 ; The hotkey calls this inside INT 09h: the 61h handoff through QPI is the only 61h access
 ; allowed there, and deferring it would leave a sustained tone silent.
 ; Does nothing while the traps are off. Preserves every register.
@@ -183,6 +185,8 @@ capture_translation_changed:
         jnc     .done
         or      al, al
         jz      .off
+        cmp     byte [RB_STATE + RBS_MODE], M_TONE
+        jne     .real
         mov     bx, [RB_STATE + RBS_DIVISOR]
         call    opl_note_on
         jmp     .real
@@ -208,6 +212,8 @@ capture_voice_changed:
         call    mask_wanted
         or      al, al
         jz      .done
+        cmp     byte [RB_STATE + RBS_MODE], M_TONE
+        jne     .done                   ; a rest: nothing is sounding
         call    opl_note_off
         mov     bx, [RB_STATE + RBS_DIVISOR]
         call    opl_note_on
@@ -216,14 +222,17 @@ capture_voice_changed:
 .ret:
         ret
 
-; mask_wanted: Out: AL = 1 when the OPL should be playing the tone (translation on, mode
-; M_TONE), else 0. Preserves every other register.
+; mask_wanted: Out: AL = 1 when the real speaker must be held (translation on, and mode
+; M_TONE, which the OPL plays, or M_REST), else 0. Preserves every other register.
 mask_wanted:
         xor     al, al
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRANSLATE
         jz      .ret
         cmp     byte [RB_STATE + RBS_MODE], M_TONE
+        je      .yes
+        cmp     byte [RB_STATE + RBS_MODE], M_REST
         jne     .ret
+.yes:
         inc     al
 .ret:
         ret

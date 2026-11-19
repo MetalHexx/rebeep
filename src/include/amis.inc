@@ -13,14 +13,15 @@ AMIS_FN_INSTALLED equ 00h       ; AL = FFh, CX = version (major << 8 | minor), D
                                 ; then ASCIZ "ReBeep <version>"
 AMIS_FN_HOOKS   equ 04h         ; AL = 04h, DX:BX -> hooked interrupts: db number, dw handler (09h, 2Dh)
 AMIS_FN_STATE   equ 10h         ; private function: AL = FFh, DX:BX -> RB_STATE
-AMIS_FN_APPLY   equ 11h         ; apply RB_STATE's voice, volume and translation flag; AL = FFh
+AMIS_FN_APPLY   equ 11h         ; apply RB_STATE's voice, volume, translation and /L flags; AL = FFh
 AMIS_FN_TRAPS_ON  equ 12h       ; AL = FFh, or AL = 00h and BL = exit code; a no-op when already on
 AMIS_FN_TRAPS_OFF equ 13h       ; the same, releasing the OPL
 AMIS_FN_UNINSTALL equ 14h       ; AL = FFh and BX = PSP segment to free, or AL = 00h and BL = 8
 
 ; RB_STATE, layout version 1: byte offsets.
 RBS_VERSION     equ 0           ; db layout version
-RBS_FLAGS       equ 1           ; db bit0 translation on, bit1 traps on, bit2 OPL3
+RBS_FLAGS       equ 1           ; db bit0 translation on, bit1 traps on, bit2 OPL3,
+                                ;    bit3 play notes below 20 Hz (/L:1) instead of resting
 RBS_VOICE       equ 2           ; db 0 faithful, 1-4
 RBS_VOLUME      equ 3           ; db 0-15
 RBS_TOGGLE_KEY  equ 4           ; db scan code
@@ -38,5 +39,6 @@ RBS_LAYOUT      equ 1
 RBS_F_TRANSLATE equ 01h
 RBS_F_TRAPS     equ 02h
 RBS_F_OPL3      equ 04h
+RBS_F_LOWFM     equ 08h
 
 %endif

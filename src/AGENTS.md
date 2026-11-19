@@ -23,8 +23,8 @@
 - **Nothing resident calls DOS.** Uninstall reads the IVT directly; the command-line copy frees the memory.
 - **QPI-only I/O.** On 42h, 43h and 61h the resident part uses QPI `1A00h`/`1A01h`/`1A04h`, never `IN`/`OUT`
   (a direct access traps again). The hotkey never executes `STI`; its one `61h` access is the speaker handoff.
-- **Masking.** In `M_TONE` (translation on) the real `61h` holds bit 1 clear, or the gate if the speaker rests high
-  (`10`), so it never steps; `IN 61h` returns the game's bits 0-1. Entering or leaving `M_TONE` re-issues `61h` at once.
+- **Masking.** In `M_TONE` or `M_REST` (translation on) the real `61h` holds bit 1 clear, or the gate if the speaker rests
+  high (`10`), so it never steps; `IN 61h` returns the game's bits 0-1. Entering or leaving them re-issues `61h` at once.
 - The callback saves every register: QPIEMU restores only `ECX`, `EDX` and the flags.
 - `engine/` assembles under `CPU 8086`; only `capture/` and `startup/` may use 386 (the CPU check must run on any CPU).
 - NASM 3.02 and ≥ 2.16. Output names are 8.3, uppercase. A new build target goes in `targets.json`.
@@ -40,8 +40,8 @@
   8 bytes, OPL target at most 16 (`T_OPL` checks). `opl_write` is the one path to the chip (`OPL_TEST_SINK`).
 - Each note on takes the other of channels 7 and 8; `opl_pitch` stays on its channel and never clears the key bit,
   or a glide retriggers. OPL3's `C0h` needs the left/right bits. OPL2's faithful voice is a 2:1 FM approximation.
-- A PIT control word never changes the current tone; the new mode and pitch apply when the count
-  completes. A count of 0 means 65536, out of range, so RAW.
+- A PIT control word never changes the current tone; the new mode and pitch apply when the count completes.
+  Below 20 Hz (above `DIV_MAX`, or 0 = 65536) is `M_REST`, OPL keyed off, or `M_TONE` once `interp_low` is set (`/L:1`).
 - While the traps are off the OPL belongs to the game: no OPL or `61h` write, and uninstall skips
   `opl_shutdown`. The hotkey then only updates `RB_STATE`. `/OFF` first undoes any masking; `/ON` resyncs.
 - A command-line change writes only the fields it names. Defaults apply on a plain load alone.
