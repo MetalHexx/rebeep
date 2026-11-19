@@ -6,7 +6,7 @@
 
 | Path | Role |
 |---|---|
-| `targets.json` | What `rebeep build run` assembles: name, source, format, optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it) |
+| `targets.json` | What `rebeep build run` assembles: name, source, format, optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it), `defines` (extra NASM `-D` names) |
 | `rebeep.asm` | `REBEEP.COM`: the resident part, then `resident_end`, then the startup part |
 | `resident/` | `data.asm`: `RB_STATE`, saved vectors, the private stack. `amis.asm`: the `INT 2Dh` handler and uninstall |
 | `capture/trap.asm` | QPI trap install and remove, the callback, and the port semantics (masking, read view, OPL events) |

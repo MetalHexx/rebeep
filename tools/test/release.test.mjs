@@ -225,6 +225,21 @@ describe('release create', () => {
     assert.ok(notes.includes('## SHA-256') && notes.includes(sha256(floppy)));
   });
 
+  test('leaves a built dev-only target such as REBEEPD.COM out of the package', () => {
+    const dev = Buffer.from('fake trace build');
+    put('build/REBEEPD.COM', dev);
+    const built = JSON.parse(fs.readFileSync(path.join(root, 'build', 'build.json'), 'utf8'));
+    built.targets.push({ name: 'REBEEPD.COM', sha256: sha256(dev) });
+    put('build/build.json', JSON.stringify(built));
+    const result = create();
+    assert.equal(result.code, 0, result.stderr);
+    const { data } = JSON.parse(result.stdout);
+    assert.ok(!data.files.some((f) => f.path === 'REBEEPD.COM'));
+    assert.ok(!readZip(out('rebeep-1.1.0.zip')).entries.some((e) => e.name === 'REBEEPD.COM'));
+    assert.equal(readImage(out('rebeep-1.1.0-floppy.img')).exists('REBEEPD.COM'), false);
+    assert.deepEqual(JSON.parse(out('release.json')).targets.map((t) => t.name), ['REBEEP.COM', 'RBTEST.COM']);
+  });
+
   test('is reproducible and replaces what was in build/release', () => {
     put('build/release/STALE.TXT', 'old');
     assert.equal(create().code, 0);

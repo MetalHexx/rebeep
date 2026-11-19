@@ -178,6 +178,44 @@ describe('build run and build clean', () => {
     }
   });
 
+  test("passes a target's defines to NASM after the version, and only for that target", () => {
+    const root = makeRepo({
+      targets: {
+        targets: [
+          { name: 'REBEEP.COM', source: 'rebeep.asm', format: 'bin' },
+          { name: 'REBEEPD.COM', source: 'rebeep.asm', format: 'bin', defines: { REBEEP_TRACE: 1, LABEL: '"x"' } },
+        ],
+      },
+    });
+    const { log, result } = run(root, ['build', 'run']);
+    assert.equal(result.code, 0, result.stderr);
+    const [plain, traced] = readCalls(log);
+    assert.equal(plain.some((a) => a.startsWith('-DREBEEP_TRACE') || a.startsWith('-DLABEL')), false);
+    const at = traced.indexOf('-DREBEEP_VER_PATCH=0');
+    assert.deepEqual(traced.slice(at + 1, at + 3), ['-DREBEEP_TRACE=1', '-DLABEL="x"']);
+    removeDir(root);
+  });
+
+  test('rejects defines that are not an object of names to strings or numbers', () => {
+    const bad = [
+      [['REBEEP_TRACE'], /defines must be an object/],
+      [{ '1BAD': 1 }, /invalid name '1BAD'/],
+      [{ 'A-B': 1 }, /invalid name 'A-B'/],
+      [{ OK: true }, /defines\.OK must be a string or a number/],
+      [{ OK: null }, /defines\.OK must be a string or a number/],
+    ];
+    for (const [defines, message] of bad) {
+      const root = makeRepo({
+        targets: { targets: [{ name: 'REBEEP.COM', source: 'rebeep.asm', format: 'bin', defines }] },
+      });
+      const { log, result } = run(root, ['build', 'run']);
+      assert.equal(result.code, 1, JSON.stringify(defines));
+      assert.match(result.stderr, message);
+      assert.deepEqual(readCalls(log), [], JSON.stringify(defines));
+      removeDir(root);
+    }
+  });
+
   test("a NASM failure is a CliError that carries NASM's message and removes the old build.json", () => {
     const root = makeRepo();
     assert.equal(run(root, ['build', 'run']).result.code, 0);
