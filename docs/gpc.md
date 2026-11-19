@@ -1,6 +1,6 @@
 # Grand Prix Circuit
 
-Accolade's Grand Prix Circuit is the game ReBeep 0.1.0 was proven on. This page covers how it
+Accolade's Grand Prix Circuit is the game ReBeep's first release was proven on. This page covers how it
 drives the PC speaker, what ReBeep makes of that, and what still sounds different. It comes from
 reading the game's EGA executable (`GPEGA.EXE`) as data, without running it, and from listening
 on the `mirror-msdos` VM. The other executables may differ. The result is in
@@ -53,8 +53,8 @@ rather than bit 1, so the parked speaker doesn't move at each note on and off. T
 and the song start and stop are direct control of the speaker bit, which ReBeep can't turn into a
 tone, so they reach the real speaker unchanged.
 
-**What you hear.** In 0.1.0 the menu music has occasional pops, and each screen change (Esc from
-a race to the menu, then to the intro) makes a click. Both come from the real speaker:
+**What you hear.** The menu music has occasional pops, and each screen change (Esc from a race to
+the menu, then to the intro) makes a click. Both come from the real speaker:
 
 - The screen-change clicks are the song stop and start.
 - The menu pops fit the percussion voice: a noise-like pattern would sound like scattered pops,
