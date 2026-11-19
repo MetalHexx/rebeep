@@ -1002,6 +1002,12 @@ run_auto:
         FAIL    "qpi", "QPIEMU not loaded"
         jmp     .restore
 .qpi:
+        mov     bx, RBS_FLAGS           ; the checks below expect the real speaker unmuted (/R:1)
+        call    get_b
+        and     al, RBS_F_MUTE
+        mov     [g_mute0], al
+        xor     al, al
+        call    set_mute
         call    chk_masked
         call    chk_raw_unmasked
         call    chk_handoff
@@ -1015,6 +1021,8 @@ run_auto:
         call    chk_gate_handoff
         call    chk_gate_translate
         call    chk_gate_trapsoff       ; last: it turns the traps off and on again
+        mov     al, [g_mute0]
+        call    set_mute
 .restore:
         call    chk_restore
         cmp     byte [fails], 0
@@ -2004,6 +2012,7 @@ g_real      db 0
 g_tr        db 0
 g_low       db 0
 g_mute      db 0
+g_mute0     db 0
 g_mode      db 0
 g_mode2     db 0
 g_voff      dw 0

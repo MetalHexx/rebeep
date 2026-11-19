@@ -1,6 +1,6 @@
 REM VM: mirror-freedos
 REM VM-TIMEOUT: 150
-REM Capture probe: RBTEST's checks against a loaded ReBeep, with the traps off, after /ON resyncs, and after unload.
+REM Capture probe: RBTEST's checks against a loaded ReBeep, also at /R:0, with the traps off, after /ON resyncs, and after unload.
 @ECHO OFF
 D:
 CD \
@@ -11,6 +11,9 @@ LH D:\REBEEP\REBEEP.COM
 IF ERRORLEVEL 1 GOTO LOADBAD
 ECHO PASS load>> D:\RESULT.TXT
 D:\REBEEP\RBTEST.COM /A /R>> D:\RESULT.TXT
+D:\REBEEP\REBEEP.COM /R:0
+D:\REBEEP\RBTEST.COM /A /R>> D:\RESULT.TXT
+D:\REBEEP\REBEEP.COM /R:1
 D:\REBEEP\REBEEP.COM /OFF
 IF ERRORLEVEL 1 GOTO OFFBAD
 ECHO PASS off>> D:\RESULT.TXT

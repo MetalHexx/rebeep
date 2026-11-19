@@ -8,6 +8,12 @@
 
 %ifdef REBEEP_TRACE
         cpu     386
+%if TRACE_REC != 32
+%error trace_record's shl assumes TRACE_REC = 32
+%endif
+%if TRACE_RECS < 1 || TRACE_RECS * TRACE_REC > 48 * 1024
+%error REBEEP_TRACE must be 1 to 1536 records: the buffer shares one 64 KB segment
+%endif
 
 ; trace_note: remember one byte the game writes. In: DL = port, AL = byte. Preserves all.
 trace_note:

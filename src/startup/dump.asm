@@ -4,6 +4,7 @@
 ; SPDX-License-Identifier: MIT
 
 %ifdef REBEEP_TRACE
+        cpu     8086
 %include "trace.inc"
 
 ; A copy is resident and of this build (change_path checked its name).
@@ -25,9 +26,13 @@ do_dump:
         mov     [tr_seen], ax
         popf
         mov     dx, tr_path
-        mov     ax, 3D01h               ; open for writing, or create
+        mov     ax, 3D01h               ; open for writing, or create it if it isn't there
         int     21h
         jnc     .open
+        cmp     ax, 2                   ; file not found
+        je      .create
+        DIE     msg_trfile, EXIT_FAILED
+.create:
         mov     dx, tr_path
         xor     cx, cx
         mov     ah, 3Ch
@@ -81,9 +86,10 @@ do_dump:
         mov     es, [tr_seg]
         mov     bx, [tr_hdr]
         pushf
-        cli
+        cli                             ; records offered meanwhile count as dropped
         mov     word [es:bx + TH_COUNT], 0
-        mov     word [es:bx + TH_SEEN], 0
+        mov     ax, [tr_seen]
+        sub     [es:bx + TH_SEEN], ax
         popf
         mov     dx, msg_tr_done_1
         call    print

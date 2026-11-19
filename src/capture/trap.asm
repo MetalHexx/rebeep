@@ -160,7 +160,7 @@ capture_owns_callback:
 
 ; capture_sync: the traps have just been installed; adopt the real 61h as the game's own and
 ; refresh RB_STATE. The mode comes back M_SILENT or M_RAW, never M_TONE, so the OPL has
-; nothing to key off.
+; nothing to key off. Under /R:0 the speaker is held from here on.
 capture_sync:
         mov     dx, SYS_CTRL
         call    qpi_in
@@ -170,6 +170,8 @@ capture_sync:
         mov     [RB_STATE + RBS_MODE], ah
         mov     word [RB_STATE + RBS_DIVISOR], 0
         mov     byte [masked], 0
+        call    mask_update
+        jc      sync_real_61
         ret
 
 ; capture_translation_changed: the translation flag changed (or is being re-applied, which
@@ -225,8 +227,9 @@ capture_voice_changed:
 
 ; capture_low_changed: interp_low changed (or is being re-applied, which changes nothing).
 ; A count below 20 Hz that the game holds turns from a rest into a tone, or back, at once,
-; as the game's next write would turn it. Does nothing while the traps are off. Preserves
-; every register.
+; as the game's next write would turn it. A rest and a tone are masked alike, so the mask
+; is left to capture_translation_changed, which runs last and keys the OPL with it. Does
+; nothing while the traps are off. Preserves every register.
 capture_low_changed:
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
         jz      .ret
@@ -234,10 +237,6 @@ capture_low_changed:
         call    interp_refresh          ; AL = event, AH = mode, BX = divisor
         call    note_state
         call    play_event
-        call    mask_update
-        jnc     .done
-        call    sync_real_61
-.done:
         popa
 .ret:
         ret

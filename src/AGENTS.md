@@ -13,7 +13,7 @@
 | `engine/` | `interp.asm` the speaker interpreter, `opl.asm` the OPL render target |
 | `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
 | `startup/` | `main.asm`: options, checks, load, change, unload, messages. `dump.asm`: `REBEEPD /D`. Freed when going resident |
-| `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [exitcode.inc](include/exitcode.inc): the exit codes. Neither is restated elsewhere |
+| `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [exitcode.inc](include/exitcode.inc): the exit codes. `trace.inc`: REBEEPD's record. None is restated elsewhere |
 | `diag/` | `qpichk.asm` → `QPICHK.COM`, reports whether QPIEMU is up (run by `BOOT.BAT`). `fdboot.asm` → `FDBOOT.BIN`, the release floppy's boot sector: hands the boot to C:, asks for a key only when C: has none |
 
 ## Rules

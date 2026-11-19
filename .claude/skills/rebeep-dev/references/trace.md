@@ -31,7 +31,8 @@ empties it.
 ## Reading RBTRACE.TXT
 
 A dump starts with `# ReBeep <v> trace: <kept> records kept of <offered> offered (capacity n)`.
-More offered than kept means the buffer filled. Each record is one line; every number is hex:
+More offered than kept means records were dropped: the buffer filled, or they came while a dump
+ran. Each record is one line; every number is hex:
 
 | Field | Meaning |
 |---|---|
@@ -50,6 +51,9 @@ The layout is in `src/include/trace.inc`.
 
 - **Fetch before any deploy.** A deploy rewrites D: and drops `RBTRACE.TXT`.
 - **Dev-only.** Never add `REBEEPD.COM` to the package, the docs for players, or `README.TXT`.
-- **Timing is indicative.** The latch costs a QPI write per record, and an emulator's timer is
-  not a real PC's.
+- **It costs more than the normal build:** a QPI read on every real `61h` write and a QPI latch
+  per record (fast toggling runs about half as fast), about 30 more bytes of the game's stack in
+  the hotkey, and 32 KB more resident, which may not fit in upper memory.
+- **Timing is indicative:** an emulator's timer is not a real PC's. A step that comes between a
+  game's own channel-0 latch and its reads (only possible from the hotkey) tears that read.
 - `rebeep test run --suite vm --probe P_TRACE` checks the build end to end.
