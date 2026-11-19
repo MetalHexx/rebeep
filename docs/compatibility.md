@@ -26,6 +26,6 @@ The speed of ReBeep's trap on these machines is in [performance](how-it-works.md
 | What | Why | What to do |
 |---|---|---|
 | SBEMU's PC-speaker feature | It traps the same ports, and only one program can (exit code 5) | Turn that feature off |
-| Games with their own FM music | The game and ReBeep both drive the OPL | `REBEEP /OFF` before the game, or `REBEEP /U` |
+| Games with their own FM music | The game and ReBeep both drive the OPL (ReBeep uses channels 7 and 8) | `REBEEP /OFF` before the game, or `REBEEP /U` |
 | Protected-mode games | ReBeep is built for real-mode games | Not supported |
 | EMM386 and QEMM | ReBeep needs Jemm's QPIEMU module | Not supported. Use Jemm |

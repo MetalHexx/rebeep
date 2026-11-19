@@ -11,6 +11,7 @@
 %define OPL_TEST_SINK sink
 
 SINK_MAX        equ 256         ; entries of 4 bytes: register word, value byte, pad
+                                ; a case that reads the log clears it first
 A4              equ 2711        ; 1,193,182 / 440 Hz
 
         jmp     start
@@ -75,8 +76,9 @@ sink_b8_off:
         pop     si
         ret
 
-; sink_stray: Out: AX = 0 when every recorded write is to channel 8's operator
-; registers, C8h/A8h/B8h, 01h or 105h; otherwise the first other register.
+; sink_stray: Out: AX = 0 when every recorded write is to an operator register
+; of channel 7 or 8, A7h/B7h/C7h, A8h/B8h/C8h, 01h or 105h; otherwise the first
+; other register.
 sink_stray:
         push    bx
         push    cx
@@ -88,20 +90,12 @@ sink_stray:
         jae     .clean
         mov     bx, [sink_buf + si]
         add     si, 4
-        cmp     bx, 01h
-        je      .entry
         cmp     bx, 105h
-        je      .entry
-        cmp     bx, 0A8h
-        je      .entry
-        cmp     bx, 0B8h
-        je      .entry
-        cmp     bx, 0C8h
         je      .entry
         or      bh, bh
         jnz     .stray
-        mov     di, ok_ops
-        mov     cx, OK_OPS_N
+        mov     di, ok_regs
+        mov     cx, OK_REGS_N
 .op:
         cmp     bl, [di]
         je      .entry
@@ -119,9 +113,52 @@ sink_stray:
         pop     bx
         ret
 
-; Operator registers of channel 8: 20h/40h/60h/80h/E0h + 12h (modulator) or 15h (carrier).
-ok_ops          db      32h, 35h, 52h, 55h, 72h, 75h, 92h, 95h, 0F2h, 0F5h
-OK_OPS_N        equ     $ - ok_ops
+; Bank-0 registers ReBeep may write: 01h, the channel registers of channels 7 and
+; 8, and their operators: 20h/40h/60h/80h/E0h + 11h/12h (modulators) or 14h/15h
+; (carriers).
+ok_regs         db      01h, 0A7h, 0B7h, 0C7h, 0A8h, 0B8h, 0C8h
+                db      31h, 34h, 51h, 54h, 71h, 74h, 91h, 94h, 0F1h, 0F4h
+                db      32h, 35h, 52h, 55h, 72h, 75h, 92h, 95h, 0F2h, 0F5h
+OK_REGS_N       equ     $ - ok_regs
+
+; twin_diff: Out: AX = 0 when every channel-7 voice register's last recorded
+; value equals its channel-8 twin's, and the twin was written; otherwise the
+; channel-8 register of the first pair that differs.
+twin_diff:
+        push    bx
+        push    dx
+        push    si
+        mov     si, twins
+.pair:
+        cmp     si, twins_end
+        jae     .same
+        mov     bx, [si + 2]
+        call    sink_last
+        cmp     ax, 0FFFFh
+        je      .differ
+        mov     dx, ax
+        mov     bx, [si]
+        call    sink_last
+        cmp     ax, dx
+        jne     .differ
+        add     si, 4
+        jmp     .pair
+.differ:
+        mov     ax, [si + 2]
+        jmp     .out
+.same:
+        xor     ax, ax
+.out:
+        pop     si
+        pop     dx
+        pop     bx
+        ret
+
+; (channel 7, channel 8) pairs: the operators and C0h. Pitch (A0h/B0h) is per note.
+twins           dw      31h, 32h, 34h, 35h, 51h, 52h, 54h, 55h, 71h, 72h
+                dw      74h, 75h, 91h, 92h, 94h, 95h, 0F1h, 0F2h, 0F4h, 0F5h
+                dw      0C7h, 0C8h
+twins_end:
 
 ; expect_pitch: BX = divisor. Out: CL = block, AX = F-number, from the formula
 ; fnum = (3 << (23 - block)) / divisor with the smallest block whose result fits 10 bits.
@@ -299,27 +336,36 @@ stk_note:
         LASTW   105h, 0FFFFh
 %endif
         LASTWM  0B8h, 20h, 0
+        LASTWM  0B7h, 20h, 0
         ENDCASE
 
 %strcat cname "output_bits_", %2
         CASE    cname
+        SINK_CLEAR
         mov     al, %1
         call    opl_init
         mov     byte [tv], 0
 %%ovoice:
         mov     al, [tv]
         call    opl_set_voice
+%if %1 == 3
+        mov     cx, 30h
+%else
+        xor     cx, cx
+%endif
         mov     bx, 0C8h
         call    sink_last
         cmp     ax, 0FFFFh
         je      %%onone
         and     ax, 30h
 %%onone:
-%if %1 == 3
-        mov     cx, 30h
-%else
-        xor     cx, cx
-%endif
+        call    t_check
+        mov     bx, 0C7h
+        call    sink_last
+        cmp     ax, 0FFFFh
+        je      %%onone7
+        and     ax, 30h
+%%onone7:
         call    t_check
         inc     byte [tv]
         cmp     byte [tv], 5
@@ -328,16 +374,19 @@ stk_note:
 
 %strcat cname "faithful_voice_", %2
         CASE    cname
+        SINK_CLEAR
         mov     al, %1
         call    opl_init
         xor     al, al
         call    opl_set_voice
+        LASTW   60h + 12h, 0D0h         ; attack 13, decay 0
+        LASTW   60h + 15h, 0D0h
+        LASTW   80h + 12h, 0Dh          ; sustain level 0, release 13
+        LASTW   80h + 15h, 0Dh
 %if %1 == 3
         LASTW   20h + 15h, 21h
         LASTW   40h + 12h, 3Fh
         LASTW   0E0h + 15h, 06h
-        LASTW   60h + 15h, 0F0h
-        LASTW   80h + 15h, 0Fh
         LASTWM  0C8h, 01h, 01h
 %else
         LASTW   20h + 12h, 22h
@@ -351,6 +400,7 @@ stk_note:
 
 %strcat cname "volume_scale_", %2
         CASE    cname
+        SINK_CLEAR
         mov     al, %1
         call    opl_init
         mov     byte [tv], 1
@@ -415,6 +465,7 @@ stk_note:
 
 %strcat cname "note_off_clears_key_", %2
         CASE    cname
+        SINK_CLEAR
         mov     al, %1
         call    opl_init
         mov     bx, 1193
@@ -433,7 +484,7 @@ stk_note:
         call    t_check
         ENDCASE
 
-%strcat cname "only_channel_8_", %2
+%strcat cname "only_channels_7_8_", %2
         CASE    cname
         SINK_CLEAR
         mov     al, %1
@@ -453,6 +504,9 @@ stk_note:
         call    opl_pitch
         mov     bx, DIV_MAX
         call    opl_pitch
+        call    opl_note_off
+        mov     bx, A4                  ; a second note, on the other channel
+        call    opl_note_on
         call    opl_note_off
         call    opl_shutdown
         mov     al, 15
@@ -476,12 +530,88 @@ stk_note:
         SINK_CLEAR
         call    opl_shutdown
         LASTWM  0B8h, 20h, 0
+        LASTWM  0B7h, 20h, 0
         LASTW   40h + 15h, 3Fh
+        LASTW   40h + 14h, 3Fh
 %if %1 == 3
         LASTW   105h, 00h
 %else
         LASTW   105h, 0FFFFh
 %endif
+        ENDCASE
+
+; Each new note takes the other channel; the one before is left keyed off, and a
+; pitch change or key-off touches the sounding note's channel alone.
+%strcat cname "alternates_channels_", %2
+        CASE    cname
+        mov     al, %1
+        call    opl_init
+        SINK_CLEAR
+        mov     bx, 1193
+        call    opl_note_on
+        LASTWM  0B8h, 20h, 20h          ; the first note after init is on 8
+        call    opl_note_off
+        LASTWM  0B8h, 20h, 0
+        mov     bx, A4
+        call    opl_note_on
+        LASTWM  0B7h, 20h, 20h
+        LASTWM  0B8h, 20h, 0
+        SINK_CLEAR
+        mov     bx, 1500
+        call    opl_pitch
+        LASTWM  0B7h, 20h, 20h
+        LASTW   0A8h, 0FFFFh
+        LASTW   0B8h, 0FFFFh
+        SINK_CLEAR
+        call    opl_note_off
+        LASTWM  0B7h, 20h, 0
+        LASTW   0B8h, 0FFFFh
+        mov     bx, 1193
+        call    opl_note_on
+        LASTWM  0B8h, 20h, 20h          ; and back to 8
+        LASTWM  0B7h, 20h, 0
+        call    opl_note_off
+        ENDCASE
+
+; Both channels carry the same voice and volume, and shutdown silences both.
+%strcat cname "both_channels_", %2
+        CASE    cname
+        mov     al, %1
+        call    opl_init
+        mov     byte [tv], 0
+%%bvoice:
+        SINK_CLEAR
+        mov     al, [tv]
+        call    opl_set_voice
+        call    twin_diff
+        xor     cx, cx
+        call    t_check
+        inc     byte [tv]
+        cmp     byte [tv], 5
+        jb      %%bvoice
+        SINK_CLEAR
+        mov     al, 7
+        call    opl_set_volume
+        mov     bx, 40h + 15h
+        call    sink_last
+        mov     cx, ax
+        mov     bx, 40h + 14h
+        call    sink_last
+        cmp     cx, 0FFFFh
+        jne     %%vset
+        xor     cx, cx                  ; 55h never written: fail
+%%vset:
+        call    t_check
+        mov     bx, 1193
+        call    opl_note_on
+        SINK_CLEAR
+        call    opl_shutdown
+        LASTWM  0B7h, 20h, 0
+        LASTWM  0B8h, 20h, 0
+        LASTW   40h + 14h, 3Fh
+        LASTW   40h + 15h, 3Fh
+        mov     al, 15
+        call    opl_set_volume
         ENDCASE
 %endmacro
 
@@ -543,13 +673,15 @@ start:
         mov     al, ah
         or      al, cl
         or      al, 20h
-        mov     [tv], al                ; expected B8h
-        mov     bx, 0A8h
+        mov     [tv], al                ; expected B0h of the note's channel
+        mov     bx, 0A0h
+        add     bl, [opl_ch]
         call    sink_last
         mov     cx, di
         xor     ch, ch
         call    t_check
-        mov     bx, 0B8h
+        mov     bx, 0B0h
+        add     bl, [opl_ch]
         call    sink_last
         mov     cl, [tv]
         xor     ch, ch

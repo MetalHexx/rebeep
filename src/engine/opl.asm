@@ -1,8 +1,11 @@
-; OPL render target: detects an OPL2/OPL3 at 388h and plays one voice on
-; channel 8, either a faithful square wave or one of four built-in patches.
+; OPL render target: detects an OPL2/OPL3 at 388h and plays one voice, either a
+; faithful square wave or one of four built-in patches. Each new note takes the
+; other of channels 7 and 8, so the last note releases undisturbed instead of
+; being retriggered; a pitch change stays on the note's own channel.
 ; Near calls; DS = this module's segment. Every routine preserves all
 ; registers except its outputs, and flags.
-; Only channel 8's registers, the global 01h and (OPL3) 105h are ever written.
+; Only channels 7 and 8's registers, the global 01h and (OPL3) 105h are ever
+; written.
 ; Stack: at most 16 bytes, return address included (opl_detect, opl_init and
 ; opl_set_voice reach it). The call chains are kept flat for that; a change that
 ; nests one more call or push breaks it.
@@ -14,6 +17,11 @@
         cpu     8086
 %include "speaker.inc"
 %include "opl.inc"
+
+%if OPL_CH_B != OPL_CH_A + 1
+%error opl_program and opl_put_volume expect OPL_CH_B = OPL_CH_A + 1
+%endif
+OPL_CAR_A       equ     OPL_CH_A + OP_MOD_OFS + OP_CAR_OFS  ; channel A's carrier; B's is next
 
 ; Status reads after each write, by chip: after the index write, after the data write.
 OPL2_IDX_READS  equ     6
@@ -77,7 +85,7 @@ opl_reset_timers:
         mov     al, 80h
         jmp     opl_hw_write
 
-; opl_init: take over channel 8, key off, current voice and volume.
+; opl_init: take over channels 7 and 8, key off, current voice and volume.
 ; In:  AL = 2 or 3 (the chip opl_detect found)
 opl_init:
         mov     byte [opl_type], 2
@@ -103,10 +111,13 @@ opl_init:
         pop     bx
         pop     ax
         mov     byte [opl_keyed], 0
+        mov     byte [opl_ch], OPL_CH_B
+        call    opl_put_keyblk
+        mov     byte [opl_ch], OPL_CH_A ; the first note goes to B
         call    opl_put_keyblk
         jmp     opl_program
 
-; opl_set_voice: reprogram channel 8's operators; the key state is untouched.
+; opl_set_voice: reprogram both channels' operators; the key state is untouched.
 ; In:  AL = 0 faithful, 1..4 patch (anything else is faithful)
 opl_set_voice:
         mov     [opl_voice], al
@@ -125,8 +136,12 @@ opl_set_volume:
 .go:
         jmp     opl_put_volume
 
-; opl_note_on: In: BX = divisor (DIV_MIN..DIV_MAX)
+; opl_note_on: key off the channel that played last (it may still be keyed), then
+; key the other one on. In: BX = divisor (DIV_MIN..DIV_MAX)
 opl_note_on:
+        mov     byte [opl_keyed], 0
+        call    opl_put_keyblk
+        xor     byte [opl_ch], OPL_CH_A ^ OPL_CH_B
         mov     byte [opl_keyed], 1
 
 ; opl_pitch: retune without touching the key bit, so a sounding note glides
@@ -172,34 +187,45 @@ opl_pitch:
         mov     [opl_fnum], ax
         pop     dx                      ; free before the write, to keep the stack shallow
         pop     cx
-        mov     bx, REG_FNUMLO + OPL_CH
+        mov     bx, REG_FNUMLO
+        add     bl, [opl_ch]
         call    opl_write               ; AL = low 8 bits
         pop     bx
         pop     ax
         jmp     opl_put_keyblk
 
-; opl_note_off: key off, block and F-number kept.
+; opl_note_off: key off the sounding channel, block and F-number kept.
 opl_note_off:
         mov     byte [opl_keyed], 0
         jmp     opl_put_keyblk
 
-; opl_shutdown: key off, carrier silenced, OPL3 mode left. /ON calls opl_init.
+; opl_shutdown: both carriers silenced, both channels keyed off, OPL3 mode left.
+; /ON calls opl_init.
 opl_shutdown:
-        mov     byte [opl_keyed], 0
-        call    opl_put_keyblk
         push    ax
         push    bx
-        mov     bx, REG_KSLTL + OP_CAR
+        mov     bx, REG_KSLTL + OPL_CAR_A
         mov     al, 3Fh
         call    opl_write
+        inc     bx
+        call    opl_write
+        pop     bx
+        pop     ax
+        mov     byte [opl_keyed], 0
+        call    opl_put_keyblk
+        xor     byte [opl_ch], OPL_CH_A ^ OPL_CH_B
+        call    opl_put_keyblk
+        xor     byte [opl_ch], OPL_CH_A ^ OPL_CH_B
         cmp     byte [opl_type], 3
         jne     .done
+        push    ax
+        push    bx
         mov     bx, REG_NEW
         xor     al, al
         call    opl_write
-.done:
         pop     bx
         pop     ax
+.done:
         ret
 
 ; opl_write: In: BX = register 000h-1FFh (bit 8 = bank 1), AL = value.
@@ -245,7 +271,8 @@ opl_hw_write:
         pop     dx
         ret
 
-; opl_put_keyblk: write B8h from the key flag, block and F-number high bits.
+; opl_put_keyblk: write the current channel's B0h from the key flag, block and
+; F-number high bits.
 opl_put_keyblk:
         push    ax
         push    bx
@@ -257,14 +284,16 @@ opl_put_keyblk:
         je      .write
         or      al, KEY_ON
 .write:
-        mov     bx, REG_KEYBLK + OPL_CH
+        mov     bx, REG_KEYBLK
+        add     bl, [opl_ch]
         call    opl_write
         pop     bx
         pop     ax
         ret
 
-; opl_program: write the current voice's operators and C0h, then the volume.
-; The carrier's 40h is left to opl_put_volume so it is written once, scaled.
+; opl_program: write the current voice's operators and C0h on both channels, then
+; the volume. The carriers' 40h is left to opl_put_volume so it is written once,
+; scaled.
 opl_program:
         push    ax
         push    bx
@@ -286,15 +315,19 @@ opl_program:
         mov     si, ax
 .have:
         mov     [opl_rec], si
+        mov     ah, OPL_CH_A            ; AH = the channel; opl_write keeps it
+.chan:
+        mov     si, [opl_rec]
         mov     di, opl_bases
 .regs:
         mov     bl, [di]
         xor     bh, bh
-        add     bl, OP_MOD
+        add     bl, ah
+        add     bl, OP_MOD_OFS
         mov     al, [si]
         inc     si
         call    opl_write
-        add     bl, OP_CAR - OP_MOD
+        add     bl, OP_CAR_OFS
         mov     al, [si]
         inc     si
         cmp     byte [di], REG_KSLTL
@@ -309,15 +342,19 @@ opl_program:
         jne     .fb
         or      al, OPL3_OUT
 .fb:
-        mov     bx, REG_FBCNT + OPL_CH
+        mov     bx, REG_FBCNT
+        add     bl, ah
         call    opl_write
+        inc     ah
+        cmp     ah, OPL_CH_B
+        jbe     .chan
         pop     di
         pop     si
         pop     bx
         pop     ax
         jmp     opl_put_volume
 
-; opl_put_volume: carrier TL = the voice's base TL + (15 - volume) * 4,
+; opl_put_volume: both carriers' TL = the voice's base TL + (15 - volume) * 4,
 ; clamped to 63; volume 0 is always 63.
 opl_put_volume:
         push    ax
@@ -345,7 +382,9 @@ opl_put_volume:
         or      al, ah
         pop     si                      ; free before the write, to keep the stack shallow
         pop     cx
-        mov     bx, REG_KSLTL + OP_CAR
+        mov     bx, REG_KSLTL + OPL_CAR_A
+        call    opl_write
+        inc     bx                      ; channel B's carrier
         call    opl_write
         pop     bx
         pop     ax
@@ -355,27 +394,29 @@ opl_put_volume:
 ; 40h, 60h, 80h and E0h, then C0h (the OPL3 output bits are added at write time).
 
 ; Faithful voice on OPL3: the carrier alone, as a square wave (waveform 6),
-; additive so the modulator (TL 63) adds nothing. Attack and release 15 and
-; sustain on keep fast beeps crisp.
+; additive so the modulator (TL 63) adds nothing. Sustain on holds the level.
+; Attack 13 (under a millisecond) and release 13 (about 10 ms) round the
+; note's edges: a key-on restarts the wave at full level, and an instant step
+; there or at key-off is a click.
 voice_faithful3:
         db      21h, 21h                ; sustain, multiplier 1
         db      3Fh, 00h                ; modulator muted, carrier TL 0
-        db      0F0h, 0F0h              ; attack 15, decay 0
-        db      0Fh, 0Fh                ; sustain level 0, release 15
+        db      0D0h, 0D0h              ; attack 13, decay 0
+        db      0Dh, 0Dh                ; sustain level 0, release 13
         db      00h, 06h                ; carrier waveform 6 = square
         db      01h                     ; additive connection, feedback 0
 
 ; Faithful voice on OPL2, which has no square waveform. The modulator runs at
 ; twice the carrier's frequency (MULT 2 against 1): FM with a 2:1 ratio puts
 ; the sidebands on odd harmonics of the carrier only, which is a square wave's
-; spectrum. Starting values: modulator TL 1Ah, FM connection, feedback 0,
-; sine waveforms, attack 15, decay 0, sustain level 0, release 15, sustain on.
-; Not tuned by ear.
+; spectrum. Modulator TL 1Ah, FM connection, feedback 0, sine waveforms, and
+; the OPL3 voice's envelope: attack 13, decay 0, sustain level 0, release 13,
+; sustain on.
 voice_faithful2:
         db      22h, 21h
         db      1Ah, 00h
-        db      0F0h, 0F0h
-        db      0Fh, 0Fh
+        db      0D0h, 0D0h
+        db      0Dh, 0Dh
         db      00h, 00h
         db      00h                     ; FM connection, feedback 0
 
@@ -395,6 +436,7 @@ opl_type        db      0               ; 0 = not initialised, 2 or 3
 opl_voice       db      0               ; 0 faithful, 1..4 patch
 opl_vol         db      15
 opl_keyed       db      0
+opl_ch          db      OPL_CH_A        ; the channel the last note took
 opl_block       db      0
 opl_fnum        dw      0
 opl_rec         dw      voice_faithful2 ; record the current voice uses

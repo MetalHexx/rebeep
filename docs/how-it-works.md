@@ -60,19 +60,23 @@ the count completes, as on the real chip.
 
 ## The OPL voice
 
-ReBeep plays one voice on OPL channel 8 and touches nothing else. A divisor `d` is a frequency of
-1193182 / `d` Hz. The OPL wants a block `b` and an F-number `n`, with
-`f = n * 49716 / 2^(20-b)`, so
+ReBeep plays one voice on OPL channels 7 and 8 and touches nothing else. Each new note takes the
+other channel, so the note before it fades out on its own. Starting a note again on the channel
+that is still sounding would restart its wave mid-cycle, which clicks.
+
+A divisor `d` is a frequency of 1193182 / `d` Hz. The OPL wants a block `b` and an F-number `n`,
+with `f = n * 49716 / 2^(20-b)`, so
 
 ```
 n = 3 * 2^(23-b) / d        (the smallest block b that keeps n ≤ 1023)
 ```
 
 Changing pitch while a note sounds rewrites only the pitch, never the key bit, so a glide stays a
-glide. Volume (0 to 15) sets the carrier's attenuation. The faithful voice is a square wave on an
-OPL3. An OPL2 has no square wave, so it gets a two-operator FM approximation; the four patches
-(Organ, Flute, Brass, Bell) are plain FM settings. On an OPL3 the chip stays in OPL3 mode, with the
-channel routed to both outputs, while ReBeep is trapping.
+glide. Volume (0 to 15) sets the carriers' attenuation. The faithful voice is a square wave on an
+OPL3. An OPL2 has no square wave, so it gets a two-operator FM approximation. The faithful voice
+fades in over about a millisecond and out over about ten, so a beep never starts or stops on a step.
+The four patches (Organ, Flute, Brass, Bell) are plain FM settings. On an OPL3 the chip stays in
+OPL3 mode, with both channels routed to both outputs, while ReBeep is trapping.
 
 ## The fallback
 

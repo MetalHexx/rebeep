@@ -1,5 +1,5 @@
-; OPL2/OPL3 ports, register bases and the operator offsets of channel 8,
-; the one voice ReBeep plays on.
+; OPL2/OPL3 ports, register bases and the two channels ReBeep's one voice
+; alternates between.
 ; SPDX-License-Identifier: MIT
 
 %ifndef OPL_INC
@@ -24,9 +24,10 @@ REG_FNUMLO  equ 0A0h            ; per channel: + channel
 REG_KEYBLK  equ 0B0h
 REG_FBCNT   equ 0C0h
 
-OPL_CH      equ 8
-OP_MOD      equ 12h             ; channel 8's modulator
-OP_CAR      equ 15h             ; channel 8's carrier
+OPL_CH_A    equ 7               ; each new note takes the other channel
+OPL_CH_B    equ 8               ; OPL_CH_A + 1: opl.asm loops from A to B
+OP_MOD_OFS  equ 0Ah             ; channels 6-8: modulator offset = channel + 0Ah
+OP_CAR_OFS  equ 3               ; carrier offset = modulator offset + 3
 
 KEY_ON      equ 20h             ; REG_KEYBLK bit 5
 OPL3_OUT    equ 30h             ; REG_FBCNT left and right output enables
