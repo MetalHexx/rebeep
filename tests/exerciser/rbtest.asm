@@ -1436,9 +1436,7 @@ chk_rest_held:
         call    st_mode
         mov     [g_mode], al
         mov     al, RBS_F_LOWFM
-        call    set_low
-        mov     ax, 0FFFFh              ; the flag applies from the next write
-        call    set_div
+        call    set_low                 ; applies at once, with no write from the game
         call    st_mode
         mov     [g_mode2], al
         mov     al, [g_low]
@@ -1895,7 +1893,7 @@ s_menu      db "RBTEST - ReBeep speaker exerciser. Esc quits.", 13, 10
             db "  4  stepped beeps, 30 ms on / 20 ms off", 13, 10
             db "  5  direct toggling, gate off (noise)", 13, 10
             db "  6  out-of-range pitch (divisor 100)", 13, 10
-            db "  7  divisor 0, below 20 Hz (silent unless REBEEP /L:1)", 13, 10
+            db "  7  divisor 0, below 20 Hz (with ReBeep: silent, or low at /L:1)", 13, 10
             db "  8  timing loop on 61h bit 5", 13, 10
             db "  9  silence and restore", 13, 10
             db "  0  stepped beeps keyed by the gate (Grand Prix Circuit)", 13, 10

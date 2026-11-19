@@ -415,6 +415,32 @@ start:
         jnz     .gate
         ENDCASE
 
+        ; interp_refresh applies a change of interp_low to the count already held, without a
+        ; write, and reports nothing when nothing changes.
+        CASE    "refresh_applies_low"
+        call    interp_reset
+        W       SYS_CTRL, SC_GATE2 | SC_SPKR
+        COUNT   0FFFFh
+        EXPECT  EV_NONE, M_REST
+        mov     byte [interp_low], 1
+        call    interp_refresh
+        EXPECTD EV_TONE_ON, M_TONE, 0FFFFh
+        call    interp_refresh
+        EXPECTD EV_NONE, M_TONE, 0FFFFh
+        mov     byte [interp_low], 0
+        call    interp_refresh
+        EXPECT  EV_TONE_OFF, M_REST
+        COUNT   D1000
+        EXPECTD EV_TONE_ON, M_TONE, D1000
+        mov     byte [interp_low], 1
+        call    interp_refresh
+        EXPECTD EV_NONE, M_TONE, D1000
+        mov     byte [interp_low], 0
+        call    interp_reset
+        call    interp_refresh
+        EXPECT  EV_NONE, M_SILENT
+        ENDCASE
+
         ; Grand Prix Circuit's race engine: 40 ms of the engine pitch, then 20 ms of count
         ; FFFFh as a rest, each slot a new count on 42h then 61h |= 3. 43h is never written.
         CASE    "gpc_engine_loop"

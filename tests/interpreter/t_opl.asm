@@ -13,6 +13,8 @@
 SINK_MAX        equ 256         ; entries of 4 bytes: register word, value byte, pad
                                 ; a case that reads the log clears it first
 A4              equ 2711        ; 1,193,182 / 440 Hz
+ORGAN_MOD_TL    equ 18h         ; patch 1's 40h bytes in opl.asm's patch_table
+ORGAN_CAR_TL    equ 08h
 
         jmp     start
 
@@ -586,6 +588,35 @@ stk_note:
         LASTWM  0B8h, 20h, 0
         LASTWM  0B7h, 20h, 20h
         call    opl_note_off
+        ENDCASE
+
+; Volume scales an additive voice's modulators with its carriers (patch 1, Organ: C0h
+; bit 0 set), and leaves an FM voice's modulators alone (patch 2, Flute).
+%strcat cname "additive_volume_", %2
+        CASE    cname
+        mov     al, %1
+        call    opl_init
+        mov     al, 1
+        call    opl_set_voice
+        SINK_CLEAR
+        mov     al, 7
+        call    opl_set_volume
+        LASTW   40h + 11h, ORGAN_MOD_TL + (15 - 7) * 4
+        LASTW   40h + 12h, ORGAN_MOD_TL + (15 - 7) * 4
+        LASTW   40h + 15h, ORGAN_CAR_TL + (15 - 7) * 4
+        mov     al, 15
+        call    opl_set_volume
+        LASTW   40h + 12h, ORGAN_MOD_TL
+        mov     al, 2
+        call    opl_set_voice
+        SINK_CLEAR
+        mov     al, 7
+        call    opl_set_volume
+        LASTW   40h + 12h, 0FFFFh
+        mov     al, 15
+        call    opl_set_volume
+        xor     al, al
+        call    opl_set_voice
         ENDCASE
 
 ; Volume 0 keys nothing, through a note on or a pitch change; a volume back up keys again.

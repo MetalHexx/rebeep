@@ -118,22 +118,24 @@ rb_opl_start:
         mov     al, [RB_STATE + RBS_VOLUME]
         jmp     opl_set_volume
 
-; rb_apply_low: hand RB_STATE's /L flag to the interpreter. It takes effect from the game's
-; next speaker write. Clobbers AL.
+; rb_apply_low: hand RB_STATE's /L flag to the interpreter. With the traps on,
+; rb_apply_config then applies it to a held count at once. Clobbers AL.
 rb_apply_low:
         mov     al, [RB_STATE + RBS_FLAGS]
         and     al, RBS_F_LOWFM
         mov     [interp_low], al
         ret
 
-; rb_apply_config: push RB_STATE's voice, volume and translation flag to the engine.
-; Only valid while the traps are on, when the OPL is ours.
+; rb_apply_config: push RB_STATE's voice, volume, /L and translation flags to the engine.
+; Only valid while the traps are on, when the OPL is ours. The voice goes first, so a
+; rest that /L turns into a tone starts in the new voice.
 rb_apply_config:
         mov     al, [RB_STATE + RBS_VOICE]
         call    opl_set_voice
         mov     al, [RB_STATE + RBS_VOLUME]
         call    opl_set_volume
         call    capture_voice_changed
+        call    capture_low_changed
         jmp     capture_translation_changed
 
 ; rb_uninstall: unhook everything, from ReBeep's own state and the IVT alone.

@@ -2,7 +2,8 @@
 ; writes, and reports tone-on, pitch-change and tone-off events plus a
 ; SILENT/TONE/RAW/REST mode. Near calls; DS = this module's segment.
 ; A square wave below 20 Hz (divisor above DIV_MAX, or 0) is M_REST while
-; interp_low is 0, and M_TONE otherwise; the caller sets interp_low.
+; interp_low is 0, and M_TONE otherwise; the caller sets interp_low and may
+; call interp_refresh to apply a change at once.
 ; Every routine preserves all registers except its outputs, and flags.
 ; SPDX-License-Identifier: MIT
 
@@ -161,6 +162,12 @@ interp_write:
         mov     al, cl
         jmp     .out
 
+; interp_refresh: re-derive the mode from the state already seen, after interp_low changed.
+; Out: as interp_write (EV_NONE when the mode and divisor stand).
+interp_refresh:
+        push    cx
+        jmp     interp_write.recompute
+
 ; interp_verdict: AL = the mode the current state implies.
 interp_verdict:
         cmp     byte [st_spk], 0
@@ -195,8 +202,8 @@ interp_verdict:
 ; Read-only state for status: current mode and (in M_TONE) divisor.
 interp_mode     db      M_SILENT
 interp_div      dw      0
-; Set by the caller: 0 = a count below 20 Hz is a rest, 1 = a tone (BX = the divisor).
-; It applies from the next write.
+; Set by the caller: 0 = a count below 20 Hz is a rest, nonzero = a tone. A change applies
+; from the next write, or at once through interp_refresh.
 interp_low      db      0
 
 st_gate         db      0

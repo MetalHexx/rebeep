@@ -18,14 +18,15 @@ Jemm. It reads and writes those ports itself only through QPI, because a direct 
 again.
 
 Every byte a game writes reaches the real port, so the timer runs as the game set it. The one
-change is to `61h`: while the FM chip plays the tone, ReBeep holds one of its bits clear to keep the
-real speaker quiet (next section). A timing loop that reads the timer output on `61h` bit 5 sees real
-hardware, except while that bit is the gate.
+change is to `61h`: while the FM chip plays a tone, or the game rests, ReBeep holds one of its bits
+clear to keep the real speaker quiet (next section). A timing loop that reads the timer output on
+`61h` bit 5 sees real hardware, except while that bit is the gate.
 
 ## Port `61h`: masking and the game's view
 
 While the OPL plays a tone, or the game rests below 20 Hz (see the interpreter), ReBeep holds one
-bit of the real `61h` clear so the PC speaker stays quiet. It picks the bit that leaves the speaker where it rests, because a speaker that moves clicks:
+bit of the real `61h` clear so the PC speaker stays quiet. It picks the bit that leaves the speaker
+where it rests, because a speaker that moves clicks:
 
 - Most games switch the timer gate (bit 0) and speaker data (bit 1) on and off together. Between
   notes the speaker rests at 0, so ReBeep holds bit 1 clear.
@@ -37,7 +38,8 @@ The game must not notice, so a read of `61h` returns the real value with bits 0 
 the game's own. A `42h` or `43h` write that moves a tone between the OPL and the speaker re-issues
 `61h` at once, so the handoff has no gap.
 
-Holding the gate clear stops the real channel 2, which has two side effects while such a note plays:
+Holding the gate clear stops the real channel 2, which has two side effects while such a note, or a
+rest, plays:
 
 - Bit 5 of `61h` would stand still, so ReBeep flips it on every read, and a game that waits for an
   edge doesn't hang. A game that times its notes by counting those edges plays them short.
@@ -61,10 +63,10 @@ states:
 It reports three events: tone on, pitch change and tone off. A new count or mode applies only when
 the count completes, as on the real chip.
 
-Games use the counts below 20 Hz as rests. On the real chip a new count takes over only at the end of
-a half-cycle, which at 18 Hz is 27 ms away, so a short slot of `FFFFh` leaves the speaker still.
-Grand Prix Circuit's engine rests like that for 20 ms in every 60. `/L:1` plays them as a low FM note
-instead.
+Games use the counts below 20 Hz as rests. On the real chip a new count takes over only at the end
+of a half-cycle, which at 18 Hz is 27 ms away, so a short slot of `FFFFh` leaves the speaker still.
+Grand Prix Circuit's engine rests like that for 20 ms in every 60. `/L:1` plays them as a low FM
+note instead. A change of `/L` on a loaded copy applies to a count the game is holding at once.
 
 ## The OPL voice
 
@@ -80,12 +82,13 @@ n = 3 * 2^(23-b) / d        (the smallest block b that keeps n ≤ 1023)
 ```
 
 Changing pitch while a note sounds rewrites only the pitch, never the key bit, so a glide stays a
-glide. Volume (0 to 15) sets the carriers' attenuation, and volume 0 keys no note at all. Divisor 0
-plays as 65535, block 0. The faithful voice is a square wave on an OPL3. An OPL2 has no square
-wave, so it gets a two-operator FM approximation. The faithful voice fades in over about a
-millisecond and out over about ten, so a beep never starts or stops on a step. The four patches
-(Organ, Flute, Brass, Bell) are plain FM settings. On an OPL3 the chip stays in OPL3 mode, with
-both channels routed to both outputs, while ReBeep is trapping.
+glide. Volume (0 to 15) sets the attenuation of every operator that is heard: the carriers, and
+in an additive voice such as Organ the modulators too, so the voice keeps its balance at every
+volume. Volume 0 keys no note at all. Divisor 0 plays as 65535, block 0. The faithful voice is a
+square wave on an OPL3. An OPL2 has no square wave, so it gets a two-operator FM approximation.
+The faithful voice fades in over about a millisecond and out over about ten, so a beep never starts
+or stops on a step. The four patches (Organ, Flute, Brass, Bell) are plain FM settings. On an OPL3
+the chip stays in OPL3 mode, with both channels routed to both outputs, while ReBeep is trapping.
 
 ## The fallback
 

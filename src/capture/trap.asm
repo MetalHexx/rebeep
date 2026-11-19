@@ -222,6 +222,25 @@ capture_voice_changed:
 .ret:
         ret
 
+; capture_low_changed: interp_low changed (or is being re-applied, which changes nothing).
+; A count below 20 Hz that the game holds turns from a rest into a tone, or back, at once,
+; as the game's next write would turn it. Does nothing while the traps are off. Preserves
+; every register.
+capture_low_changed:
+        test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
+        jz      .ret
+        pusha
+        call    interp_refresh          ; AL = event, AH = mode, BX = divisor
+        call    note_state
+        call    play_event
+        call    mask_update
+        jnc     .done
+        call    sync_real_61
+.done:
+        popa
+.ret:
+        ret
+
 ; mask_wanted: Out: AL = 1 when the real speaker must be held (translation on, and mode
 ; M_TONE, which the OPL plays, or M_REST), else 0. Preserves every other register.
 mask_wanted:

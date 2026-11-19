@@ -742,7 +742,8 @@ scan_letter:
         pop     cx
         ret
 
-; print_config: "<voice>, volume <n>, Ctrl+Alt+<x> toggles, ..." from the RB_STATE at ES:BX.
+; print_config: "<voice>, volume <n>." then "Ctrl+Alt+<x> toggles, ..." and the /L line,
+; from the RB_STATE at ES:BX. A patch is named: "patch 2 Flute".
 print_config:
         push    ax
         push    dx
@@ -758,7 +759,12 @@ print_config:
         call    print
         pop     ax
         add     al, '0'
+        push    ax
         call    putc
+        mov     al, ' '
+        call    putc
+        pop     ax
+        call    print_patch_name
 .volume:
         mov     dx, msg_volume
         call    print
@@ -784,6 +790,33 @@ print_config:
 .low:
         call    print
         pop     dx
+        pop     ax
+        ret
+
+; print_patch_name: AL = '1'..'4'. Prints that patch's name from opl_patch_names
+; ("1 Organ, 2 Flute, ..."), the one list the help prints too.
+print_patch_name:
+        push    ax
+        push    si
+        mov     ah, al
+        mov     si, opl_patch_names
+.find:
+        lodsb
+        cmp     al, '$'
+        je      .done
+        cmp     al, ah
+        jne     .find
+        inc     si                      ; the space after the number
+.name:
+        lodsb
+        cmp     al, ','
+        je      .done
+        cmp     al, '$'
+        je      .done
+        call    putc
+        jmp     .name
+.done:
+        pop     si
         pop     ax
         ret
 
@@ -875,7 +908,7 @@ msg_loaded_4    db      ", $"
 msg_faithful    db      "faithful voice$"
 msg_patch       db      "patch $"
 msg_volume      db      ", volume $"
-msg_keys_1      db      ", Ctrl+Alt+$"
+msg_keys_1      db      ".", 13, 10, "Ctrl+Alt+$"
 msg_keys_2      db      " toggles, Ctrl+Alt+$"
 msg_keys_3      db      " cycles the voice.", 13, 10, '$'
 msg_low_0       db      "Notes below 20 Hz are silent (/L:0).", 13, 10, '$'

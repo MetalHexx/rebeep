@@ -6,7 +6,7 @@
 ; registers except its outputs, and flags.
 ; Only channels 7 and 8's registers, the global 01h, (OPL3) 105h and, while
 ; detecting, the timer registers 02h and 04h are ever written. Volume 0 keys no
-; note: TL 63 is only -47 dB, and an additive voice's modulator ignores it.
+; note: TL 63 is only -47 dB, not silence.
 ; Stack: at most 16 bytes, return address included (opl_detect, opl_init and
 ; opl_set_voice reach it). The call chains are kept flat for that; a change that
 ; nests one more call or push breaks it.
@@ -297,7 +297,7 @@ opl_put_keyblk:
 
 ; opl_program: write the current voice's operators and C0h on both channels, then
 ; the volume. The carriers' 40h is left to opl_put_volume so it is written once,
-; scaled.
+; scaled; an additive voice's modulators get their scaled 40h there too.
 opl_program:
         push    ax
         push    bx
@@ -358,38 +358,48 @@ opl_program:
         pop     ax
         jmp     opl_put_volume
 
-; opl_put_volume: both carriers' TL = the voice's base TL + (15 - volume) * 4,
-; clamped to 63; volume 0 is always 63.
+; opl_put_volume: the TL of every operator that is heard = the voice's base TL +
+; (15 - volume) * 4, clamped to 63; volume 0 is always 63. That is both carriers,
+; and in an additive voice (C0h bit 0) both modulators too, so the balance of its
+; partials holds at every volume.
 opl_put_volume:
         push    ax
         push    bx
-        push    cx
         push    si
         mov     si, [opl_rec]
-        mov     al, [si + 3]            ; carrier 40h
-        mov     ah, al
-        and     ah, 0C0h                ; keep the key scale level bits
+        mov     al, 15
+        sub     al, [opl_vol]
+        shl     al, 1
+        shl     al, 1
+        mov     [opl_att], al
+        mov     bl, REG_KSLTL + OPL_CAR_A
+        mov     al, [si + 3]            ; the carriers' 40h
+.pair:                                  ; AL = the record's 40h, BL = channel A's operator
+        mov     bh, al
+        and     bh, 0C0h                ; keep the key scale level bits
         and     al, 3Fh
-        mov     cl, [opl_vol]
-        or      cl, cl
-        jz      .mute
-        mov     ch, 15
-        sub     ch, cl
-        shl     ch, 1
-        shl     ch, 1
-        add     al, ch
+        cmp     byte [opl_vol], 0
+        je      .mute
+        add     al, [opl_att]
         cmp     al, 63
         jbe     .write
 .mute:
         mov     al, 63
 .write:
-        or      al, ah
-        pop     si                      ; free before the write, to keep the stack shallow
-        pop     cx
-        mov     bx, REG_KSLTL + OPL_CAR_A
+        or      al, bh
+        xor     bh, bh
         call    opl_write
-        inc     bx                      ; channel B's carrier
+        inc     bx                      ; channel B's operator
         call    opl_write
+        cmp     bl, REG_KSLTL + OPL_CAR_A + 1
+        jne     .done                   ; that was the modulators
+        test    byte [si + 10], 01h     ; additive: the modulators are heard too
+        jz      .done
+        mov     bl, REG_KSLTL + OPL_CH_A + OP_MOD_OFS
+        mov     al, [si + 2]            ; the modulators' 40h
+        jmp     .pair
+.done:
+        pop     si
         pop     bx
         pop     ax
         ret
@@ -440,6 +450,7 @@ opl_bases       db      REG_AVEKSR, REG_KSLTL, REG_ARDR, REG_SLRR, REG_WAVE
 opl_type        db      0               ; 0 = not initialised, 2 or 3
 opl_voice       db      0               ; 0 faithful, 1..4 patch
 opl_vol         db      15
+opl_att         db      0               ; (15 - opl_vol) * 4, opl_put_volume's scratch
 opl_keyed       db      0
 opl_ch          db      OPL_CH_A        ; the channel the last note took
 opl_block       db      0

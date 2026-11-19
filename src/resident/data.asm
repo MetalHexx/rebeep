@@ -6,7 +6,8 @@
 %include "amis.inc"
 
 ; RB_STATE as a fresh load leaves it. A plain load overrides the config fields (voice,
-; volume, keys) from the command line; a change of a loaded copy writes only the named ones.
+; volume, keys, the /L flag) from the command line; a change of a loaded copy writes only the
+; named ones.
 RB_STATE:
         db      RBS_LAYOUT
         db      RBS_F_TRANSLATE         ; RBS_FLAGS: translation on, traps off until installed
