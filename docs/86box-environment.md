@@ -78,6 +78,17 @@ DOS needs 8.3 names, so the deploy handles awkward files like this:
 
 Check the output of `rebeep disk deploy` (or `rebeep disk list`) when a game misbehaves.
 
+To move a file between your host and D: without copying it by hand, quit the VM first, then:
+
+| Goal | Command |
+|---|---|
+| See what D: holds now, including what DOS wrote | `rebeep disk show <vm> [path]` |
+| Copy a file or folder off D: | `rebeep disk fetch <vm> <path>`, into `build/disk/<vm>/` unless you give `--out <dir>` |
+| Put a host file on D: | `rebeep disk add <vm> <file> [--to <dir>]` |
+
+The next deploy drops anything you added and anything DOS wrote, so fetch it before then. Game
+folders can't be fetched; your games stay in the media folder.
+
 ## How a boot fits together
 
 1. **CONFIG menu.** The default is **ReBeep dev**, which loads
