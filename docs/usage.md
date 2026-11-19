@@ -63,8 +63,9 @@ Use `/OFF` before a game that plays its own FM music, or that toggles the speake
 down. Use `/ON` to come back. The hotkey is not enough for a game with its own FM music: it stops
 translating but keeps the traps, and on an OPL3 keeps the chip in OPL3 mode.
 
-Some games take over the keyboard interrupt, so the hotkeys do nothing in them. Set the state
-before you start the game.
+Some games, such as Grand Prix Circuit, take over the keyboard interrupt, so the hotkeys do nothing
+in them. They still work at the DOS prompt. Set the voice (`/F` or `/P:n`), or `/OFF`, before you
+start the game.
 
 ## Exit codes
 
@@ -116,6 +117,6 @@ Other problems:
 | Symptom | Fix |
 |---|---|
 | A game with its own FM music clashes | `REBEEP /OFF` before it, or `REBEEP /U` |
-| A hotkey does nothing in a game | Set `/ON` or `/OFF` before starting the game |
+| A hotkey does nothing in a game | The game owns the keyboard. Set the voice or `/OFF` before starting it |
 | A game runs slowly | It toggles the speaker very often. `REBEEP /OFF` before starting it. See [performance](how-it-works.md#performance) |
 | `RBPLAY` says ReBeep did not load | Run `REBEEP /?` and read the exit code above |

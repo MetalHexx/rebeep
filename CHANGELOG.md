@@ -27,5 +27,6 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 ### Known issues
 
 - Grand Prix Circuit hangs on FreeDOS 1.4 whether or not ReBeep is loaded.
-- The hotkeys may not fire in games that take over the keyboard.
+- The hotkeys don't fire in games that take over the keyboard, such as Grand Prix Circuit. Set the voice,
+  or `REBEEP /OFF`, at the DOS prompt before starting them.
 - Games with their own FM music need `REBEEP /OFF` first, or ReBeep and the game fight over the FM chip.

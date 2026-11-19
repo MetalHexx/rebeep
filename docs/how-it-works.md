@@ -98,7 +98,8 @@ is found. Uninstall is refused if another program hooked an interrupt after ReBe
 because removing ReBeep would break that chain.
 
 The hotkey hooks `INT 09h`. It tracks Ctrl and Alt from the raw scan codes, so it still works when a
-game replaces the BIOS keyboard handler, but not when a game takes over the interrupt entirely.
+game replaces the BIOS keyboard handler, but not when a game takes over the interrupt entirely, as
+Grand Prix Circuit does.
 
 ## Performance
 

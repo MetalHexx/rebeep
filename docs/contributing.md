@@ -77,16 +77,19 @@ means a fix on the branch, never a merge.
 - **`mirror-msdos`:**
   - On the normal dev boot, which autoloads ReBeep, play Grand Prix Circuit
     (`D:\GAMES\GPC\GPAUTO\GPEGA.EXE`): its engine and effects come out of the OPL with the real
-    speaker silent, in faithful mode and in a patch.
-  - Ctrl+Alt+B toggles between the OPL and the speaker. Ctrl+Alt+N cycles the voice.
+    speaker silent, in faithful mode and in a patch. No note may click. After `REBEEP /V:0` the
+    game must be silent.
+  - At the DOS prompt, with `RBTEST /C:1`: Ctrl+Alt+B toggles between the OPL and the speaker, and
+    Ctrl+Alt+N cycles the voice. GPC takes over the keyboard, so the hotkeys do nothing inside it.
   - Update the GPC row in [compatibility.md](compatibility.md).
   - Last, attach `build/release/rebeep-<v>-floppy.img` as A: from 86Box's Media menu, run
     `A:\INSTALL`, copy the MS-DOS samples over C:'s configs and reboot. Check that ReBeep loads from
     the sample config.
   - Quit 86Box, then run `rebeep vm reset mirror-msdos --yes` to put the VM back on its dev configs.
 - **`mirror-freedos`:** GPC hangs there, so FreeDOS acceptance rests on RBTEST.
-  - With ReBeep autoloaded, play RBTEST cases 1 to 9 by ear (`RBTEST /C:n`), especially case 4, the
-    stepped beeps. Do it in faithful mode and in one patch.
+  - With ReBeep autoloaded, play RBTEST cases 0 to 9 by ear (`RBTEST /C:n`), especially case 4, the
+    stepped beeps, and case 0, the same beeps keyed the way GPC keys them. Neither may click or
+    crackle. Do it in faithful mode and in one patch.
   - The real speaker stays silent while the OPL plays.
   - Ctrl+Alt+B hands the tone to the speaker and back. Ctrl+Alt+N cycles the voice.
 - **DOSBox-X:** run `T_OPL /L` with `oplmode=opl2` and again with `oplmode=opl3`, and confirm the

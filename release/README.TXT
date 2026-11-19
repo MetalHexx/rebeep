@@ -170,9 +170,10 @@ Other problems:
       the chip in OPL3 mode while it is trapping.
 
   A hotkey that does not fire
-      Some games take over the keyboard interrupt, so Ctrl+Alt keys do
-      nothing in them. Set the state before you start the game, with
-      REBEEP /ON or REBEEP /OFF.
+      Some games, such as Grand Prix Circuit, take over the keyboard
+      interrupt, so Ctrl+Alt keys do nothing in them. They still work at
+      the DOS prompt. Set the voice (REBEEP /F or REBEEP /P:n), or run
+      REBEEP /OFF, before you start the game.
 
   Games that toggle the speaker heavily
       A game that toggles the speaker very often can run slowly while
