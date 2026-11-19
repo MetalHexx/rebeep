@@ -17,16 +17,32 @@ QPI interface. ReBeep installs that callback and traps `42h`, `43h` and `61h`, s
 Jemm. It reads and writes those ports itself only through QPI, because a direct access would trap
 again.
 
-Every byte a game writes is forwarded to the real port, so **the timer is never faked**. Channel 2
-keeps counting, and a timing loop that reads the timer output on `61h` bit 5 sees real hardware.
-ReBeep only watches, and silences the real speaker while the FM chip plays the tone.
+Every byte a game writes is forwarded to the real port, so the timer runs as the game set it, and a
+timing loop that reads the timer output on `61h` bit 5 sees real hardware. ReBeep only watches, and
+silences the real speaker while the FM chip plays the tone.
 
 ## Port `61h`: masking and the game's view
 
-While the OPL plays a tone, ReBeep writes the real `61h` with bit 1 (speaker data) clear, so the PC
-speaker stays quiet. The game must not notice, so a read of `61h` returns the real value with bit 1
-replaced by the game's own last-written bit. A `42h` or `43h` write that moves a tone between the OPL
-and the speaker re-issues `61h` at once, so the handoff has no gap.
+While the OPL plays a tone, ReBeep holds one bit of the real `61h` clear so the PC speaker stays
+quiet. It picks the bit that leaves the speaker where it rests, because a speaker that moves clicks:
+
+- Most games switch the timer gate (bit 0) and speaker data (bit 1) on and off together. Between
+  notes the speaker rests at 0, so ReBeep holds bit 1 clear.
+- Some, such as Grand Prix Circuit, leave bit 1 on and start and stop each note with the gate alone.
+  With the gate off, channel 2 holds its output high, so the speaker rests high. ReBeep holds the
+  gate clear instead, and the speaker stays high and still.
+
+The game must not notice, so a read of `61h` returns the real value with bits 0 and 1 replaced by
+the game's own. A `42h` or `43h` write that moves a tone between the OPL and the speaker re-issues
+`61h` at once, so the handoff has no gap.
+
+Holding the gate clear stops the real channel 2, which has two side effects while such a note plays:
+
+- Bit 5 of `61h` would stand still, so ReBeep flips it on every read, and a game that waits for an
+  edge doesn't hang. A game that times its notes by counting those edges plays them short.
+- A game that reads the count back from `42h` sees it frozen.
+
+Neither happens in games that switch both bits together.
 
 ## The interpreter
 

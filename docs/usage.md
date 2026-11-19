@@ -85,8 +85,8 @@ check passed, and 1 otherwise.
 
 | Command | Does |
 |---|---|
-| `RBTEST` | Menu: keys 1 to 9 play a case, Esc quits |
-| `RBTEST /C:n` | Play case `n` (1 to 9) once |
+| `RBTEST` | Menu: keys 0 to 9 play a case, Esc quits |
+| `RBTEST /C:n` | Play case `n` (0 to 9) once |
 | `RBTEST /A` | Unattended behaviour checks (PASS and FAIL lines) |
 | `RBTEST /A /R` | Also require ReBeep and check its state |
 | `RBTEST /M:SAVE` | Save the largest free block to `RBMEM.DAT` |

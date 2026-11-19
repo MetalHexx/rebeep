@@ -1,8 +1,9 @@
 ; Speaker-port capture through Jemm's QPI: installs and removes the traps on 42h, 43h and
 ; 61h, and owns the callback QPIEMU calls on every trapped access. Resident code (386).
 ; Every byte a game writes goes to the interpreter and on to the real port. While the OPL
-; plays a tone (translation on, mode M_TONE) the real 61h has bit 1 clear, and the game
-; reads back its own 61h. Anything else (M_RAW) plays on the real speaker.
+; plays a tone (translation on, mode M_TONE) one bit of the real 61h is held clear, chosen
+; so the speaker stays where it rests (see mask_update), and the game reads back its own
+; bits 0-1. Anything else (M_RAW) plays on the real speaker.
 ; Port I/O on a trapped port goes through QPI 1A00h/1A01h/1A04h only: a direct IN/OUT
 ; would trap again.
 ; Near calls, DS = CS, and everything but the stack may be clobbered unless noted.
@@ -33,6 +34,10 @@ IMG_ECX         equ 28
 IMG_EAX         equ 32
 
 TRAP_PORTS      equ 3
+
+; `masked`: the bit held clear in the real 61h while the OPL plays the tone, or 0.
+MASK_SPK        equ SC_SPKR             ; bit 1: the speaker rests at 0
+MASK_GATE       equ SC_GATE2            ; the gate: OUT2 stays high, so a speaker parked high rests there
 
 ; capture_install: trap 42h, 43h and 61h, with interrupts off throughout.
 ; The first call also installs the callback, remembering the previous one in RB_STATE.
@@ -83,8 +88,8 @@ capture_install:
         ret
 
 ; capture_remove: with the traps on, first undo any masking (OPL key off, then the real 61h
-; with the game's own bit 1); then untrap the three ports and clear the traps flag, set the
-; mode in RB_STATE to M_SILENT and clear `masked`, so nothing stale survives until /ON
+; with the game's own bits 0-1); then untrap the three ports and clear the traps flag, set
+; the mode in RB_STATE to M_SILENT and clear `masked`, so nothing stale survives until /ON
 ; resyncs. With the traps already off the game's 61h is stale: nothing is written to the OPL
 ; or 61h. The callback stays installed until uninstall. A port that was not trapped is ignored.
 capture_remove:
@@ -94,7 +99,7 @@ capture_remove:
         jz      .untrap
         call    opl_note_off
         mov     byte [masked], 0
-        call    sync_real_bit1
+        call    sync_real_61
 .untrap:
         xor     si, si
 .next:
@@ -167,17 +172,15 @@ capture_sync:
 
 ; capture_translation_changed: the translation flag changed (or is being re-applied, which
 ; changes nothing). Moves a tone that is sounding between the OPL and the real speaker.
-; The hotkey calls this inside INT 09h: the speaker-bit handoff through QPI is the only 61h
-; access allowed there, and deferring it would leave a sustained tone silent.
+; The hotkey calls this inside INT 09h: the 61h handoff through QPI is the only 61h access
+; allowed there, and deferring it would leave a sustained tone silent.
 ; Does nothing while the traps are off. Preserves every register.
 capture_translation_changed:
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
         jz      .ret
         pusha
-        call    mask_wanted
-        cmp     al, [masked]
-        je      .done
-        mov     [masked], al
+        call    mask_update
+        jnc     .done
         or      al, al
         jz      .off
         mov     bx, [RB_STATE + RBS_DIVISOR]
@@ -186,19 +189,22 @@ capture_translation_changed:
 .off:
         call    opl_note_off
 .real:
-        call    sync_real_bit1
+        call    sync_real_61
 .done:
         popa
 .ret:
         ret
 
 ; capture_voice_changed: the voice changed (or is being re-applied): a tone that is sounding
-; on the OPL restarts with the new voice. Does nothing while the traps are off.
-; Preserves every register.
+; on the OPL, and stays there, restarts with the new voice. One that is moving between the
+; OPL and the speaker is left to capture_translation_changed, which runs next.
+; Does nothing while the traps are off. Preserves every register.
 capture_voice_changed:
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
         jz      .ret
         pusha
+        cmp     byte [masked], 0
+        je      .done
         call    mask_wanted
         or      al, al
         jz      .done
@@ -222,21 +228,59 @@ mask_wanted:
 .ret:
         ret
 
-; sync_real_bit1: write the real 61h with bit 1 clear when `masked`, else the game's own.
-; Preserves every register.
-sync_real_bit1:
+; mask_update: bring `masked` in line with mask_wanted. When masking starts it picks the bit
+; to hold clear from the real 61h: a speaker parked high (real bits 0-1 = 10, so OUT2 is
+; high) keeps resting there with the gate held clear; anything else holds bit 1 clear and
+; the speaker rests at 0. A mask that holds keeps its kind: picking again mid-note would
+; swap a held gate for a held bit 1, a step on the speaker.
+; Out: CF set when `masked` changed, with AL = 1 (masking started) or 0 (ended).
+;      CF clear when it already agreed. AH is clobbered; every other register survives.
+mask_update:
+        call    mask_wanted
+        cmp     byte [masked], 0
+        je      .unmasked
+        or      al, al
+        jnz     .same
+        mov     byte [masked], 0
+        stc
+        ret
+.unmasked:
+        or      al, al
+        jz      .same
+        push    bx
+        push    dx
+        mov     dx, SYS_CTRL
+        call    qpi_in
+        and     bl, SC_GATE2 | SC_SPKR
+        mov     al, MASK_GATE
+        cmp     bl, SC_SPKR
+        je      .pick
+        mov     al, MASK_SPK
+.pick:
+        mov     [masked], al
+        pop     dx
+        pop     bx
+        mov     al, 1
+        stc
+        ret
+.same:
+        clc
+        ret
+
+; sync_real_61: write the real 61h's bits 0-1 as the game's own, less the bit `masked`
+; holds clear. Preserves every register.
+sync_real_61:
         push    ax
         push    bx
         push    dx
         mov     dx, SYS_CTRL
         call    qpi_in
-        and     bl, 0FFh ^ SC_SPKR
-        cmp     byte [masked], 0
-        jne     .write
-        mov     al, [game_61]
-        and     al, SC_SPKR
+        and     bl, 0FFh ^ (SC_GATE2 | SC_SPKR)
+        mov     al, [masked]
+        not     al
+        and     al, [game_61]
+        and     al, SC_GATE2 | SC_SPKR
         or      bl, al
-.write:
         call    qpi_out
         pop     dx
         pop     bx
@@ -368,9 +412,11 @@ qpi_callback:
 ; handle_access: the port semantics for one trapped access.
 ;   OUT 42h/43h: interpreter, forward the byte, drive the OPL; when that moves the tone
 ;                between OPL and speaker, re-issue 61h.
-;   OUT 61h:     interpreter, remember the game's byte, forward it with bit 1 cleared while
-;                the OPL plays the tone, drive the OPL.
-;   IN 61h:      the real value with bit 1 replaced by the game's own.
+;   OUT 61h:     interpreter, remember the game's byte, forward it less the bit `masked`
+;                holds clear, drive the OPL.
+;   IN 61h:      the real value with bits 0-1 replaced by the game's own. While the gate is
+;                held clear the real OUT2 stands still, so bit 5 flips on every read instead:
+;                a game waiting for its edge must not hang.
 ; Anything else (IN 42h/43h, word and dword accesses) is forwarded unchanged.
 ; In:  ES:DI -> the saved frame
 handle_access:
@@ -383,11 +429,16 @@ handle_access:
         cmp     dx, SYS_CTRL
         jne     forward_access
         call    qpi_in
-        mov     al, bl
-        and     al, 0FFh ^ SC_SPKR
-        mov     ah, [game_61]
-        and     ah, SC_SPKR
-        or      al, ah
+        mov     al, [game_61]
+        and     al, SC_GATE2 | SC_SPKR
+        and     bl, 0FFh ^ (SC_GATE2 | SC_SPKR)
+        or      al, bl
+        cmp     byte [masked], MASK_GATE
+        jne     .view
+        xor     byte [out2_fake], SC_OUT2
+        and     al, 0FFh ^ SC_OUT2
+        or      al, [out2_fake]
+.view:
         mov     [es:di + IMG_EAX], al
         ret
 
@@ -404,12 +455,8 @@ handle_access:
         pop     bx
         pop     ax
         call    play_event
-        call    mask_wanted
-        cmp     al, [masked]
-        je      .done
-        mov     [masked], al
-        jmp     sync_real_bit1
-.done:
+        call    mask_update
+        jc      sync_real_61
         ret
 
 .sys:
@@ -417,12 +464,10 @@ handle_access:
         push    bx
         mov     bl, [es:di + IMG_EAX]
         mov     [game_61], bl
-        call    mask_wanted
-        mov     [masked], al
-        or      al, al
-        jz      .send
-        and     bl, 0FFh ^ SC_SPKR
-.send:
+        call    mask_update             ; before the forward: a new mask reads the real port
+        mov     al, [masked]
+        not     al
+        and     bl, al
         call    qpi_out
         pop     bx
         pop     ax

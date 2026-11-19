@@ -23,8 +23,8 @@
 - **Nothing resident calls DOS.** Uninstall reads the IVT directly; the command-line copy frees the memory.
 - **QPI-only I/O.** On 42h, 43h and 61h the resident part uses QPI `1A00h`/`1A01h`/`1A04h`, never `IN`/`OUT`
   (a direct access traps again). The hotkey never executes `STI`; its one `61h` access is the speaker handoff.
-- **Masking.** While the OPL plays a tone (translation on, `M_TONE`) the real `61h` has bit 1 clear and `IN 61h`
-  returns the game's own bit 1. A `42h`/`43h` write that enters or leaves `M_TONE` re-issues `61h`: an instant handoff.
+- **Masking.** In `M_TONE` (translation on) the real `61h` holds bit 1 clear, or the gate if the speaker rests high
+  (`10`), so it never steps; `IN 61h` returns the game's bits 0-1. Entering or leaving `M_TONE` re-issues `61h` at once.
 - The callback saves every register: QPIEMU restores only `ECX`, `EDX` and the flags.
 - `engine/` assembles under `CPU 8086`; only `capture/` and `startup/` may use 386 (the CPU check must run on any CPU).
 - NASM 3.02 and ≥ 2.16. Output names are 8.3, uppercase. A new build target goes in `targets.json`.

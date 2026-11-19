@@ -345,6 +345,28 @@ start:
         call    t_check
         ENDCASE
 
+        ; Grand Prix Circuit's in-race notes: the speaker bit stays on and the gate alone
+        ; starts and stops each note. Capture's choice of what to mask rests on these verdicts.
+        CASE    "gate_keyed_beeps"
+        call    interp_reset
+        W       SYS_CTRL, SC_SPKR
+        EXPECT  EV_NONE, M_RAW
+        mov     word [beep_pitch], 2000
+        mov     byte [beep_n], 10
+.gate:
+        COUNT_AT beep_pitch
+        EXPECT  EV_NONE, M_RAW
+        W       SYS_CTRL, SC_GATE2 | SC_SPKR
+        EXPECTD EV_TONE_ON, M_TONE, [beep_pitch]
+        W       SYS_CTRL, SC_GATE2 | SC_SPKR
+        EXPECTD EV_NONE, M_TONE, [beep_pitch]
+        W       SYS_CTRL, SC_SPKR
+        EXPECT  EV_TONE_OFF, M_RAW
+        sub     word [beep_pitch], 100
+        dec     byte [beep_n]
+        jnz     .gate
+        ENDCASE
+
         jmp     t_done
 
 beep_pitch      dw      0

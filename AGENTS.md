@@ -66,7 +66,7 @@ flowchart LR
   C --> I[Interpreter<br/>8086-compatible]
   I -- tone events --> O[OPL target<br/>OPL2/OPL3 at 388h]
   I -- untranslatable --> F[Fallback]
-  C -- "forward, bit 1 masked or not" --> H[Real PIT + speaker]
+  C -- "forward, masked or not" --> H[Real PIT + speaker]
   F --> H
 ```
 

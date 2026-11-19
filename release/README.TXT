@@ -106,10 +106,10 @@ Exit codes, also in ERRORLEVEL:
 5 Testing with RBTEST
 ---------------------
 RBTEST.COM plays speaker test cases. Run it with no options for a menu:
-keys 1 to 9 play a case, and Esc quits. Its options are:
+keys 0 to 9 play a case, and Esc quits. Its options are:
 
-  RBTEST           menu: 1-9 plays a case, Esc quits
-  RBTEST /C:n      play case n (1 to 9) once
+  RBTEST           menu: 0-9 plays a case, Esc quits
+  RBTEST /C:n      play case n (0 to 9) once
   RBTEST /A        unattended behaviour checks (PASS and FAIL lines)
   RBTEST /A /R     also require ReBeep and check its state
   RBTEST /M:SAVE   save the largest free block to RBMEM.DAT

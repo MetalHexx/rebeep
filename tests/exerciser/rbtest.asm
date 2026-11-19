@@ -231,10 +231,13 @@ parse:
         cmp     byte [si + 2], ':'
         jne     .bad
         mov     al, [si + 3]
-        sub     al, '1'
-        cmp     al, 8
+        sub     al, '0'
+        cmp     al, 9
         ja      .bad
-        inc     al
+        or      al, al
+        jnz     .cn
+        mov     al, 10                  ; case 0 is the tenth
+.cn:
         mov     [case_n], al
         cmp     byte [si + 4], ' '
         ja      .bad
@@ -585,7 +588,7 @@ calibrate:
 
 ; ---------------------------------------------------------------- listening cases
 
-; AL = 1..9
+; AL = 1..10 (10 is case 0)
 run_case:
         xor     ah, ah
         mov     bx, ax
@@ -778,6 +781,50 @@ case9:
         call    hexbyte
         jmp     crlf
 
+; Case 4's beeps the way Grand Prix Circuit plays them in a race: the speaker bit stays on
+; between notes and the gate alone starts and stops each one, with a read-modify-write of
+; bit 1 while it sounds.
+case10:
+        mov     dx, t_c10
+        call    print
+        call    calibrate
+        call    spk_off
+        in      al, SYS_CTRL
+        or      al, SC_SPKR             ; parked: speaker bit on, gate off
+        out     SYS_CTRL, al
+        mov     cx, 9                   ; half a second
+        call    wait_ticks
+        mov     word [cur], 4000
+        mov     byte [cnt], 20
+.b:
+        mov     ax, [cur]
+        call    pit_tone
+        in      al, SYS_CTRL
+        or      al, SC_GATE2
+        out     SYS_CTRL, al
+        call    gpc_rmw
+        mov     ax, [u_on]
+        mov     dx, [u_on + 2]
+        call    spin
+        in      al, SYS_CTRL
+        and     al, 0FFh ^ SC_GATE2
+        out     SYS_CTRL, al
+        mov     ax, [u_off]
+        mov     dx, [u_off + 2]
+        call    spin
+        sub     word [cur], 150
+        dec     byte [cnt]
+        jnz     .b
+        jmp     spk_off
+
+; GPC's per-tick update of bit 1, which keeps bit 0 as it reads it. Clobbers AL.
+gpc_rmw:
+        in      al, SYS_CTRL
+        and     al, 0FFh ^ SC_SPKR
+        or      al, SC_SPKR
+        out     SYS_CTRL, al
+        ret
+
 run_menu:
         mov     dx, s_menu
         call    print
@@ -788,11 +835,14 @@ run_menu:
         je      .quit
         cmp     al, 03h
         je      .quit
-        cmp     al, '1'
+        cmp     al, '0'
         jb      .key
         cmp     al, '9'
         ja      .key
         sub     al, '0'
+        jnz     .run
+        mov     al, 10
+.run:
         call    run_case
         mov     dx, s_prompt
         call    print
@@ -955,6 +1005,14 @@ run_auto:
         call    chk_masked
         call    chk_raw_unmasked
         call    chk_handoff
+        call    chk_gate_masked
+        call    chk_gate_rmw
+        call    chk_gate_out2
+        call    chk_gate_pitch
+        call    chk_gate_off
+        call    chk_gate_handoff
+        call    chk_gate_translate
+        call    chk_gate_trapsoff       ; last: it turns the traps off and on again
 .restore:
         call    chk_restore
         cmp     byte [fails], 0
@@ -1340,6 +1398,247 @@ chk_handoff:
         call    spk_off
         ret
 
+; --- gate-keyed notes (Grand Prix Circuit): the speaker bit stays on and the gate alone
+; keys each note. The real speaker must stay where it rests, so ReBeep holds the real gate
+; clear instead of bit 1: the real 61h reads 10 while the game reads its own 11.
+
+; A gate-keyed note at GOOD_DIV: 61h 00, the count, 10 (parked), then 11 (note on).
+gate_note:
+        call    spk_off
+        mov     ax, GOOD_DIV
+        call    pit_tone
+        in      al, SYS_CTRL
+        or      al, SC_SPKR
+        out     SYS_CTRL, al
+        or      al, SC_GATE2
+        out     SYS_CTRL, al
+        ret
+
+; AL = the real 61h bits 0-1 (through QPI), AH = the game's own (IN 61h). Preserves the rest.
+real_view:
+        call    qpi_read61
+        and     al, 3
+        mov     ah, al
+        in      al, SYS_CTRL
+        and     al, 3
+        xchg    al, ah
+        ret
+
+; AL = an AMIS function: call ReBeep's. Out: AL as it returns. Clobbers BX, CX, DX.
+amis_fn:
+        mov     ah, [amis_id]
+        int     2Dh
+        ret
+
+; AL = RBS_F_TRANSLATE or 0: set or clear the resident translation flag, with interrupts
+; off so the hotkey can't change the byte in between. Preserves the rest.
+set_translate:
+        push    es
+        push    si
+        mov     es, [st_seg]
+        mov     si, [st_off]
+        pushf
+        cli
+        and     byte [es:si + RBS_FLAGS], 0FFh ^ RBS_F_TRANSLATE
+        or      [es:si + RBS_FLAGS], al
+        popf
+        pop     si
+        pop     es
+        ret
+
+chk_gate_masked:
+        call    gate_note
+        call    real_view
+        cmp     ax, (3 << 8) | SC_SPKR
+        je      .mode
+        FAIL2B  "gate-masked", "real 61h bits 0-1=", " own="
+        ret
+.mode:
+        call    st_mode
+        cmp     al, M_TONE
+        je      .ok
+        FAILB   "gate-masked", "mode="
+        ret
+.ok:
+        PASS    "gate-masked"
+        ret
+
+; The game's read-modify-write must keep its own gate, or it would end its own note.
+chk_gate_rmw:
+        call    gate_note
+        mov     bx, RBS_TONE_ON
+        call    get_w
+        mov     [t0], ax
+        mov     cx, 3
+.rmw:
+        call    gpc_rmw
+        loop    .rmw
+        call    real_view
+        cmp     ax, (3 << 8) | SC_SPKR
+        je      .count
+        FAIL2B  "gate-rmw", "real 61h bits 0-1=", " own="
+        ret
+.count:
+        mov     bx, RBS_TONE_ON
+        call    get_w
+        cmp     ax, [t0]
+        je      .ok
+        FAIL    "gate-rmw", "tone-on count changed"
+        ret
+.ok:
+        PASS    "gate-rmw"
+        ret
+
+; The real gate is clear, so the real OUT2 stands still; bit 5 must still move, or a game
+; waiting for its edge would hang.
+chk_gate_out2:
+        call    gate_note
+        in      al, SYS_CTRL
+        mov     bl, al
+        in      al, SYS_CTRL
+        mov     bh, al
+        in      al, SYS_CTRL
+        xor     bl, bh
+        xor     bh, al
+        and     bx, (SC_OUT2 << 8) | SC_OUT2
+        cmp     bx, (SC_OUT2 << 8) | SC_OUT2
+        je      .ok
+        FAIL    "gate-out2", "61h bit 5 did not change between reads"
+        ret
+.ok:
+        PASS    "gate-out2"
+        ret
+
+; A pitch change mid-note keeps the gate held.
+chk_gate_pitch:
+        call    gate_note
+        mov     ax, OTHER_DIV
+        call    set_div
+        call    real_view
+        cmp     ax, (3 << 8) | SC_SPKR
+        je      .div
+        FAIL2B  "gate-pitch", "real 61h bits 0-1=", " own="
+        ret
+.div:
+        mov     bx, RBS_DIVISOR
+        call    get_w
+        cmp     ax, OTHER_DIV
+        je      .ok
+        FAIL    "gate-pitch", "divisor not updated"
+        ret
+.ok:
+        PASS    "gate-pitch"
+        ret
+
+chk_gate_off:
+        call    gate_note
+        in      al, SYS_CTRL
+        and     al, 0FFh ^ SC_GATE2
+        out     SYS_CTRL, al
+        call    real_view
+        cmp     ax, (SC_SPKR << 8) | SC_SPKR
+        je      .ok
+        FAIL2B  "gate-off", "real 61h bits 0-1=", " own="
+        ret
+.ok:
+        PASS    "gate-off"
+        ret
+
+; An out-of-range divisor hands the note to the real speaker: the real gate comes back.
+chk_gate_handoff:
+        call    gate_note
+        mov     ax, BAD_DIV
+        call    set_div
+        call    real_view
+        cmp     ax, 0303h
+        je      .ok
+        FAIL2B  "gate-handoff", "real 61h bits 0-1=", " own="
+        call    spk_off
+        ret
+.ok:
+        PASS    "gate-handoff"
+        call    spk_off
+        ret
+
+; Translation off mid-note gives the note to the real speaker (11); back on, it returns to
+; the OPL. The speaker has been sounding by then, so ReBeep holds bit 1 instead (01).
+chk_gate_translate:
+        call    gate_note
+        xor     al, al
+        call    set_translate
+        mov     al, AMIS_FN_APPLY
+        call    amis_fn
+        call    real_view
+        push    ax
+        mov     al, RBS_F_TRANSLATE
+        call    set_translate
+        mov     al, AMIS_FN_APPLY
+        call    amis_fn
+        call    real_view
+        pop     dx
+        push    ax
+        call    spk_off
+        pop     ax
+        cmp     dx, 0303h
+        je      .on
+        mov     ax, dx
+        FAIL2B  "gate-translate", "off: real 61h bits 0-1=", " own="
+        ret
+.on:
+        cmp     ax, (3 << 8) | SC_GATE2
+        je      .ok
+        FAIL2B  "gate-translate", "back on: real 61h bits 0-1=", " own="
+        ret
+.ok:
+        PASS    "gate-translate"
+        ret
+
+; /OFF mid-note gives the real gate back (11), and /ON afterwards puts the traps back.
+; Skipped while the traps are off. Runs last among the checks that need the traps.
+chk_gate_trapsoff:
+        mov     bx, RBS_FLAGS
+        call    get_b
+        test    al, RBS_F_TRAPS
+        jnz     .go
+        ret
+.go:
+        call    gate_note
+        mov     al, AMIS_FN_TRAPS_OFF
+        call    amis_fn
+        mov     [g_off], al
+        call    qpi_read61
+        and     al, 3
+        mov     [g_real], al
+        mov     al, AMIS_FN_TRAPS_ON
+        call    amis_fn
+        mov     [g_on], al
+        call    spk_off
+        cmp     byte [g_on], 0FFh
+        je      .on
+        FAIL    "gate-trapsoff", "AMIS 12h refused"
+        ret
+.on:
+        mov     bx, RBS_FLAGS
+        call    get_b
+        test    al, RBS_F_TRAPS
+        jnz     .traps
+        FAIL    "gate-trapsoff", "the traps are still off"
+        ret
+.traps:
+        cmp     byte [g_off], 0FFh
+        je      .off
+        FAIL    "gate-trapsoff", "AMIS 13h refused"
+        ret
+.off:
+        mov     al, [g_real]
+        cmp     al, 3
+        je      .ok
+        FAILB   "gate-trapsoff", "real 61h bits 0-1 after /OFF="
+        ret
+.ok:
+        PASS    "gate-trapsoff"
+        ret
+
 ; ---------------------------------------------------------------- benchmark
 
 ; Runs a write loop (SI = its address; DX:CX = count) for N writes, doubling N
@@ -1501,8 +1800,8 @@ s_usage     db "RBTEST: bad option. RBTEST /? lists them.", 13, 10, "$"
 
 s_help      db "RBTEST - ReBeep speaker exerciser", 13, 10
             db 13, 10
-            db "  RBTEST           menu: 1-9 plays a case, Esc quits", 13, 10
-            db "  RBTEST /C:n      play case n (1-9) once", 13, 10
+            db "  RBTEST           menu: 0-9 plays a case, Esc quits", 13, 10
+            db "  RBTEST /C:n      play case n (0-9) once", 13, 10
             db "  RBTEST /A        unattended behaviour checks (PASS/FAIL lines)", 13, 10
             db "  RBTEST /A /R     also require ReBeep and check its state", 13, 10
             db "  RBTEST /M:SAVE   save the largest free block to RBMEM.DAT", 13, 10
@@ -1521,7 +1820,8 @@ s_menu      db "RBTEST - ReBeep speaker exerciser. Esc quits.", 13, 10
             db "  7  divisor 0", 13, 10
             db "  8  timing loop on 61h bit 5", 13, 10
             db "  9  silence and restore", 13, 10
-s_prompt    db "Case 1-9, Esc quits: $"
+            db "  0  stepped beeps keyed by the gate (Grand Prix Circuit)", 13, 10
+s_prompt    db "Case 0-9, Esc quits: $"
 
 t_c1        db "1: steady tones, 2 s each", 13, 10, "$"
 t_c2        db "2: sweep up and down", 13, 10, "$"
@@ -1532,9 +1832,10 @@ t_c6        db "6: divisor 100", 13, 10, "$"
 t_c7        db "7: divisor 0", 13, 10, "$"
 t_c8        db "8: timing loop on 61h bit 5", 13, 10, "$"
 t_c9        db "9: silence; 61h bits 0-1 = $"
+t_c10       db "0: stepped beeps keyed by the gate", 13, 10, "$"
 t_edges     db "bit 5 edges in 2 s: $"
 
-case_tab    dw case1, case2, case3, case4, case5, case6, case7, case8, case9
+case_tab    dw case1, case2, case3, case4, case5, case6, case7, case8, case9, case10
 c1_divs     dw 5424, 2712, 1356, 678
 arp         dw 2281, 1810, 1522, 1140, 1522, 1810
 
@@ -1547,6 +1848,9 @@ fails       db 0
 cal_done    db 0
 amis_id     db 0
 cnt         db 0
+g_off       db 0
+g_on        db 0
+g_real      db 0
 label_ptr   dw 0
 label_len   dw 0
 st_seg      dw 0
