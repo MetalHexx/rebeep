@@ -1006,6 +1006,7 @@ run_auto:
         call    chk_raw_unmasked
         call    chk_handoff
         call    chk_rest_held
+        call    chk_raw_muted
         call    chk_gate_masked
         call    chk_gate_rmw
         call    chk_gate_out2
@@ -1399,22 +1400,33 @@ chk_handoff:
         call    spk_off
         ret
 
-; AL = RBS_F_LOWFM or 0: set or clear the resident /L flag (interrupts off around the
-; byte), then apply it through AMIS 11h. Clobbers BX, CX, DX.
-set_low:
+; AH = a resident flag (RBS_F_*), AL = that flag or 0: set or clear it (interrupts off
+; around the byte), then apply it through AMIS 11h. Clobbers BX, CX, DX.
+set_flag:
         push    es
         push    si
         mov     es, [st_seg]
         mov     si, [st_off]
+        not     ah
         pushf
         cli
-        and     byte [es:si + RBS_FLAGS], 0FFh ^ RBS_F_LOWFM
+        and     [es:si + RBS_FLAGS], ah
         or      [es:si + RBS_FLAGS], al
         popf
         pop     si
         pop     es
         mov     al, AMIS_FN_APPLY
         jmp     amis_fn
+
+; AL = RBS_F_LOWFM or 0: set_flag for the /L flag.
+set_low:
+        mov     ah, RBS_F_LOWFM
+        jmp     set_flag
+
+; AL = RBS_F_MUTE or 0: set_flag for the /R flag.
+set_mute:
+        mov     ah, RBS_F_MUTE
+        jmp     set_flag
 
 ; A count below 20 Hz mid-tone is a rest by default: the real speaker stays held (01) and
 ; the mode is REST. With the /L flag set it is a tone. The flag ends as it was found.
@@ -1461,6 +1473,68 @@ chk_rest_held:
         ret
 .ok:
         PASS    "rest-held"
+        ret
+
+; With /R:0 nothing the OPL can't play reaches the speaker. A BAD_DIV tone keeps the real
+; bit 1 clear (01, mode RAW), and so does bit 1 set with the gate off (00). Muting a
+; gate-keyed note, whose gate is held (real 10), holds bit 1 instead (01). The flag ends as
+; it was found.
+chk_raw_muted:
+        mov     bx, RBS_FLAGS
+        call    get_b
+        and     al, RBS_F_MUTE
+        mov     [g_mute], al
+        mov     al, RBS_F_MUTE
+        call    set_mute
+        call    spk_off
+        mov     ax, BAD_DIV
+        call    pit_tone
+        call    spk_on
+        call    real_view
+        mov     [g_voff], ax
+        call    st_mode
+        mov     [g_mode], al
+        call    spk_off
+        in      al, SYS_CTRL
+        or      al, SC_SPKR
+        out     SYS_CTRL, al            ; bit 1 alone: a click on a speaker that isn't muted
+        call    real_view
+        mov     [g_von], ax
+        xor     al, al
+        call    set_mute
+        call    gate_note
+        mov     al, RBS_F_MUTE
+        call    set_mute
+        call    real_view
+        mov     [g_vgate], ax
+        mov     al, [g_mute]
+        call    set_mute
+        call    spk_off
+        mov     ax, [g_voff]
+        cmp     ax, (3 << 8) | SC_GATE2
+        je      .mode
+        FAIL2B  "raw-muted", "tone: real 61h bits 0-1=", " own="
+        ret
+.mode:
+        mov     al, [g_mode]
+        cmp     al, M_RAW
+        je      .bit1
+        FAILB   "raw-muted", "mode="
+        ret
+.bit1:
+        mov     ax, [g_von]
+        cmp     ax, SC_SPKR << 8
+        je      .gate
+        FAIL2B  "raw-muted", "bit 1: real 61h bits 0-1=", " own="
+        ret
+.gate:
+        mov     ax, [g_vgate]
+        cmp     ax, (3 << 8) | SC_GATE2
+        je      .ok
+        FAIL2B  "raw-muted", "gate-keyed: real 61h bits 0-1=", " own="
+        ret
+.ok:
+        PASS    "raw-muted"
         ret
 
 ; --- gate-keyed notes (Grand Prix Circuit): the speaker bit stays on and the gate alone
@@ -1929,10 +2003,12 @@ g_on        db 0
 g_real      db 0
 g_tr        db 0
 g_low       db 0
+g_mute      db 0
 g_mode      db 0
 g_mode2     db 0
 g_voff      dw 0
 g_von       dw 0
+g_vgate     dw 0
 label_ptr   dw 0
 label_len   dw 0
 st_seg      dw 0

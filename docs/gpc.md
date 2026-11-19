@@ -13,6 +13,8 @@ on the `mirror-msdos` VM. The other executables may differ. The result is in
   Ctrl+Alt+B and Ctrl+Alt+N do nothing inside it. Pick the voice and volume at the DOS prompt.
 - **`/L:0`, the default,** keeps the engine's rests silent, as on a real PC. With `/L:1` the
   engine drops to a low FM note in those slots instead.
+- **`/R:0`** mutes the real speaker, so only the OPL plays. The music loses its percussion voice,
+  and the song start and stop no longer click (see the music section).
 
 ## The race: engine and effects
 
@@ -51,7 +53,7 @@ songs use the percussion voice, and how, is not known.
 **What ReBeep does.** The melody plays on the OPL. While a note sounds, ReBeep holds the gate clear
 rather than bit 1, so the parked speaker doesn't move at each note on and off. The percussion voice
 and the song start and stop are direct control of the speaker bit, which ReBeep can't turn into a
-tone, so they reach the real speaker unchanged.
+tone, so they reach the real speaker unchanged, unless `/R:0` mutes it.
 
 **What you hear.** The menu music has occasional pops, and each screen change (Esc from a race to
 the menu, then to the intro) makes a click. Both come from the real speaker:

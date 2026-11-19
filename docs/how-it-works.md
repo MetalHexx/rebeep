@@ -97,6 +97,11 @@ unchanged, including the speaker bit. That covers noise from direct toggling, pi
 chip's 6182 Hz and odd timer modes. The switch between OPL and speaker is immediate. `/OFF` and
 Ctrl+Alt+B take the same path for a sounding tone.
 
+`/R:0` mutes the fallback. ReBeep then holds bit 1 of the real `61h` clear in every state, so the
+speaker never moves, while the gate and the timer still run as the game set them. Muting while a
+note holds the gate moves the hold to bit 1, which is one step on the speaker. Ctrl+Alt+B still
+gives the game the real speaker, unmuted.
+
 ## Residency, AMIS and the hotkey
 
 `REBEEP.COM` is a resident part followed by a startup part. When the program goes resident, the

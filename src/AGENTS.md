@@ -24,7 +24,7 @@
 - **QPI-only I/O.** On 42h, 43h and 61h the resident part uses QPI `1A00h`/`1A01h`/`1A04h`, never `IN`/`OUT`
   (a direct access traps again). The hotkey never executes `STI`; its one `61h` access is the speaker handoff.
 - **Masking.** In `M_TONE` or `M_REST` (translation on) the real `61h` holds bit 1 clear, or the gate if the speaker rests
-  high (`10`), so it never steps; `IN 61h` returns the game's bits 0-1. Entering or leaving them re-issues `61h` at once.
+  high (`10`), so it never steps; `/R:0` holds bit 1 in every mode. `IN 61h` returns the game's bits 0-1; a change re-issues `61h`.
 - The callback saves every register: QPIEMU restores only `ECX`, `EDX` and the flags.
 - `engine/` assembles under `CPU 8086`; only `capture/` and `startup/` may use 386 (the CPU check must run on any CPU).
 - NASM 3.02 and ≥ 2.16. Output names are 8.3, uppercase. A new build target goes in `targets.json`.

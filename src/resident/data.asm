@@ -6,8 +6,8 @@
 %include "amis.inc"
 
 ; RB_STATE as a fresh load leaves it. A plain load overrides the config fields (voice,
-; volume, keys, the /L flag) from the command line; a change of a loaded copy writes only the
-; named ones.
+; volume, keys, the /L and /R flags) from the command line; a change of a loaded copy writes
+; only the named ones.
 RB_STATE:
         db      RBS_LAYOUT
         db      RBS_F_TRANSLATE         ; RBS_FLAGS: translation on, traps off until installed
@@ -33,7 +33,7 @@ rb_old2d        dd      0
 rb_amis_id      db      0               ; ReBeep's AMIS multiplex number
 rb_cb_set       db      0               ; 1 while ReBeep's callback is QPIEMU's I/O callback
 game_61         db      0               ; the last byte the game wrote to 61h (what it reads back)
-masked          db      0               ; the bit held clear in the real 61h for the OPL, or 0
+masked          db      0               ; the bit held clear in the real 61h (OPL, rest, /R:0), or 0
 out2_fake       db      20h             ; 61h bit 5 as IN 61h reports it while the gate is held
 
 ; The QPI callback runs on its own stack: the client's may be tiny. client_sp and client_ss

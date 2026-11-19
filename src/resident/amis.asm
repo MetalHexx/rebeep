@@ -126,9 +126,10 @@ rb_apply_low:
         mov     [interp_low], al
         ret
 
-; rb_apply_config: push RB_STATE's voice, volume, /L and translation flags to the engine.
-; Only valid while the traps are on, when the OPL is ours. The voice goes first, so a
-; rest that /L turns into a tone starts in the new voice.
+; rb_apply_config: push RB_STATE's voice, volume, /L, /R and translation flags to the
+; engine. Only valid while the traps are on, when the OPL is ours. The voice goes first, so
+; a rest that /L turns into a tone starts in the new voice; translation goes last, as it
+; starts or ends masking for whatever the others left.
 rb_apply_config:
         mov     al, [RB_STATE + RBS_VOICE]
         call    opl_set_voice
@@ -136,6 +137,7 @@ rb_apply_config:
         call    opl_set_volume
         call    capture_voice_changed
         call    capture_low_changed
+        call    capture_mute_changed
         jmp     capture_translation_changed
 
 ; rb_uninstall: unhook everything, from ReBeep's own state and the IVT alone.

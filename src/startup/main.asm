@@ -18,7 +18,8 @@ OPT_S           equ 0040h
 OPT_U           equ 0080h
 OPT_HELP        equ 0100h
 OPT_L           equ 0200h
-OPT_CONFIG      equ OPT_F | OPT_P | OPT_V | OPT_K | OPT_L
+OPT_R           equ 0400h
+OPT_CONFIG      equ OPT_F | OPT_P | OPT_V | OPT_K | OPT_L | OPT_R
 OPT_CONTROL     equ OPT_ON | OPT_OFF | OPT_S | OPT_U
 
 ; Paragraphs kept resident, counted from the PSP: everything below resident_end.
@@ -388,9 +389,15 @@ apply_fields:
         mov     [es:bx + RBS_CYCLE_KEY], dl
 .low:
         test    ax, OPT_L
-        jz      .done
+        jz      .mute
         and     byte [es:bx + RBS_FLAGS], 0FFh ^ RBS_F_LOWFM
         mov     dl, [opt_low]
+        or      [es:bx + RBS_FLAGS], dl
+.mute:
+        test    ax, OPT_R
+        jz      .done
+        and     byte [es:bx + RBS_FLAGS], 0FFh ^ RBS_F_MUTE
+        mov     dl, [opt_mute]
         or      [es:bx + RBS_FLAGS], dl
 .done:
         popf
@@ -444,9 +451,27 @@ parse_options:
         je      .keys
         cmp     al, 'l'
         je      .low
+        cmp     al, 'r'
+        je      .mute
 .bad:
         stc
         ret
+
+.mute:                                  ; /R:1 plays on the speaker, /R:0 sets the mute flag
+        call    getc
+        cmp     al, ':'
+        jne     .bad
+        call    get_number
+        jc      .bad
+        xor     ah, ah
+        cmp     al, 1
+        je      .muteset
+        ja      .bad
+        mov     ah, RBS_F_MUTE
+.muteset:
+        mov     [opt_mute], ah
+        mov     bx, OPT_R
+        jmp     .flag
 
 .low:
         call    getc
@@ -742,8 +767,8 @@ scan_letter:
         pop     cx
         ret
 
-; print_config: "<voice>, volume <n>." then "Ctrl+Alt+<x> toggles, ..." and the /L line,
-; from the RB_STATE at ES:BX. A patch is named: "patch 2 Flute".
+; print_config: "<voice>, volume <n>." then "Ctrl+Alt+<x> toggles, ..." and the /L and /R
+; lines, from the RB_STATE at ES:BX. A patch is named: "patch 2 Flute".
 print_config:
         push    ax
         push    dx
@@ -788,6 +813,12 @@ print_config:
         jz      .low
         mov     dx, msg_low_1
 .low:
+        call    print
+        mov     dx, msg_raw_1
+        test    byte [es:bx + RBS_FLAGS], RBS_F_MUTE
+        jz      .raw
+        mov     dx, msg_raw_0
+.raw:
         call    print
         pop     dx
         pop     ax
@@ -865,6 +896,7 @@ opt_volume      db      0
 opt_toggle      db      0
 opt_cycle       db      0
 opt_low         db      0               ; RBS_F_LOWFM or 0
+opt_mute        db      0               ; RBS_F_MUTE (/R:0) or 0
 
 load_opl        db      0
 scan_id         db      0
@@ -913,15 +945,18 @@ msg_keys_2      db      " toggles, Ctrl+Alt+$"
 msg_keys_3      db      " cycles the voice.", 13, 10, '$'
 msg_low_0       db      "Notes below 20 Hz are silent (/L:0).", 13, 10, '$'
 msg_low_1       db      "Notes below 20 Hz are played (/L:1).", 13, 10, '$'
+msg_raw_1       db      "Sounds ReBeep can't translate play on the speaker (/R:1).", 13, 10, '$'
+msg_raw_0       db      "Sounds ReBeep can't translate are muted (/R:0).", 13, 10, '$'
 
 msg_help_1      db      "ReBeep ", REBEEP_VERSION, " - plays PC-speaker beeps on a Sound Blaster's OPL2/OPL3.", 13, 10
                 db      "Needs a 386 or better and Jemm's QPIEMU (JLOAD QPIEMU.DLL).", 13, 10, 13, 10
-                db      "REBEEP [/F | /P:n] [/V:n] [/L:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]", 13, 10
+                db      "REBEEP [/F | /P:n] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]", 13, 10
                 db      "  /F     faithful square-wave voice (default)", 13, 10
                 db      "  /P:n   built-in patch n: $"
 msg_help_2      db      13, 10
                 db      "  /V:n   volume 0-15 (default 12)", 13, 10
                 db      "  /L:n   notes below 20 Hz: 0 silent (default), 1 played", 13, 10
+                db      "  /R:n   sounds it can't translate: 1 speaker (default), 0 muted", 13, 10
                 db      "  /K:xy  Ctrl+Alt+x toggles, Ctrl+Alt+y cycles the voice (default BN)", 13, 10
                 db      "  /OFF   stop trapping and release the OPL    /ON  trap again", 13, 10
                 db      "  /S     status                               /U   unload", 13, 10

@@ -74,12 +74,13 @@ PATH so that the newer copy is found.
 
 4 Options and hotkeys
 ---------------------
-  REBEEP [/F | /P:n] [/V:n] [/L:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
+  REBEEP [/F | /P:n] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
 
   /F      faithful square-wave voice (default)
   /P:n    built-in patch n, 1 to 4: 1 Organ, 2 Flute, 3 Brass, 4 Bell
   /V:n    volume, 0 to 15 (default 12)
   /L:n    notes below 20 Hz: 0 silent (default), 1 played
+  /R:n    sounds it can't translate: 1 speaker (default), 0 muted
   /K:xy   Ctrl+Alt+x toggles, Ctrl+Alt+y cycles the voice (default BN)
   /ON     trap the speaker again
   /OFF    stop trapping and release the OPL to the game
@@ -93,6 +94,11 @@ other option changes only what it names.
 Some games use a pitch below 20 Hz as a rest, as Grand Prix Circuit's
 engine does. /L:0 keeps those silent, close to what the real speaker
 does with them. /L:1 plays them as a low FM note.
+
+Clicks, noise and pitches above the FM chip's range can't become an FM
+note, so they play on the real speaker (/R:1). /R:0 mutes them, and only
+the FM chip sounds. The game then loses whatever it played that way, such
+as Grand Prix Circuit's percussion.
 
 Hotkeys, with the defaults:
 

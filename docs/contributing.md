@@ -79,7 +79,7 @@ means a fix on the branch, never a merge.
     (`D:\GAMES\GPC\GPAUTO\GPEGA.EXE`): its engine and effects come out of the OPL with the real
     speaker silent, in faithful mode and in a patch. No note may click, and the engine's rests are
     silent. After `REBEEP /V:0` the game must be silent. After `REBEEP /L:1` the rests are a low FM
-    note.
+    note. After `REBEEP /R:0` the menu music has no pops and the screen changes no clicks.
   - At the DOS prompt, with `RBTEST /C:1`: Ctrl+Alt+B toggles between the OPL and the speaker, and
     Ctrl+Alt+N cycles the voice. GPC takes over the keyboard, so the hotkeys do nothing inside it.
   - Update the GPC row in [compatibility.md](compatibility.md).

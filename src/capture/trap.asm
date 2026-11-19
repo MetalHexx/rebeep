@@ -4,7 +4,7 @@
 ; plays a tone (translation on, mode M_TONE) or the game rests below 20 Hz (M_REST), one bit
 ; of the real 61h is held clear, chosen so the speaker stays where it rests (see
 ; mask_update), and the game reads back its own bits 0-1. Anything else (M_RAW) plays on
-; the real speaker.
+; the real speaker, unless /R:0 mutes it: then bit 1 is held clear in every mode.
 ; Port I/O on a trapped port goes through QPI 1A00h/1A01h/1A04h only: a direct IN/OUT
 ; would trap again.
 ; Near calls, DS = CS, and everything but the stack may be clobbered unless noted.
@@ -241,12 +241,33 @@ capture_low_changed:
 .ret:
         ret
 
+; capture_mute_changed: the /R flag changed (or is being re-applied, which changes nothing).
+; Muting while a held gate keeps a parked-high speaker up holds bit 1 instead: one step on
+; the speaker, when the user asks for it. capture_translation_changed, which runs next,
+; starts or ends masking. Does nothing while the traps are off. Preserves every register.
+capture_mute_changed:
+        test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
+        jz      .ret
+        test    byte [RB_STATE + RBS_FLAGS], RBS_F_MUTE
+        jz      .ret
+        test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRANSLATE
+        jz      .ret                    ; translation off: masking ends next
+        cmp     byte [masked], MASK_GATE
+        jne     .ret
+        mov     byte [masked], MASK_SPK
+        call    sync_real_61
+.ret:
+        ret
+
 ; mask_wanted: Out: AL = 1 when the real speaker must be held (translation on, and mode
-; M_TONE, which the OPL plays, or M_REST), else 0. Preserves every other register.
+; M_TONE, which the OPL plays, or M_REST, or any mode under /R:0), else 0. Preserves every
+; other register.
 mask_wanted:
         xor     al, al
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRANSLATE
         jz      .ret
+        test    byte [RB_STATE + RBS_FLAGS], RBS_F_MUTE
+        jnz     .yes
         cmp     byte [RB_STATE + RBS_MODE], M_TONE
         je      .yes
         cmp     byte [RB_STATE + RBS_MODE], M_REST
@@ -259,7 +280,8 @@ mask_wanted:
 ; mask_update: bring `masked` in line with mask_wanted. When masking starts it picks the bit
 ; to hold clear from the real 61h: a speaker parked high (real bits 0-1 = 10, so OUT2 is
 ; high) keeps resting there with the gate held clear; anything else holds bit 1 clear and
-; the speaker rests at 0. A mask that holds keeps its kind: picking again mid-note would
+; the speaker rests at 0. Under /R:0 it always holds bit 1, so the game's own bit-1 writes
+; never reach the speaker. A mask that holds keeps its kind: picking again mid-note would
 ; swap a held gate for a held bit 1, a step on the speaker.
 ; Out: CF set when `masked` changed, with AL = 1 (masking started) or 0 (ended).
 ;      CF clear when it already agreed. AH is clobbered; every other register survives.
@@ -275,19 +297,22 @@ mask_update:
 .unmasked:
         or      al, al
         jz      .same
+        mov     al, MASK_SPK
+        test    byte [RB_STATE + RBS_FLAGS], RBS_F_MUTE
+        jnz     .pick
         push    bx
         push    dx
         mov     dx, SYS_CTRL
-        call    qpi_in
+        call    qpi_in                  ; clobbers AX
+        pop     dx
         and     bl, SC_GATE2 | SC_SPKR
         mov     al, MASK_GATE
         cmp     bl, SC_SPKR
+        pop     bx
         je      .pick
         mov     al, MASK_SPK
 .pick:
         mov     [masked], al
-        pop     dx
-        pop     bx
         mov     al, 1
         stc
         ret
