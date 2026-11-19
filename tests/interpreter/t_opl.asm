@@ -573,6 +573,44 @@ stk_note:
         call    opl_note_off
         ENDCASE
 
+; A note on with no note off before it keys the sounding channel off first.
+%strcat cname "retrigger_keys_old_off_", %2
+        CASE    cname
+        mov     al, %1
+        call    opl_init
+        mov     bx, 1193
+        call    opl_note_on
+        SINK_CLEAR
+        mov     bx, A4
+        call    opl_note_on
+        LASTWM  0B8h, 20h, 0
+        LASTWM  0B7h, 20h, 20h
+        call    opl_note_off
+        ENDCASE
+
+; Volume 0 keys nothing, through a note on or a pitch change; a volume back up keys again.
+%strcat cname "mute_keys_nothing_", %2
+        CASE    cname
+        mov     al, %1
+        call    opl_init
+        xor     al, al
+        call    opl_set_volume
+        SINK_CLEAR
+        mov     bx, 1193
+        call    opl_note_on
+        LASTWM  0B8h, 20h, 0
+        mov     bx, A4
+        call    opl_pitch
+        LASTWM  0B8h, 20h, 0
+        call    opl_note_off
+        mov     al, 15
+        call    opl_set_volume
+        mov     bx, 1193
+        call    opl_note_on
+        LASTWM  0B7h, 20h, 20h
+        call    opl_note_off
+        ENDCASE
+
 ; Both channels carry the same voice and volume, and shutdown silences both.
 %strcat cname "both_channels_", %2
         CASE    cname

@@ -4,8 +4,9 @@
 ; being retriggered; a pitch change stays on the note's own channel.
 ; Near calls; DS = this module's segment. Every routine preserves all
 ; registers except its outputs, and flags.
-; Only channels 7 and 8's registers, the global 01h and (OPL3) 105h are ever
-; written.
+; Only channels 7 and 8's registers, the global 01h, (OPL3) 105h and, while
+; detecting, the timer registers 02h and 04h are ever written. Volume 0 keys no
+; note: TL 63 is only -47 dB, and an additive voice's modulator ignores it.
 ; Stack: at most 16 bytes, return address included (opl_detect, opl_init and
 ; opl_set_voice reach it). The call chains are kept flat for that; a change that
 ; nests one more call or push breaks it.
@@ -127,7 +128,8 @@ opl_set_voice:
 .go:
         jmp     opl_program
 
-; opl_set_volume: In: AL = 0..15 (0 silent; larger values count as 15)
+; opl_set_volume: In: AL = 0..15 (0 silent; larger values count as 15). A note
+; sounding when it changes keeps its key until the next note on, pitch or key-off.
 opl_set_volume:
         mov     [opl_vol], al
         cmp     al, 15
@@ -282,6 +284,8 @@ opl_put_keyblk:
         or      al, [opl_fnum + 1]
         cmp     byte [opl_keyed], 0
         je      .write
+        cmp     byte [opl_vol], 0       ; volume 0 keys nothing: TL 63 alone still sounds
+        je      .write
         or      al, KEY_ON
 .write:
         mov     bx, REG_KEYBLK
@@ -394,7 +398,8 @@ opl_put_volume:
 ; 40h, 60h, 80h and E0h, then C0h (the OPL3 output bits are added at write time).
 
 ; Faithful voice on OPL3: the carrier alone, as a square wave (waveform 6),
-; additive so the modulator (TL 63) adds nothing. Sustain on holds the level.
+; additive, with the modulator at TL 63 (-47 dB, next to nothing). Sustain on
+; holds the level.
 ; Attack 13 (under a millisecond) and release 13 (about 10 ms) round the
 ; note's edges: a key-on restarts the wave at full level, and an instant step
 ; there or at key-off is a click.

@@ -26,7 +26,7 @@
 - `interpreter/t_interp.asm` (`T_INTERP.COM`) covers the speaker interpreter: port-write sequencing,
   ignored channels and commands, glide, direct toggling, range edges, rests below 20 Hz and `interp_sync`.
 - `interpreter/t_opl.asm` (`T_OPL.COM`) covers the OPL target: real chip detection, block/F-number
-  against the formula, and, through a recording sink, the key bit, notes alternating over channels 7
+  against the formula, and, through a recording sink, the key bit (none at volume 0), notes alternating over channels 7
   and 8 (and nothing else written), `C0h`, volume and shutdown, as an OPL2 and as an OPL3. It checks that every
   routine preserves its registers and uses at most 16 bytes of stack (depths print as an `INFO` line).
 - Listening check: `T_OPL /L` plays each voice for a second at 440 Hz. Run `build/tests/T_OPL.COM /L`

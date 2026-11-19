@@ -1560,11 +1560,14 @@ chk_gate_rmw:
 ; waiting for its edge would hang.
 chk_gate_out2:
         call    gate_note
+        pushf
+        cli                             ; an interrupt handler reading 61h would flip bit 5 too
         in      al, SYS_CTRL
         mov     bl, al
         in      al, SYS_CTRL
         mov     bh, al
         in      al, SYS_CTRL
+        popf
         xor     bl, bh
         xor     bh, al
         and     bx, (SC_OUT2 << 8) | SC_OUT2
@@ -1629,29 +1632,37 @@ chk_gate_handoff:
 
 ; Translation off mid-note gives the note to the real speaker (11); back on, it returns to
 ; the OPL. The speaker has been sounding by then, so ReBeep holds bit 1 instead (01).
+; The translation flag ends as it was found.
 chk_gate_translate:
+        mov     bx, RBS_FLAGS
+        call    get_b
+        and     al, RBS_F_TRANSLATE
+        mov     [g_tr], al
         call    gate_note
         xor     al, al
         call    set_translate
         mov     al, AMIS_FN_APPLY
         call    amis_fn
         call    real_view
-        push    ax
+        mov     [g_voff], ax
         mov     al, RBS_F_TRANSLATE
         call    set_translate
         mov     al, AMIS_FN_APPLY
         call    amis_fn
         call    real_view
-        pop     dx
-        push    ax
+        mov     [g_von], ax
+        mov     al, [g_tr]
+        call    set_translate
+        mov     al, AMIS_FN_APPLY
+        call    amis_fn
         call    spk_off
-        pop     ax
-        cmp     dx, 0303h
+        mov     ax, [g_voff]
+        cmp     ax, 0303h
         je      .on
-        mov     ax, dx
         FAIL2B  "gate-translate", "off: real 61h bits 0-1=", " own="
         ret
 .on:
+        mov     ax, [g_von]
         cmp     ax, (3 << 8) | SC_GATE2
         je      .ok
         FAIL2B  "gate-translate", "back on: real 61h bits 0-1=", " own="
@@ -1918,10 +1929,12 @@ cnt         db 0
 g_off       db 0
 g_on        db 0
 g_real      db 0
+g_tr        db 0
 g_low       db 0
 g_mode      db 0
 g_mode2     db 0
 g_voff      dw 0
+g_von       dw 0
 label_ptr   dw 0
 label_len   dw 0
 st_seg      dw 0

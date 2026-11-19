@@ -17,9 +17,10 @@ QPI interface. ReBeep installs that callback and traps `42h`, `43h` and `61h`, s
 Jemm. It reads and writes those ports itself only through QPI, because a direct access would trap
 again.
 
-Every byte a game writes is forwarded to the real port, so the timer runs as the game set it, and a
-timing loop that reads the timer output on `61h` bit 5 sees real hardware. ReBeep only watches, and
-silences the real speaker while the FM chip plays the tone.
+Every byte a game writes reaches the real port, so the timer runs as the game set it. The one
+change is to `61h`: while the FM chip plays the tone, ReBeep holds one of its bits clear to keep the
+real speaker quiet (next section). A timing loop that reads the timer output on `61h` bit 5 sees real
+hardware, except while that bit is the gate.
 
 ## Port `61h`: masking and the game's view
 
@@ -40,9 +41,10 @@ Holding the gate clear stops the real channel 2, which has two side effects whil
 
 - Bit 5 of `61h` would stand still, so ReBeep flips it on every read, and a game that waits for an
   edge doesn't hang. A game that times its notes by counting those edges plays them short.
-- A game that reads the count back from `42h` sees it frozen.
+- A game that reads the count back from `42h` sees it frozen, so one that waits for the count to
+  change would hang.
 
-Neither happens in games that switch both bits together.
+Neither happens in games that switch both bits together, and Grand Prix Circuit reads neither.
 
 ## The interpreter
 
@@ -78,8 +80,8 @@ n = 3 * 2^(23-b) / d        (the smallest block b that keeps n ≤ 1023)
 ```
 
 Changing pitch while a note sounds rewrites only the pitch, never the key bit, so a glide stays a
-glide. Volume (0 to 15) sets the carriers' attenuation. Divisor 0 plays as 65535, block 0.
-The faithful voice is a square wave on an OPL3. An OPL2 has no square
+glide. Volume (0 to 15) sets the carriers' attenuation, and volume 0 keys no note at all. Divisor 0
+plays as 65535, block 0. The faithful voice is a square wave on an OPL3. An OPL2 has no square
 wave, so it gets a two-operator FM approximation. The faithful voice fades in over about a
 millisecond and out over about ten, so a beep never starts or stops on a step. The four patches
 (Organ, Flute, Brass, Bell) are plain FM settings. On an OPL3 the chip stays in OPL3 mode, with
