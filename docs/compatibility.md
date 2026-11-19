@@ -10,6 +10,9 @@ What ReBeep has been tried on, and what is known not to work. Machine options an
 | Grand Prix Circuit | MS-DOS 6.22 | 86Box `mirror-msdos` | Pending its listening check at release |
 | Grand Prix Circuit | FreeDOS 1.4 | 86Box `mirror-freedos` | Hangs on a black screen in both menu entries, with and without Jemm, so ReBeep is not the cause. Use MS-DOS |
 
+How Grand Prix Circuit drives the speaker, and what still sounds different, is on
+[its own page](gpc.md).
+
 Tried another game? Open an issue or a PR adding a row.
 
 ## Hardware and emulators
