@@ -112,7 +112,7 @@ MMX 233 in 86Box:
 
 | State | `OUT 61h` | One tone change (two `OUT 42h` writes) |
 |---|---|---|
-| ReBeep loaded and trapping | 6.7 µs | 21.7 µs |
+| ReBeep loaded and trapping | 7.1 µs | 23.4 µs |
 | After `/OFF` | 0.9 µs | 1.9 µs |
 | After unload | 0.9 µs | 1.9 µs |
 
@@ -123,5 +123,5 @@ are indicative, not a real machine's.
 
 | Profile | `OUT 61h` loaded | `OUT 61h` after `/OFF` |
 |---|---|---|
-| `mirror-freedos` (86Box, Pentium MMX 233) | 6.7 µs | 0.9 µs |
+| `mirror-freedos` (86Box, Pentium MMX 233) | 7.1 µs | 0.9 µs |
 | `slow-386sx` (86Box, 386SX/16) | _filled in at release time_ | _filled in at release time_ |
