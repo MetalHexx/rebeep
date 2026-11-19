@@ -8,6 +8,14 @@
 %fatal REBEEP_VERSION is not defined: build with "rebeep build run"
 %endif
 
+; REBEEP_TRACE (the record count) builds REBEEPD.COM, the dev-only logger (capture/trace.asm).
+; Its name differs, so it and REBEEP.COM never take each other for the same version.
+%ifdef REBEEP_TRACE
+%define REBEEP_NAME "ReBeep ", REBEEP_VERSION, " trace"
+%else
+%define REBEEP_NAME "ReBeep ", REBEEP_VERSION
+%endif
+
         org     100h
 image_start:
         jmp     startup_entry
@@ -17,5 +25,7 @@ image_start:
 %include "engine/opl.asm"               ; cpu 8086
 %include "hotkey/kbd.asm"
 %include "resident/amis.asm"
+%include "capture/trace.asm"            ; the trace build only
 resident_end:
 %include "startup/main.asm"             ; freed when going resident
+%include "startup/dump.asm"             ; the trace build only: REBEEPD /D

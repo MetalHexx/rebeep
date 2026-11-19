@@ -13,6 +13,7 @@
         cpu     386
 %include "speaker.inc"
 %include "amis.inc"
+%include "trace.inc"
 
 QPI_READ        equ 1A00h               ; DX = port -> BL
 QPI_WRITE       equ 1A01h               ; DX = port, BL = byte
@@ -334,7 +335,7 @@ sync_real_61:
         and     al, [game_61]
         and     al, SC_GATE2 | SC_SPKR
         or      bl, al
-        call    qpi_out
+        OUT_REAL_61
         pop     dx
         pop     bx
         pop     ax
@@ -371,6 +372,7 @@ qpi_out:
 play_event:
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRANSLATE
         jz      .ret
+        TRACE_EVENT
         cmp     al, EV_TONE_ON
         je      opl_note_on
         cmp     al, EV_PITCH
@@ -440,6 +442,7 @@ qpi_callback:
         inc     word [RB_STATE + RBS_TRAPPED]
 .handle:
         call    handle_access
+        TRACE_SITE TK_REBEEP
         lss     sp, [client_sp]
         pop     es
         pop     ds
@@ -497,6 +500,7 @@ handle_access:
 
 .out:
         mov     al, [es:di + IMG_EAX]
+        TRACE_NOTE
         call    interp_write            ; AL = event, AH = mode, BX = divisor
         call    note_state
         cmp     dx, SYS_CTRL
@@ -508,6 +512,7 @@ handle_access:
         pop     bx
         pop     ax
         call    play_event
+        TRACE_SITE TK_GAMEPIT
         call    mask_update
         jc      sync_real_61
         ret
@@ -521,7 +526,8 @@ handle_access:
         mov     al, [masked]
         not     al
         and     bl, al
-        call    qpi_out
+        TRACE_SITE TK_GAME61
+        OUT_REAL_61
         pop     bx
         pop     ax
         jmp     play_event

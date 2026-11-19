@@ -15,6 +15,11 @@ Thanks for helping. Here is what you need to know.
 
 4. Open a pull request against `main`, as a draft until it's ready, and fill in the template.
 
+To see what a game makes ReBeep do, load `REBEEPD.COM`, the trace build deployed beside
+`REBEEP.COM`, instead of ReBeep. It logs every speaker step and OPL note, and `REBEEPD /D` writes the
+log to `D:\REBEEP\RBTRACE.TXT`. It is for development only and never ships. The steps and the log
+format are in the `rebeep-dev` skill's [trace reference](../.claude/skills/rebeep-dev/references/trace.md).
+
 ## Commits
 
 [Conventional Commits](https://www.conventionalcommits.org): `feat`, `fix`, `docs`, `test`,

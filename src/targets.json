@@ -8,6 +8,15 @@
       "autoload": true
     },
     {
+      "name": "REBEEPD.COM",
+      "source": "rebeep.asm",
+      "format": "bin",
+      "deploy": "REBEEP",
+      "defines": {
+        "REBEEP_TRACE": 1024
+      }
+    },
+    {
       "name": "QPICHK.COM",
       "source": "diag/qpichk.asm",
       "format": "bin",

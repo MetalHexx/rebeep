@@ -11,6 +11,8 @@ or to put a small file there (a batch file, a config) without asking the user to
 
 D: paths take `\` or `/`, any case, with or without `D:`: `D:\REBEEP\RBLOG.TXT`.
 
+The trace build's log, `D:\REBEEP\RBTRACE.TXT`, is fetched this way: [trace.md](trace.md).
+
 **Rules:**
 
 - **Quit the VM first.** All three refuse while 86Box runs, because it holds `d.img` open and

@@ -17,6 +17,7 @@ AMIS_FN_APPLY   equ 11h         ; apply RB_STATE's voice, volume, translation, /
 AMIS_FN_TRAPS_ON  equ 12h       ; AL = FFh, or AL = 00h and BL = exit code; a no-op when already on
 AMIS_FN_TRAPS_OFF equ 13h       ; the same, releasing the OPL
 AMIS_FN_UNINSTALL equ 14h       ; AL = FFh and BX = PSP segment to free, or AL = 00h and BL = 8
+AMIS_FN_TRACE   equ 15h         ; trace build only: AL = FFh, DX:BX -> the trace buffer (trace.inc)
 
 ; RB_STATE, layout version 1: byte offsets.
 RBS_VERSION     equ 0           ; db layout version

@@ -19,8 +19,13 @@ OPT_U           equ 0080h
 OPT_HELP        equ 0100h
 OPT_L           equ 0200h
 OPT_R           equ 0400h
+%ifdef REBEEP_TRACE
+OPT_D           equ 0800h               ; dump the trace
+%else
+OPT_D           equ 0
+%endif
 OPT_CONFIG      equ OPT_F | OPT_P | OPT_V | OPT_K | OPT_L | OPT_R
-OPT_CONTROL     equ OPT_ON | OPT_OFF | OPT_S | OPT_U
+OPT_CONTROL     equ OPT_ON | OPT_OFF | OPT_S | OPT_U | OPT_D
 
 ; Paragraphs kept resident, counted from the PSP: everything below resident_end.
 RESIDENT_PARAS  equ (resident_end - image_start + 100h + 15) >> 4
@@ -149,6 +154,12 @@ change_path:
         jnz     do_on
         test    ax, OPT_OFF
         jnz     do_off
+%ifdef REBEEP_TRACE
+        test    ax, OPT_D
+        jz      .nodump
+        jmp     do_dump
+.nodump:
+%endif
         test    ax, OPT_CONFIG
         jnz     do_update
         jmp     do_status
@@ -441,6 +452,11 @@ parse_options:
         mov     bx, OPT_F
         cmp     al, 'f'
         je      .flag
+%ifdef REBEEP_TRACE
+        mov     bx, OPT_D
+        cmp     al, 'd'
+        je      .flag
+%endif
         cmp     al, 'o'
         je      .onoff
         cmp     al, 'p'
@@ -922,7 +938,7 @@ msg_on          db      "ReBeep is on.", 13, 10, '$'
 msg_off         db      "ReBeep is off: the OPL is free for the game.", 13, 10, '$'
 msg_updated     db      "ReBeep updated: $"
 
-msg_stat_1      db      "ReBeep ", REBEEP_VERSION, " is loaded: traps $"
+msg_stat_1      db      REBEEP_NAME, " is loaded: traps $"
 msg_stat_2      db      ", translation $"
 msg_stat_3      db      ", OPL$"
 msg_stat_4      db      ".", 13, 10, '$'
@@ -930,7 +946,7 @@ msg_stat_5      db      " speaker writes handled.", 13, 10, '$'
 msg_on_word     db      "on$"
 msg_off_word    db      "off$"
 
-msg_loaded_1    db      "ReBeep ", REBEEP_VERSION, " loaded in $"
+msg_loaded_1    db      REBEEP_NAME, " loaded in $"
 msg_upper       db      "upper$"
 msg_conventional db     "conventional$"
 msg_loaded_2    db      " memory, $"
@@ -948,9 +964,13 @@ msg_low_1       db      "Notes below 20 Hz are played (/L:1).", 13, 10, '$'
 msg_raw_1       db      "Sounds ReBeep can't translate play on the speaker (/R:1).", 13, 10, '$'
 msg_raw_0       db      "Sounds ReBeep can't translate are muted (/R:0).", 13, 10, '$'
 
-msg_help_1      db      "ReBeep ", REBEEP_VERSION, " - plays PC-speaker beeps on a Sound Blaster's OPL2/OPL3.", 13, 10
+msg_help_1      db      REBEEP_NAME, " - plays PC-speaker beeps on a Sound Blaster's OPL2/OPL3.", 13, 10
                 db      "Needs a 386 or better and Jemm's QPIEMU (JLOAD QPIEMU.DLL).", 13, 10, 13, 10
+%ifdef REBEEP_TRACE
+                db      "REBEEPD [/F|/P:n] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON|/OFF] [/S] [/U] [/D] [/?]", 13, 10
+%else
                 db      "REBEEP [/F | /P:n] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]", 13, 10
+%endif
                 db      "  /F     faithful square-wave voice (default)", 13, 10
                 db      "  /P:n   built-in patch n: $"
 msg_help_2      db      13, 10
@@ -960,6 +980,9 @@ msg_help_2      db      13, 10
                 db      "  /K:xy  Ctrl+Alt+x toggles, Ctrl+Alt+y cycles the voice (default BN)", 13, 10
                 db      "  /OFF   stop trapping and release the OPL    /ON  trap again", 13, 10
                 db      "  /S     status                               /U   unload", 13, 10
+%ifdef REBEEP_TRACE
+                db      "  /D     add the trace to D:\REBEEP\RBTRACE.TXT, then empty it", 13, 10
+%endif
                 db      "  /?     this help", 13, 10
                 db      "/S, /U, /ON and /OFF act only on a loaded copy. Any other option on a", 13, 10
                 db      "loaded copy changes only what it names.", 13, 10, 13, 10

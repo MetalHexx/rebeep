@@ -1,6 +1,6 @@
 ---
 name: rebeep-dev
-description: Work in the ReBeep repo's dev environment through the rebeep CLI (tools/rebeep.mjs). Use to set up, check, reset or clean the 86Box environment; add MS-DOS or game media; create, install, run, snapshot or reset the VMs (mirror-msdos, mirror-freedos, slow-386sx); build ReBeep and deploy it to the VMs' D: disk; see, fetch or add files on a VM's D: (logs, results); run the tests; or add a command to the CLI.
+description: Work in the ReBeep repo's dev environment through the rebeep CLI (tools/rebeep.mjs). Use to set up, check, reset or clean the 86Box environment; add MS-DOS or game media; create, install, run, snapshot or reset the VMs (mirror-msdos, mirror-freedos, slow-386sx); build ReBeep and deploy it to the VMs' D: disk; see, fetch or add files on a VM's D: (logs, results); log what a game makes ReBeep do with the REBEEPD trace build; run the tests; or add a command to the CLI.
 ---
 
 # rebeep-dev
@@ -14,6 +14,7 @@ commands and hard rules. Read it first, then the one reference that matches the 
 | Create a VM, install DOS, run it, snapshot it | [references/vms.md](references/vms.md) |
 | Build, deploy to D:, test | [references/build-and-test.md](references/build-and-test.md) |
 | See, fetch or add files on a VM's D: (logs, results, small files) | [references/d-files.md](references/d-files.md) |
+| Log what a game makes ReBeep do (REBEEPD, the trace build) and read the log | [references/trace.md](references/trace.md) |
 | Build the release package: zip, floppy image, checksums, notes | [references/release.md](references/release.md) |
 | Add or change a CLI noun, verb or option | [references/cli.md](references/cli.md) |
 | Update docs → `update-docs` skill | [update-docs](../update-docs/SKILL.md) |

@@ -28,6 +28,10 @@ amis_isr:
         je      .hooks
         cmp     al, AMIS_FN_STATE
         je      .state
+%ifdef REBEEP_TRACE
+        cmp     al, AMIS_FN_TRACE
+        je      .trace
+%endif
         cmp     al, AMIS_FN_APPLY
         jb      .unknown
         cmp     al, AMIS_FN_UNINSTALL
@@ -108,6 +112,13 @@ amis_isr:
         mov     dx, cs
         mov     bx, RB_STATE
         iret
+%ifdef REBEEP_TRACE
+.trace:
+        mov     al, 0FFh
+        mov     dx, cs
+        mov     bx, trace_hdr
+        iret
+%endif
 
 ; rb_opl_start: take over the OPL with the configured voice and volume.
 ; In:  AL = 2 or 3, the chip type
@@ -191,7 +202,7 @@ rb_uninstall:
 ; the command-line copy compares to tell versions apart.
 rb_ident:
         db      AMIS_SIG_MFR, AMIS_SIG_PROD
-        db      "ReBeep ", REBEEP_VERSION, 0
+        db      REBEEP_NAME, 0
 
 ; Function 04h's list: interrupt number and handler entry, INT 2Dh last.
 rb_hooks:

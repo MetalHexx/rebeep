@@ -6,13 +6,13 @@
 
 | Path | Role |
 |---|---|
-| `targets.json` | What `rebeep build run` assembles: name, source, format, optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it), `defines` (extra NASM `-D` names) |
+| `targets.json` | What `rebeep build run` assembles: name, source, format, optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it), `defines` (extra NASM `-D` names: `REBEEP_TRACE` builds `REBEEPD.COM`, dev-only, never packaged; `REBEEP.COM` is unchanged by it) |
 | `rebeep.asm` | `REBEEP.COM`: the resident part, then `resident_end`, then the startup part |
 | `resident/` | `data.asm`: `RB_STATE`, saved vectors, the private stack. `amis.asm`: the `INT 2Dh` handler and uninstall |
-| `capture/trap.asm` | QPI trap install and remove, the callback, and the port semantics (masking, read view, OPL events) |
+| `capture/` | `trap.asm`: QPI trap install and remove, the callback, the port semantics (masking, read view, OPL events). `trace.asm`: REBEEPD's log |
 | `engine/` | `interp.asm` the speaker interpreter, `opl.asm` the OPL render target |
 | `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
-| `startup/main.asm` | Options, checks, load, change, unload, messages. Freed when going resident |
+| `startup/` | `main.asm`: options, checks, load, change, unload, messages. `dump.asm`: `REBEEPD /D`. Freed when going resident |
 | `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [exitcode.inc](include/exitcode.inc): the exit codes. Neither is restated elsewhere |
 | `diag/` | `qpichk.asm` → `QPICHK.COM`, reports whether QPIEMU is up (run by `BOOT.BAT`). `fdboot.asm` → `FDBOOT.BIN`, the release floppy's boot sector: hands the boot to C:, asks for a key only when C: has none |
 
