@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/images/rebeep-logo.png" alt="A green frog at a retro PC, saying ReBeep!" width="300">
+
 # ReBeep
 
 **Hear your beeper-only DOS games through a real sound card.**

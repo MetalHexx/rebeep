@@ -14,6 +14,7 @@
 | `getting-started.md` | Zero to first boot, Free and Full paths, and the Verified-on table |
 | `86box-environment.md` | The VMs, disks, boot flow, snapshot and reset |
 | `contributing.md` | Set up, workflow and checks, commits, PR rules, payload rules |
+| `images/` | Pictures the docs show. `rebeep-logo.png` is the README's logo, on a transparent background |
 | `releasing.md` | The maintainer's release procedure, with the checks by a person that gate the merge |
 
 ## Rules
