@@ -80,6 +80,10 @@ A boot menu lets you pick a setup each time the PC starts. It is written in `CON
 needs MS-DOS 6 or later. Each entry has its own block, and `AUTOEXEC.BAT` learns which entry you
 picked from `%CONFIG%`. Follow the case that matches your `CONFIG.SYS`.
 
+**The menu is optional, but handy.** With one, you pick your usual entry for games that don't use
+the speaker, and ReBeep and Jemm stay out of their way. Without one, they load on every boot
+(case C).
+
 ### A. You have no boot menu yet
 
 Make your `CONFIG.SYS` look like this. Move your own `HIMEM.SYS` and `EMM386.EXE` lines into
@@ -148,6 +152,25 @@ The `GOTO` at the end matters: a batch file runs on through the next label, so p
 label your other entries finish on (here `:END`). Add your mouse driver here too, if the other
 entries load one. If your `AUTOEXEC.BAT` uses `IF "%CONFIG%"==` lines instead, add the two lines
 from case A, with `RB` in place of `REBEEP`.
+
+### C. No boot menu
+
+For MS-DOS 5, or if you'd rather load ReBeep on every boot. In `CONFIG.SYS`, remove your
+`HIMEM.SYS` and `EMM386.EXE` lines and put these in their place:
+
+```
+DEVICE=C:\JEMM\JEMMEX.EXE NOEMS X=TEST NOVME NOINVLPG
+DOS=HIGH,UMB
+```
+
+Then add these to the end of `AUTOEXEC.BAT`, and `;C:\REBEEP` to the end of your `PATH` line:
+
+```
+C:\JEMM\JLOAD.EXE C:\JEMM\QPIEMU.DLL
+LH C:\REBEEP\REBEEP.COM
+```
+
+These are the lines `INSTALL` prints. To undo, copy your backups back (step 6).
 
 ### What each line does
 

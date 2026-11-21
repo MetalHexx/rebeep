@@ -51,6 +51,12 @@ PATH so that the newer copy is found.
 This adds a ReBeep entry to your boot menu, so your usual setup stays a
 pick away. A boot menu needs MS-DOS 6 or later.
 
+The menu is optional, but handy: pick your usual entry for games that
+don't use the speaker, and ReBeep and Jemm stay out of their way. Without
+one (MS-DOS 5, or by choice), replace HIMEM.SYS and EMM386.EXE in
+CONFIG.SYS with the lines INSTALL prints, add its AUTOEXEC.BAT lines, and
+ReBeep loads on every boot.
+
   1. Back up your boot files:
 
        COPY C:\CONFIG.SYS C:\CONFIG.BAK
