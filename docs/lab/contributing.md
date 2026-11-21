@@ -4,7 +4,7 @@ Thanks for helping. Here is what you need to know.
 
 ## Set up
 
-[Getting started](getting-started.md) takes a fresh clone to a booted DOS VM with ReBeep's
+[Lab setup](setup.md) takes a fresh clone to a booted DOS VM with ReBeep's
 environment loaded. Below, `rebeep` stands for `node tools/rebeep.mjs`.
 
 ## Workflow
@@ -18,7 +18,7 @@ environment loaded. Below, `rebeep` stands for `node tools/rebeep.mjs`.
    | Anything | `rebeep repo check` |
    | `tools/` | `rebeep test run --suite tools` |
    | `src/` or `tests/` | Also `rebeep test run --suite interpreter` and `rebeep test run --suite vm` |
-   | Docs | The rules and budgets in the root [AGENTS.md](../AGENTS.md#10-writing-docs) |
+   | Docs | The rules and budgets in the root [AGENTS.md](../../AGENTS.md#10-writing-docs) |
 
    CI runs the tools and interpreter suites, the build, a package dry run and the payload guard. It
    can't run 86Box, so the VM probes are yours to run before you push.
@@ -32,7 +32,7 @@ Releases are the maintainer's: [releasing](releasing.md).
 Load `REBEEPD.COM`, the trace build deployed beside `REBEEP.COM`, instead of ReBeep. It logs every
 speaker step and OPL note, and `REBEEPD /D` writes the log to `D:\REBEEP\RBTRACE.TXT`. It is for
 development only and never ships. The steps and the log format are in the `rebeep-dev` skill's
-[trace reference](../.claude/skills/rebeep-dev/references/trace.md).
+[trace reference](../../.claude/skills/rebeep-dev/references/trace.md).
 
 ## Commits
 
@@ -62,13 +62,13 @@ description.
 - **A change to a command** updates its `--help` (generated from the spec), plus any doc or skill
   reference that mentions it, in the same PR.
 - **Each folder's `AGENTS.md`** must stay true. The rules and budgets for every doc are in the root
-  [AGENTS.md](../AGENTS.md#10-writing-docs). Working with an AI agent? Its `update-docs` skill
-  ([SKILL.md](../.claude/skills/update-docs/SKILL.md)) applies them to your change.
+  [AGENTS.md](../../AGENTS.md#10-writing-docs). Working with an AI agent? Its `update-docs` skill
+  ([SKILL.md](../../.claude/skills/update-docs/SKILL.md)) applies them to your change.
 - **Every user-visible change** adds a player-facing line under `## [Unreleased]` in
-  [CHANGELOG.md](../CHANGELOG.md).
+  [CHANGELOG.md](../../CHANGELOG.md).
 
 ## Report your host
 
 The environment is verified on Windows. If you run it on Linux or macOS, add your result to the
-**Verified on** table in [getting-started.md](getting-started.md), even if something broke. Say
+**Verified on** table in [setup.md](setup.md), even if something broke. Say
 what broke.

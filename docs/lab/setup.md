@@ -1,4 +1,4 @@
-# Getting started
+# Lab setup
 
 From a fresh clone to a booted DOS VM with ReBeep's environment loaded.
 
@@ -31,7 +31,7 @@ rebeep vm run mirror-freedos
 - The boot menu picks **ReBeep dev** after 5 seconds. It loads Jemm, then QPIEMU, prints
   `QPICHK: QPI ready (QPIEMU), version 07.03`, and loads the latest ReBeep build (autoload).
 - `REBEEP /S` shows its status. `D:\REBEEP\RBTEST` plays test sounds and checks ReBeep; see
-  [usage](usage.md#check-your-hardware-with-rbtest).
+  [usage](../usage.md#check-your-hardware-with-rbtest).
 
 When it looks right, save it as the VM's baseline:
 

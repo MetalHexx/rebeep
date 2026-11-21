@@ -1,4 +1,4 @@
-# The 86Box environment
+# The 86Box lab
 
 How the VMs are defined, what is on their disks, and how a boot loads Jemm, QPIEMU and ReBeep.
 
@@ -124,7 +124,7 @@ loads nothing. `RBTEST.COM` is deployed beside it.
 
 `rebeep test run --suite vm` runs each `tests/vm/P_*.BAT` probe unattended on `mirror-freedos`. It
 writes a probe D: whose `ENV\BOOT.BAT` is the probe, boots, reads `RESULT.TXT` back and redeploys the
-normal D:. Probe format and rules: [tests/vm/AGENTS.md](../tests/vm/AGENTS.md).
+normal D:. Probe format and rules: [tests/vm/AGENTS.md](../../tests/vm/AGENTS.md).
 
 ## Snapshot and reset
 
@@ -154,7 +154,7 @@ With no baseline:
 - DOSBox-X 2026.10.01.
 
 On Linux and macOS, NASM (and on Linux, DOSBox-X) comes from your package manager instead. To
-re-pin a tool, follow the procedure in [env/AGENTS.md](../env/AGENTS.md).
+re-pin a tool, follow the procedure in [env/AGENTS.md](../../env/AGENTS.md).
 
 ## Troubleshooting
 
@@ -162,7 +162,7 @@ re-pin a tool, follow the procedure in [env/AGENTS.md](../env/AGENTS.md).
 |---|---|
 | "CMOS checksum error" at every boot | Press F1. Take a snapshot after the first good boot, so it's saved |
 | BIOS doesn't see a disk | Del → IDE HDD auto-detection (or set the type to Auto), then save |
-| `DISK BOOT FAILURE` on `slow-386sx` | Del → set Drive C: to the user type with 260 / 16 / 63, precomp 0, landzone 260. See [getting-started](getting-started.md#3-full-path-ms-dos-622-and-your-own-game) |
+| `DISK BOOT FAILURE` on `slow-386sx` | Del → set Drive C: to the user type with 260 / 16 / 63, precomp 0, landzone 260. See [lab setup](setup.md#3-full-path-ms-dos-622-and-your-own-game) |
 | No sound at all, even `ECHO` + Ctrl+G | Check 86Box in the host's volume mixer, then **Action → Hard Reset** |
 | A game hangs on a black screen in `mirror-freedos` | Some old games don't run on FreeDOS. Grand Prix Circuit hangs there in both menu entries; use `mirror-msdos` |
 | `QPICHK: no QPI` | Boot the **ReBeep dev** entry. Clean has no Jemm |

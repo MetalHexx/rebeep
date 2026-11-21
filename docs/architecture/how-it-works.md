@@ -1,7 +1,7 @@
 # How ReBeep works
 
 For the curious: how a speaker beep becomes an FM note, and what that costs. Options and fixes are
-in [usage](usage.md); the code-level rules are in [src/AGENTS.md](../src/AGENTS.md).
+in [usage](../usage.md); the code-level rules are in [src/AGENTS.md](../../src/AGENTS.md).
 
 ```
 game ──OUT 42h/43h/61h──▶ Jemm + QPIEMU ──▶ ReBeep ──▶ OPL2/OPL3 at 388h

@@ -2,7 +2,7 @@
 
 The player reference: starting ReBeep, its options and hotkeys, and what to do when it refuses. The
 package's `README.TXT` mirrors the tables below; if they ever differ, fix both. Machine and game
-results are in [compatibility](compatibility.md), the design in [how it works](how-it-works.md).
+results are in [compatibility](compatibility.md), the design in [how it works](architecture/how-it-works.md).
 
 ## Start it
 
@@ -128,5 +128,5 @@ Other problems:
 |---|---|
 | A game with its own FM music clashes | `REBEEP /OFF` before it, or `REBEEP /U` |
 | A hotkey does nothing in a game | The game owns the keyboard. Set the voice or `/OFF` before starting it |
-| A game runs slowly | It toggles the speaker very often. `REBEEP /OFF` before starting it. See [performance](how-it-works.md#performance) |
+| A game runs slowly | It toggles the speaker very often. `REBEEP /OFF` before starting it. See [performance](architecture/how-it-works.md#performance) |
 | `RBPLAY` says ReBeep did not load | Run `REBEEP /?` and read the exit code above |

@@ -1,6 +1,6 @@
 REM VM: mirror-freedos
 REM VM-TIMEOUT: 240
-REM Benchmark probe: RBTEST /B with ReBeep loaded, after /OFF and after unload, for the numbers in docs/how-it-works.md.
+REM Benchmark probe: RBTEST /B with ReBeep loaded, after /OFF and after unload, for the numbers in docs/architecture/how-it-works.md.
 @ECHO OFF
 D:
 CD \

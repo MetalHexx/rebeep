@@ -129,12 +129,12 @@ doc has one job. When two docs need the same fact, one owns it and the others li
 |---|---|
 | `README.md` | The front door, for players: why, highlights, how in brief, what you need, install in brief, tested on, and the docs index. Build details live in `docs/` |
 | `docs/usage.md` | The player reference: options, hotkeys, voices, exit codes, `RBTEST`, troubleshooting. `release/README.TXT` mirrors its tables; change both together |
-| `docs/how-it-works.md` | The design for curious readers and the measured cost (`P_BENCH` numbers) |
+| `docs/architecture/how-it-works.md` | The design for curious readers and the measured cost (`P_BENCH` numbers) |
 | `docs/compatibility.md` | Tested games and hardware, known conflicts |
-| `docs/getting-started.md` | Zero to first boot on both paths, plus the Verified-on table |
-| `docs/86box-environment.md` | VMs, disks, boot flow, snapshot and reset. Owns troubleshooting |
-| `docs/contributing.md` | Set up, workflow and checks, commits, PR rules, payload rules |
-| `docs/releasing.md` | The release procedure and the checks by a person |
+| `docs/lab/setup.md` | Zero to first boot on both paths, plus the Verified-on table |
+| `docs/lab/86box-lab.md` | VMs, disks, boot flow, snapshot and reset. Owns troubleshooting |
+| `docs/lab/contributing.md` | Set up, workflow and checks, commits, PR rules, payload rules |
+| `docs/lab/releasing.md` | The release procedure and the checks by a person |
 | `CHANGELOG.md` | Player-facing changes |
 | Folder `AGENTS.md` | That folder's rules and pitfalls |
 | CLI help | The source of truth for commands and options (`rebeep <noun> <verb> --help`) |

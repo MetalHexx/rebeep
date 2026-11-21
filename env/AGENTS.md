@@ -49,5 +49,5 @@ rebeep vm run <vm>
 
 ## Related
 
-- [docs/86box-environment.md](../docs/86box-environment.md): the full guide
+- [docs/lab/86box-lab.md](../docs/lab/86box-lab.md): the full guide
 - [tools/AGENTS.md](../tools/AGENTS.md): the CLI that reads these files

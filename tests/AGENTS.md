@@ -33,7 +33,7 @@
   in DOSBox-X with sound on, once per `oplmode` (`-set sblaster,oplmode=opl2`, then `opl3`).
 - `RBTEST.COM` plays speaker cases for listening, runs PASS/FAIL behaviour checks (with `/R`, against
   ReBeep's state through AMIS, last turning its traps off and on), probes free memory and times a trapped write.
-  `P_EXER` tests it without ReBeep, `P_CAPT` with it, `P_TRACE` under REBEEPD, `P_BENCH` times it (`docs/how-it-works.md`); `RBTEST /?`.
+  `P_EXER` tests it without ReBeep, `P_CAPT` with it, `P_TRACE` under REBEEPD, `P_BENCH` times it (`docs/architecture/how-it-works.md`); `RBTEST /?`.
 - The CLI's own unit tests live in `tools/test/`, not here.
 
 ## Pitfalls

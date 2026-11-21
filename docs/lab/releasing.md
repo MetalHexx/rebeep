@@ -7,7 +7,7 @@ order, on the release branch: the checks run on the final files.
 
 1. Branch from `main`.
 2. `rebeep version bump <major|minor|patch|X.Y.Z>`. It moves `[Unreleased]` in
-   [CHANGELOG.md](../CHANGELOG.md) under the new version, dated today, and sets `package.json`.
+   [CHANGELOG.md](../../CHANGELOG.md) under the new version, dated today, and sets `package.json`.
    `--preview` shows the change first.
 3. Commit, push, and open the release PR as a draft.
 
@@ -23,8 +23,8 @@ CI also runs `version check` and a package dry run on the PR.
 ## 3. Checks by a person
 
 These gate the merge. A failed check means a fix on the branch, then section 2 again, never a
-merge. Commit the results (the GPC and real hardware rows in [compatibility.md](compatibility.md),
-the `slow-386sx` numbers in [how-it-works.md](how-it-works.md)) before the PR is marked ready.
+merge. Commit the results (the GPC and real hardware rows in [compatibility.md](../compatibility.md),
+the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) before the PR is marked ready.
 
 **`mirror-msdos`**, on the normal dev boot, which autoloads ReBeep. Play Grand Prix Circuit
 (`D:\GAMES\GPC\GPAUTO\GPEGA.EXE`):
@@ -58,7 +58,7 @@ the `slow-386sx` numbers in [how-it-works.md](how-it-works.md)) before the PR is
 **`slow-386sx`:**
 
 - [ ] `RBTEST /B` with ReBeep loaded, then after `REBEEP /OFF`. Record the numbers in
-  [how-it-works.md](how-it-works.md).
+  [how-it-works.md](../architecture/how-it-works.md).
 
 **The real machine**, last. The VMs stand in for it, so it decides the release:
 

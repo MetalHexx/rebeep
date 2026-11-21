@@ -1,7 +1,7 @@
 # Compatibility
 
 What ReBeep has been tried on, and what is known not to work. Machine options and fixes are in
-[usage](usage.md); the VMs are in [the 86Box environment](86box-environment.md).
+[usage](usage.md); the VMs are in [the 86Box environment](lab/86box-lab.md).
 
 ## Games
 
@@ -23,7 +23,7 @@ Tried another game? Open an issue or a PR adding a row.
 | 86Box `mirror-freedos` (Pentium MMX 233) | Sound Blaster Vibra 16S, OPL3 | Verified by the probes (`rebeep test run --suite vm`): load, trap, translate, fallback, `/OFF`, unload |
 | Real PC: FIC PA-2010 (Socket 7), MS-DOS 7.1, JemmEx + QPIEMU | Sound Blaster Vibra 16 | Grand Prix Circuit races clean (Games above) |
 
-The speed of ReBeep's trap on these machines is in [performance](how-it-works.md#performance).
+The speed of ReBeep's trap on these machines is in [performance](architecture/how-it-works.md#performance).
 
 ## Known conflicts
 

@@ -39,7 +39,7 @@ game ──OUT 42h/43h/61h──▶ Jemm + QPIEMU ──▶ ReBeep ──▶ OPL
 A game beeps by setting a pitch on the PC's timer chip and switching the speaker on. Jemm's QPIEMU
 module lets ReBeep catch those port writes as they happen. ReBeep works out the note the game asked
 for, plays it on the FM chip, and holds the real speaker still. The details, and what it costs in
-speed, are in [how it works](docs/how-it-works.md).
+speed, are in [how it works](docs/architecture/how-it-works.md).
 
 ## What you need
 
@@ -73,7 +73,7 @@ emulated Pentium MMX and a 386SX/16, backed by automated checks that run in DOS 
 | Doc | What it covers |
 |---|---|
 | [Usage](docs/usage.md) | Options, hotkeys, voices, exit codes, RBTEST, troubleshooting |
-| [How it works](docs/how-it-works.md) | The design, and the measured cost |
+| [How it works](docs/architecture/how-it-works.md) | The design, and the measured cost |
 | [Compatibility](docs/compatibility.md) | Tested games and machines, known conflicts |
 | [Grand Prix Circuit](docs/gpc.md) | How the game drives the speaker, and what ReBeep makes of it |
 
@@ -81,20 +81,20 @@ emulated Pentium MMX and a 386SX/16, backed by automated checks that run in DOS 
 
 | Doc | What it covers |
 |---|---|
-| [Getting started](docs/getting-started.md) | From a fresh clone to a booted DOS VM, on the Free and Full paths |
-| [The 86Box lab](docs/86box-environment.md) | The VMs, their disks, the boot flow, snapshot and reset |
-| [Contributing](docs/contributing.md) | Set up, workflow and checks, commits, payload rules |
-| [Releasing](docs/releasing.md) | The release procedure and the checks by a person |
+| [Getting started](docs/lab/setup.md) | From a fresh clone to a booted DOS VM, on the Free and Full paths |
+| [The 86Box lab](docs/lab/86box-lab.md) | The VMs, their disks, the boot flow, snapshot and reset |
+| [Contributing](docs/lab/contributing.md) | Set up, workflow and checks, commits, payload rules |
+| [Releasing](docs/lab/releasing.md) | The release procedure and the checks by a person |
 
 ## Build it yourself
 
 ReBeep comes with a ready-made 86Box lab: one command-line tool fetches 86Box, FreeDOS and Jemm at
 pinned versions, builds the DOS VMs, and puts each new build on them. Start at
-[getting started](docs/getting-started.md).
+[getting started](docs/lab/setup.md).
 
 ## Contributing
 
-Issues and pull requests are welcome. Start with [contributing](docs/contributing.md); AI agents
+Issues and pull requests are welcome. Start with [contributing](docs/lab/contributing.md); AI agents
 start at [AGENTS.md](AGENTS.md).
 
 ## License

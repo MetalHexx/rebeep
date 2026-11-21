@@ -49,7 +49,7 @@ downloads already exist it does nothing; otherwise it checks, runs `release crea
 floppy, tags the commit (failing if the tag is on another commit) and creates the GitHub Release, or uploads
 with `--clobber` when the release already exists. A re-run finishes a half-done release and never makes a
 second tag. PR CI (`ci.yml`) runs `version check` and `release create --skip-build` on every OS.
-The whole procedure, with the checks by a person: [docs/releasing.md](../../../../docs/releasing.md).
+The whole procedure, with the checks by a person: [docs/lab/releasing.md](../../../../docs/lab/releasing.md).
 
 Code: `tools/lib/version.mjs`, `tools/commands/version.mjs`, `tools/lib/release.mjs`,
 `tools/commands/release.mjs`; `buildFloppy` in `tools/lib/fat.mjs`, `writeZip` in `tools/lib/zip.mjs`.
