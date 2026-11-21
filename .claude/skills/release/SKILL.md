@@ -19,7 +19,9 @@ says what the agent does at each step.
 - **Merging into `main` publishes.** Never mark the PR ready, merge, push to `main` or use the
   admin bypass without the user's explicit go for this release.
 - Talk in short steps, and lead with what the user must do or decide.
-- No agent attribution in commits, the PR or the notes.
+- **No agent attribution** in commits, the PR, the notes or the squash message. Before the PR is
+  ready, grep `git log --format='%an %ae %cn %ce%n%B' origin/main..HEAD` and the PR body for
+  `Co-Authored-By`, `Generated with`, `claude`, `anthropic`. Read each: `.claude/` paths match.
 
 ## 1. Read the branch
 
@@ -75,14 +77,13 @@ commit `chore: release X.Y.Z`, push, and open or update the release PR as a draf
 
 Hand the user `releasing.md` section 3 one machine at a time, real machine last. Record what they
 report (game and machine rows in `docs/guide/compatibility.md`, the `slow-386sx` numbers in
-`docs/architecture/how-it-works.md`) and commit it. A failure means a fix on the branch, then step 4
-again.
+`docs/architecture/how-it-works.md`) and commit it. A failure: fix it on the branch, then step 4.
 
 ## 6. Merge day
 
 - The entry's date is today's. If not, edit the heading's date, then rerun step 4's checks.
-- CI is green on the PR, and the user has reviewed the notes (step 3).
-- Ask for the go. On it, mark the PR ready and squash-merge, or let the user do it.
+- CI is green, the user has reviewed the notes (step 3), and the attribution scan (Always) is clean.
+- Ask for the go, saying the scan is clean. On it, mark ready and squash-merge, or the user does.
 
 ## 7. After the merge
 
@@ -90,8 +91,7 @@ Watch it with `gh run list --workflow release.yml --limit 1`, then `gh run watch
 
 - Compare the release's `SHA256SUMS.txt` with `build/release/SHA256SUMS.txt`. A match means the
   downloads are the bytes that were tested.
-- Ask the user to download it, install it by following `README.TXT`, and check that ReBeep loads
-  and names the version.
+- Have the user install the download by following `README.TXT`: ReBeep loads and names its version.
 - Offer a short announcement for Discord, for the user to post.
 - Half done? Re-run the workflow on `main` (`gh workflow run release.yml --ref main`); it never
   makes a second tag. Broken? Make a patch release. Never move or delete a published tag.
