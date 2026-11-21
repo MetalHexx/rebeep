@@ -20,8 +20,9 @@
   purpose, so nothing here overwrites one.
 - `@VERSION@` is the only placeholder, and it appears only in `README.TXT`'s
   title block.
-- `README.TXT`'s tables mirror `docs/usage.md`, the `REBEEP /?` help in
-  `src/startup/main.asm`, and the RBTEST help in `tests/exerciser/rbtest.asm`.
+- `README.TXT`'s tables mirror `docs/guide/reference.md`, the `REBEEP /?`
+  help in `src/startup/main.asm`, and the RBTEST help in
+  `tests/exerciser/rbtest.asm`. Its section 3 follows `docs/guide/real-pc.md`.
   Change them together.
 - Each sample is proven in a VM before each release.
 

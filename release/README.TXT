@@ -6,17 +6,22 @@ Contents
 --------
   1  Requirements
   2  Getting Jemm
-  3  Quick setup
+  3  Setting up
   4  Options and hotkeys
   5  Testing with RBTEST
   6  Troubleshooting
   7  License and contact
 
+The same guide, with more detail, is online:
+
+  https://github.com/MetalHexx/rebeep/tree/main/docs/guide
+
 
 1 Requirements
 --------------
   - A 386 or better.
-  - MS-DOS 5 or later, or FreeDOS.
+  - MS-DOS 5 or later, or FreeDOS, booted to plain DOS: not a DOS window
+    inside Windows.
   - Jemm 5.87 or later, with its QPIEMU module (section 2).
   - An OPL2 or OPL3 FM chip at port 388h. Sound Blaster cards and most
     clones have one.
@@ -24,52 +29,117 @@ Contents
 
 2 Getting Jemm
 --------------
-Jemm is a free memory manager. ReBeep needs its QPIEMU module:
+Jemm is a free memory manager. It replaces HIMEM.SYS and EMM386.EXE, and
+its QPIEMU module is what lets ReBeep catch the speaker:
 
   https://github.com/Baron-von-Riedesel/Jemm/releases
 
-Use 5.87 or later. It is the version this kit is tested with.
+Use 5.87 or later. It is the version this kit is tested with. Copy three
+files from its zip to C:\JEMM:
 
-  1. Copy JEMMEX.EXE, JLOAD.EXE and QPIEMU.DLL to C:\JEMM.
-
-  2. Add these two lines to CONFIG.SYS:
-
-       DEVICE=C:\JEMM\JEMMEX.EXE NOEMS X=TEST NOVME NOINVLPG
-       DOS=HIGH,UMB
-
-  3. Add this line to AUTOEXEC.BAT, before ReBeep is loaded:
-
-       C:\JEMM\JLOAD.EXE C:\JEMM\QPIEMU.DLL
+  JEMMEX.EXE   the memory manager
+  JLOAD.EXE    loads Jemm modules
+  QPIEMU.DLL   the module ReBeep needs
 
 FreeDOS caveat: FreeDOS ships an older Jemm, and its live image has no
-JLOAD. Use C:\JEMM with full paths, as above, and keep C:\JEMM first on
+JLOAD. Use C:\JEMM with full paths, as below, and keep C:\JEMM first on
 PATH so that the newer copy is found.
 
 
-3 Quick setup
--------------
-  1. Run INSTALL from the folder that holds REBEEP.COM. It copies the
-     files to C:\REBEEP, or to the folder you name:
+3 Setting up
+------------
+This adds a ReBeep entry to your boot menu, so your usual setup stays a
+pick away. A boot menu needs MS-DOS 6 or later.
+
+  1. Back up your boot files:
+
+       COPY C:\CONFIG.SYS C:\CONFIG.BAK
+       COPY C:\AUTOEXEC.BAT C:\AUTOEXEC.BAK
+
+     If an edit stops the PC from booting, press F5 when "Starting
+     MS-DOS..." appears (MS-DOS 6), or boot from a DOS floppy. Then copy
+     the .BAK files back.
+
+  2. Run INSTALL from the folder that holds REBEEP.COM. It copies the
+     files to C:\REBEEP, or to the folder you name, and edits nothing:
 
        INSTALL [dir]
 
-  2. Then pick one way to start ReBeep:
+     If INSTALL fails, as it can on Windows 98's DOS with "Invalid drive
+     or directory", copy the files by hand:
 
-     - Add the lines that INSTALL prints to CONFIG.SYS and AUTOEXEC.BAT.
+       MD C:\REBEEP
+       COPY A:\*.* C:\REBEEP
 
-     - Start from a sample in SAMPLES\MSDOS or SAMPLES\FREEDOS. Each one
-       has a boot menu entry for ReBeep. Save your own file before you
-       copy a sample over it.
+  3. Add the ReBeep entry. With no boot menu yet, make CONFIG.SYS look
+     like this. Move your own HIMEM.SYS and EMM386.EXE lines into
+     [NORMAL], and the rest of what you load into [COMMON]:
 
-     - Leave your configs alone and use RBPLAY. It loads ReBeep for one
-       game and unloads it after the game exits:
+       [MENU]
+       MENUITEM=REBEEP, ReBeep (Jemm + QPIEMU)
+       MENUITEM=NORMAL, My usual setup
+       MENUDEFAULT=REBEEP,5
 
-       RBPLAY GAME.EXE [args]
+       [REBEEP]
+       DEVICE=C:\JEMM\JEMMEX.EXE NOEMS X=TEST NOVME NOINVLPG
+       DOS=HIGH,UMB
 
-  RBPLAY needs JEMMEX in CONFIG.SYS (section 2). If Jemm is not in
-  C:\JEMM, set RBJEMM to its folder first:
+       [NORMAL]
+       DEVICE=C:\DOS\HIMEM.SYS
+       DEVICE=C:\DOS\EMM386.EXE
+       DOS=HIGH,UMB
+
+       [COMMON]
+       FILES=40
+       BUFFERS=20
+
+     Then add these to the end of AUTOEXEC.BAT, and add ;C:\REBEEP to
+     the end of your PATH line:
+
+       IF "%CONFIG%"=="REBEEP" C:\JEMM\JLOAD.EXE C:\JEMM\QPIEMU.DLL
+       IF "%CONFIG%"=="REBEEP" LH C:\REBEEP\REBEEP.COM
+
+     SAMPLES\MSDOS holds a complete pair of files like these, and
+     SAMPLES\FREEDOS the same entry for FreeDOS.
+
+     Already have a boot menu, as many Windows 98 game PCs do? Add a
+     MENUITEM=RB line, and an [RB] block with the JEMMEX.EXE line (and
+     DOS=HIGH,UMB if [COMMON] lacks it). If AUTOEXEC.BAT uses GOTO
+     %CONFIG%, add:
+
+       :RB
+       C:\JEMM\JLOAD.EXE C:\JEMM\QPIEMU.DLL
+       LH C:\REBEEP\REBEEP.COM
+       GOTO END
+
+     Point the GOTO at the label your other entries finish on.
+
+  4. Reboot and pick the ReBeep entry. You should see:
+
+       ReBeep x.y.z loaded in upper memory, nnnn bytes resident.
+
+     Then run RBTEST /C:1. The tones should come from the sound card,
+     not the PC speaker.
+
+What the JEMMEX.EXE options do:
+
+  NOEMS      no EMS page frame. Remove it for a game that needs EMS.
+  X=TEST     use only upper memory that reads as empty.
+  NOVME      leave off the Pentium's V86 mode extensions.
+  NOINVLPG   skip the 486's INVLPG instruction (helps in emulators).
+
+JEMMEX.EXE does the job of HIMEM.SYS and EMM386.EXE, so the ReBeep entry
+loads neither. LH loads ReBeep into upper memory.
+
+To undo: pick another entry at the boot menu, or copy the .BAK files
+back.
+
+To play one game without the boot entry's AUTOEXEC.BAT lines, use RBPLAY.
+It loads ReBeep, runs the game, and unloads ReBeep after it. It needs
+JEMMEX.EXE in CONFIG.SYS. If Jemm is not in C:\JEMM, set RBJEMM first:
 
        SET RBJEMM=D:\JEMM
+       RBPLAY GAME.EXE [args]
 
 
 4 Options and hotkeys
@@ -154,8 +224,8 @@ Messages, and what to do about each:
 
   "Another program already traps the speaker ports (for example
    SBEMU's PC-speaker feature)."
-      Turn off that program's PC-speaker feature. Only one program can
-      trap the speaker ports.
+      Only one program can trap the speaker ports. For SBEMU, start it
+      with /PCS0 to turn its PC-speaker emulation off.
 
   "... is loaded. Use that version's REBEEP to change or unload it."
       A different ReBeep version is resident. Run REBEEP from that
