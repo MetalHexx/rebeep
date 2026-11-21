@@ -75,8 +75,7 @@ ReBeep loads on every boot.
      INSTALL /I installs and INSTALL /U updates without the menu. The
      menu needs CHOICE, which MS-DOS 5 lacks, so use them there.
 
-     If INSTALL fails, as it can on Windows 98's DOS with "Invalid drive
-     or directory", copy the files by hand:
+     If INSTALL fails, copy the files by hand:
 
        MD C:\REBEEP
        COPY A:\*.* C:\REBEEP

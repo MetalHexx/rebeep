@@ -31,8 +31,6 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 
 ### Known issues
 
-- `INSTALL` can fail on Windows 98's DOS with "Invalid drive or directory". Copy the files by hand
-  ([real PC, step 3](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/real-pc.md#3-install-rebeep)).
 - The hotkeys don't work in games that take over the keyboard, such as Grand Prix Circuit. Set the
   voice at the DOS prompt before you start them
   ([known conflicts](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/compatibility.md#known-conflicts)).

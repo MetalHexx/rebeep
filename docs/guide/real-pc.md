@@ -73,8 +73,7 @@ and changes nothing else.
 | Update a copy you already have | `INSTALL`, then `U`. Your boot files need no change; reboot to load the new copy |
 | Skip the menu | `INSTALL /I` to install, or `INSTALL /U` to update. Use these on MS-DOS 5, which can't show the menu |
 
-**If `INSTALL` fails,** as it can on Windows 98's DOS with `Invalid drive or directory`, copy the
-files by hand:
+**If `INSTALL` fails,** copy the files by hand:
 
 ```
 MD C:\REBEEP
