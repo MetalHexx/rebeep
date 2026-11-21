@@ -80,3 +80,17 @@ The workflow rebuilds the downloads on GitHub's Linux runner rather than copying
 its `SHA256SUMS.txt` matches the candidate's, they are the bytes you tested. Either way, download the
 zip or the floppy, install it by following `README.TXT`, and check that ReBeep loads. A failure is
 fixed in a patch release.
+
+## Working with an AI agent
+
+The repo ships two skills for AI coding assistants, such as Claude Code, which picks them up from
+`.claude/skills/`. Agents start at [AGENTS.md](../../AGENTS.md).
+
+| Skill | What it does |
+|---|---|
+| [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build, releases |
+| [`update-docs`](../../.claude/skills/update-docs/SKILL.md) | Keeps the docs and `AGENTS.md` files true before each commit |
+
+For this page, the `rebeep-dev` [release
+reference](../../.claude/skills/rebeep-dev/references/release.md) covers the package and the release
+commands.

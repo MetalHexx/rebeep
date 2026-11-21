@@ -72,3 +72,15 @@ description.
 The environment is verified on Windows. If you run it on Linux or macOS, add your result to the
 **Verified on** table in [setup.md](setup.md), even if something broke. Say
 what broke.
+
+## Working with an AI agent
+
+The repo ships two skills for AI coding assistants, such as Claude Code, which picks them up from
+`.claude/skills/`. Agents start at [AGENTS.md](../../AGENTS.md).
+
+| Skill | What it does |
+|---|---|
+| [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build, releases |
+| [`update-docs`](../../.claude/skills/update-docs/SKILL.md) | Keeps the docs and `AGENTS.md` files true before each commit |
+
+Ask the agent to run `update-docs` before you commit; it applies the doc rules above to your change.

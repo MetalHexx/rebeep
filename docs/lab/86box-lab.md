@@ -168,3 +168,18 @@ re-pin a tool, follow the procedure in [env/AGENTS.md](../../env/AGENTS.md).
 | `QPICHK: no QPI` | Boot the **ReBeep dev** entry. Clean has no Jemm |
 | `… is running. Quit 86Box first.` | Close the VM window, then retry |
 | Changes made in the 86Box settings dialog vanished | Expected. Edit the profile's `86box.cfg.tmpl` |
+
+## Working with an AI agent
+
+The repo ships two skills for AI coding assistants, such as Claude Code, which picks them up from
+`.claude/skills/`. Agents start at [AGENTS.md](../../AGENTS.md).
+
+| Skill | What it does |
+|---|---|
+| [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build, releases |
+| [`update-docs`](../../.claude/skills/update-docs/SKILL.md) | Keeps the docs and `AGENTS.md` files true before each commit |
+
+For this page, its [VMs](../../.claude/skills/rebeep-dev/references/vms.md), [build and
+test](../../.claude/skills/rebeep-dev/references/build-and-test.md) and [D:
+files](../../.claude/skills/rebeep-dev/references/d-files.md) references cover running, deploying
+and probing.
