@@ -1,0 +1,75 @@
+name: "Game report"
+description: "You tried a game with ReBeep. Tell us how it went, good or bad."
+title: "Game report: "
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks! Every report helps fill in the [compatibility page](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/compatibility.md)."
+  - type: input
+    id: game
+    attributes:
+      label: "Game"
+      description: "Its name, and the .EXE you ran if it has several."
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: "Result"
+      options:
+        - "Works"
+        - "Partly works"
+        - "Doesn't work"
+    validations:
+      required: true
+  - type: textarea
+    id: heard
+    attributes:
+      label: "What you heard"
+      description: "Which sounds came from the sound card, which from the PC speaker, and any clicks or crackle."
+    validations:
+      required: true
+  - type: input
+    id: dos
+    attributes:
+      label: "DOS"
+      placeholder: "MS-DOS 6.22, MS-DOS 7.1, FreeDOS 1.4..."
+    validations:
+      required: true
+  - type: dropdown
+    id: machine-kind
+    attributes:
+      label: "Machine"
+      options:
+        - "Real PC"
+        - "86Box"
+        - "Another emulator"
+    validations:
+      required: true
+  - type: input
+    id: machine
+    attributes:
+      label: "Machine details"
+      description: "The board and CPU, or the emulated machine and CPU."
+  - type: input
+    id: sound
+    attributes:
+      label: "Sound card"
+      placeholder: "Sound Blaster 16"
+    validations:
+      required: true
+  - type: input
+    id: jemm
+    attributes:
+      label: "Jemm version"
+      placeholder: "5.87"
+  - type: input
+    id: options
+    attributes:
+      label: "ReBeep options"
+      placeholder: "REBEEP /P:1 /R:0"
+  - type: textarea
+    id: notes
+    attributes:
+      label: "Anything else"
+      description: "Settings that helped, messages you saw, whether the game works without ReBeep."

@@ -12,6 +12,7 @@ import {
   hashTree,
   readZip,
   stripCommonRoot,
+  writeZip as zipOf,
 } from '../lib/zip.mjs';
 import { makeTempDir, removeDir } from './helpers.mjs';
 import { makeZip } from './zipfixture.mjs';
@@ -260,5 +261,37 @@ describe('extractZip', () => {
     assert.equal(fs.statSync(path.join(dest, 'run.sh')).mode & 0o7777, 0o755);
     assert.equal(fs.statSync(path.join(dest, 'plain')).mode & 0o7777, 0o644);
     assert.equal(fs.statSync(path.join(dest, 'suid')).mode & 0o7777, 0o755, 'setuid and group/other write bits are dropped');
+  });
+});
+
+describe('writeZip', () => {
+  const date = new Date(2026, 4, 17, 13, 45, 30);
+  const compressible = Buffer.from('ABCD'.repeat(500));
+  const entries = () => [
+    { name: 'A/BIG.TXT', bytes: compressible, date },
+    { name: 'TINY.BIN', bytes: Buffer.from([1, 2, 3]), date },
+    { name: 'EMPTY.TXT', bytes: Buffer.alloc(0), date },
+  ];
+
+  test('round-trips deflated and stored entries through readZip', () => {
+    const { entries: read } = readZip(zipOf(entries()));
+    assert.deepEqual(read.map((e) => e.name), ['A/BIG.TXT', 'TINY.BIN', 'EMPTY.TXT']);
+    assert.deepEqual(read.map((e) => e.method), [8, 0, 0]);
+    assert.deepEqual(read[0].read(), compressible);
+    assert.deepEqual(read[1].read(), Buffer.from([1, 2, 3]));
+    assert.equal(read[2].read().length, 0);
+    assert.equal(read[0].size, compressible.length);
+    assert.equal(read[0].mtime.getTime(), date.getTime());
+  });
+
+  test('is reproducible and writes no extra fields', () => {
+    const a = zipOf(entries());
+    assert.equal(Buffer.compare(a, zipOf(entries())), 0);
+    assert.equal(a.readUInt16LE(4), 20);
+    assert.equal(a.readUInt16LE(28), 0);
+  });
+
+  test('refuses an unsafe name', () => {
+    assert.throws(() => zipOf([{ name: '../X.TXT', bytes: hello, date }]), /unsafe zip entry name/);
   });
 });

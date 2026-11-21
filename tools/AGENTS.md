@@ -6,20 +6,22 @@
 
 | Path | Role |
 |---|---|
-| `rebeep.mjs` · `commands/<noun>.mjs` | Entry point · one file per noun (`env tool media vm disk build test repo`) |
+| `rebeep.mjs` · `commands/<noun>.mjs` | Entry point · one file per noun (`env tool media vm disk build test release version repo`) |
 | `lib/cli` · `paths` · `log` | Spec, parsing, help, envelope · home and repo layout · output |
-| `lib/manifest` · `download` · `zip` | Pinned tools (`resolveTool`), verified downloads, safe zip read/extract |
-| `lib/fat` | FAT16 disk images: `buildImage`, `readImage`, `checkImage` |
+| `lib/manifest` · `download` · `zip` | Pinned tools (`resolveTool`), verified downloads, safe zip read/extract, `writeZip` |
+| `lib/fat` | FAT images: FAT16 disks `buildImage`, FAT12 floppies `buildFloppy`, and `readImage`, `checkImage` for both |
+| `lib/release` · `lib/version` | Package tree, `CHANGES.TXT`, text checks · SemVer, changelog entries and rules, `checkVersions`, the bump's edit |
 | `lib/profiles` · `vmcfg` · `proc` | VM profiles, 86Box cfg rendering, launch and running-VM detection |
 | `lib/delivery` · `freedos` · `nasm` · `guard` | D: contents · scripted FreeDOS C: · assembling · payload guard |
+| `lib/suites` · `commands/vmtest` | RESULT.TXT judging and suite discovery · the `vm` suite: probe header, probe D:, boot-and-wait loop |
 | `lib/fsx` | Atomic writes, copies and directory swaps. Use it for anything that replaces user files |
-| `test/` | `*.test.mjs`; shared fixtures in `helpers`, `zipfixture`, `vmenv`, `fake86box` |
+| `test/` | `*.test.mjs`; shared fixtures in `helpers.mjs`, `fake86box.mjs` (a stand-in for 86Box) and `serve.mjs` (a local HTTP server for downloads) |
 
 ## Rules
 
 - **Grammar:** `rebeep <noun> <verb> [args] [options]`. Nouns are singular things. Verbs come only
   from: `list show status check setup create add remove fetch verify run snapshot reset deploy
-  clean`. Need a new verb? Add it here first, in the same change.
+  clean bump`. Need a new verb? Add it here first, in the same change.
 - Every noun and verb is a **spec object** (name, summary, args, options, run). Help is rendered
   from it at every level (`rebeep`, `rebeep <noun>`, `rebeep <noun> <verb> --help`), never by hand.
 - Global options (`--json`, `--home <path>`, `--verbose`, `-h/--help`, `--version`) go anywhere;
@@ -27,7 +29,7 @@
 - `--json` prints exactly one `{ ok, data, error }` on stdout. Exit codes: `0` ok, `1` failure,
   `2` bad usage.
 - Verbs that can destroy user state (`env reset`, `env clean`, `media remove`, `vm create
-  --force`, `vm snapshot`, `vm reset`) are `destructive`: `--preview` changes nothing, and
+  --force`, `vm snapshot`, `vm reset`, `version bump`) are `destructive`: `--preview` changes nothing, and
   replacing anything needs `--yes` or a confirm. `env clean` deletes only the layout it owns.
 - Node ≥ 22 built-ins only. **No npm dependencies**, ever. Paths via `path.join`; no shell.
 - **Adding a command:** add the verb's spec to its noun file and a test that checks its help and

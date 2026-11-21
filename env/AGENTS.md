@@ -9,7 +9,7 @@
 | `86box/manifest.json` | Every pinned tool: version, per-OS asset URL, SHA-256 and where the hash came from |
 | `86box/profiles/<vm>/86box.cfg.tmpl` | The VM's 86Box config. Rendered on every `vm run` |
 | `86box/profiles/<vm>/profile.json` | Disks, C: route (blank, build or clone), install media, required ROMs |
-| `86box/dos/common/` | `BOOT.BAT` (loads QPIEMU on the dev menu entry), copied to `D:\ENV\` |
+| `86box/dos/common/` | `BOOT.BAT` (loads QPIEMU on the dev menu entry, then ReBeep when the deploy wrote `AUTOLOAD.FLG`), copied to `D:\ENV\` |
 | `86box/dos/msdos622/` · `86box/dos/freedos/` | Each DOS's `CONFIG`/`AUTOEXEC` and its one-time `INSTALL.BAT` |
 
 ## Rules
@@ -49,5 +49,5 @@ rebeep vm run <vm>
 
 ## Related
 
-- [docs/86box-environment.md](../docs/86box-environment.md): the full guide
+- [docs/lab/86box-lab.md](../docs/lab/86box-lab.md): the full guide
 - [tools/AGENTS.md](../tools/AGENTS.md): the CLI that reads these files

@@ -44,18 +44,19 @@ const FORBIDDEN_KEYS = ['uuid', 'cpu_override'];
 
 /**
  * Renders a profile's template to cfg text. Disk and floppy paths are relative to the VM folder.
- * Normal mode attaches C: and D:. Install mode (`install: true`) attaches C: and the floppy named
- * by `floppy` in the VM's `floppy/` folder, and no D:, so DOS Setup can't partition the wrong disk.
+ * Normal mode attaches C: and D:, plus the floppy named by `floppy` (in the VM's `floppy/` folder)
+ * as A: when one is given. Install mode (`install: true`) attaches C: and that floppy, which is
+ * then required, and no D:, so DOS Setup can't partition the wrong disk.
  */
 export function renderVmCfg(profile, templateText, { install = false, floppy } = {}) {
   const vars = { C_IMG: 'c.img', C_PARAMS: geometryParams(profile.c.geometry) };
   if (install) {
     if (!floppy) throw new Error('install mode needs a first floppy');
-    vars.FDD1_FN = `floppy/${floppy}`;
   } else {
     vars.D_IMG = 'd.img';
     vars.D_PARAMS = geometryParams(profile.d.geometry);
   }
+  if (floppy) vars.FDD1_FN = `floppy/${floppy}`;
   const text = renderTemplate(templateText, vars);
   for (const line of text.split(/\r?\n/)) {
     const key = /^\s*([A-Za-z0-9_]+)\s*=/.exec(line)?.[1];

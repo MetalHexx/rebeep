@@ -9,7 +9,7 @@ import { createLog } from '../lib/log.mjs';
 import { repoRoot } from '../lib/paths.mjs';
 import { captureStreams, runRebeep } from './helpers.mjs';
 
-const NOUN_NAMES = ['env', 'tool', 'media', 'vm', 'disk', 'build', 'test', 'repo'];
+const NOUN_NAMES = ['env', 'tool', 'media', 'vm', 'disk', 'build', 'test', 'release', 'version', 'repo'];
 const ROOT_SYNOPSIS = 'Usage: rebeep <noun> <verb> [args] [options]';
 
 async function drive(argv, { registry = nouns, tty = false, input, env = {}, cwd } = {}) {
@@ -243,11 +243,11 @@ describe('help', () => {
   test('verb help shows choices, defaults and value names', async () => {
     const r = await drive(['test', 'run', '--help']);
     assert.match(r.stdout, /--suite <name>/);
-    assert.match(r.stdout, /one of: tools, interpreter, all; default: all/);
+    assert.match(r.stdout, /one of: tools, interpreter, vm, all; default: all/);
   });
 
   test('exactly the destructive verbs list --yes and --preview', async () => {
-    const expected = ['env clean', 'env reset', 'media remove', 'vm create', 'vm reset', 'vm snapshot'];
+    const expected = ['env clean', 'env reset', 'media remove', 'version bump', 'vm create', 'vm reset', 'vm snapshot'];
     const found = [];
     for (const noun of nouns) {
       for (const verb of noun.verbs) {
@@ -290,7 +290,7 @@ describe('usage errors (exit 2)', () => {
     [['vm', 'list', '--bogus'], /bogus/, 'Usage: rebeep vm list [options]'],
     [['vm', 'create'], /missing argument <vm>/, 'Usage: rebeep vm create <vm> [options]'],
     [['vm', 'list', 'extra'], /unexpected argument 'extra'/, 'Usage: rebeep vm list [options]'],
-    [['test', 'run', '--suite', 'nope'], /one of: tools, interpreter, all/, 'Usage: rebeep test run [options]'],
+    [['test', 'run', '--suite', 'nope'], /one of: tools, interpreter, vm, all/, 'Usage: rebeep test run [options]'],
     [['vm', 'run', 'x', '--preview'], /preview/, 'Usage: rebeep vm run <vm> [options]'],
     [['--bogus'], /unknown option '--bogus'/, ROOT_SYNOPSIS],
     [['vm', '--bogus'], /unknown option '--bogus'/, VM_SYNOPSIS],

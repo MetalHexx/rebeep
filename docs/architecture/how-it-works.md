@@ -1,0 +1,147 @@
+# How ReBeep works
+
+For the curious: how a speaker beep becomes an FM note, and what that costs. Options and fixes are
+in the [player guide](../guide/getting-started.md); the code-level rules are in
+[src/AGENTS.md](../../src/AGENTS.md).
+
+```
+game ──OUT 42h/43h/61h──▶ Jemm + QPIEMU ──▶ ReBeep ──▶ OPL2/OPL3 at 388h
+                                               └──────▶ PC speaker (fallback)
+```
+
+## Catching the speaker: QPI
+
+A game makes a beep by loading a divisor into PIT channel 2 (`42h`, with a control word on `43h`)
+and switching the speaker on through port `61h`. Real-mode code can't be told when it does that, but
+Jemm's QPIEMU module can trap port accesses in V86 mode and hands each one to a callback through its
+QPI interface. ReBeep installs that callback and traps `42h`, `43h` and `61h`, so it needs a 386 and
+Jemm. It reads and writes those ports itself only through QPI, because a direct access would trap
+again. QPIEMU calls the callback on the game's stack, and a game's interrupt handler may have landed
+on a small DOS or BIOS one, so the callback switches to its own stack before saving anything. A
+trapped write takes only QPIEMU's 8 bytes of the game's stack.
+
+Every byte a game writes reaches the real port, so the timer runs as the game set it. The one
+change is to `61h`: while the FM chip plays a tone, or the game rests, ReBeep holds one of its bits
+clear to keep the real speaker quiet (next section). A timing loop that reads the timer output on
+`61h` bit 5 sees real hardware, except while that bit is the gate.
+
+## Port `61h`: masking and the game's view
+
+While the OPL plays a tone, or the game rests below 20 Hz (see the interpreter), ReBeep holds one
+bit of the real `61h` clear so the PC speaker stays quiet. It picks the bit that leaves the speaker
+where it rests, because a speaker that moves clicks:
+
+- Most games switch the timer gate (bit 0) and speaker data (bit 1) on and off together. Between
+  notes the speaker rests at 0, so ReBeep holds bit 1 clear.
+- Some, such as Grand Prix Circuit, leave bit 1 on and start and stop each note with the gate alone.
+  With the gate off, channel 2 holds its output high, so the speaker rests high. ReBeep holds the
+  gate clear instead, and the speaker stays high and still.
+
+The game must not notice, so a read of `61h` returns the real value with bits 0 and 1 replaced by
+the game's own. A `42h` or `43h` write that moves a tone between the OPL and the speaker re-issues
+`61h` at once, so the handoff has no gap.
+
+Holding the gate clear stops the real channel 2, which has two side effects while such a note, or a
+rest, plays:
+
+- Bit 5 of `61h` would stand still, so ReBeep flips it on every read, and a game that waits for an
+  edge doesn't hang. A game that times its notes by counting those edges plays them short.
+- A game that reads the count back from `42h` sees it frozen, so one that waits for the count to
+  change would hang.
+
+Neither happens in games that switch both bits together, and Grand Prix Circuit reads neither.
+
+## The interpreter
+
+The interpreter follows channel 2 and `61h` from the bytes written, and is always in one of four
+states:
+
+| State | When | Plays on |
+|---|---|---|
+| SILENT | Speaker data bit is off | Nothing |
+| TONE | Speaker on, gate on, a completed count in square-wave mode, divisor 193 to 59659 (about 20 to 6182 Hz) | The OPL |
+| REST | As TONE, but a divisor above 59659, or 0 (which means 65536): 18.2 to 20 Hz | Nothing; the speaker stays held. With `/L:1` it is a TONE |
+| RAW | Speaker on, but not a clean tone: gate off (direct toggling), another counting mode, an unknown count, a divisor below 193 | The real speaker |
+
+It reports three events: tone on, pitch change and tone off. A new count or mode applies only when
+the count completes, as on the real chip.
+
+Games use the counts below 20 Hz as rests. On the real chip a new count takes over only at the end
+of a half-cycle, which at 18 Hz is 27 ms away, so a short slot of `FFFFh` leaves the speaker still.
+Grand Prix Circuit's engine rests like that for 20 ms in every 60. `/L:1` plays them as a low FM
+note instead. A change of `/L` on a loaded copy applies to a count the game is holding at once.
+
+## The OPL voice
+
+ReBeep plays one voice on OPL channels 7 and 8 and touches nothing else. Each new note takes the
+other channel, so the note before it fades out on its own. Starting a note again on the channel
+that is still sounding would restart its wave mid-cycle, which clicks.
+
+A divisor `d` is a frequency of 1193182 / `d` Hz. The OPL wants a block `b` and an F-number `n`,
+with `f = n * 49716 / 2^(20-b)`, so
+
+```
+n = 3 * 2^(23-b) / d        (the smallest block b that keeps n ≤ 1023)
+```
+
+Changing pitch while a note sounds rewrites only the pitch, never the key bit, so a glide stays a
+glide. Volume (0 to 15) sets the attenuation of every operator that is heard: the carriers, and
+in an additive voice such as Organ the modulators too, so the voice keeps its balance at every
+volume. Volume 0 keys no note at all. Divisor 0 plays as 65535, block 0. The faithful voice is a
+square wave on an OPL3. An OPL2 has no square wave, so it gets a two-operator FM approximation.
+The faithful voice fades in over about a millisecond and out over about ten, so a beep never starts
+or stops on a step. The four patches (Organ, Flute, Brass, Bell) are plain FM settings. On an OPL3
+the chip stays in OPL3 mode, with both channels routed to both outputs, while ReBeep is trapping.
+
+## The fallback
+
+Anything the interpreter calls RAW is never translated: the game's bytes reach the real speaker
+unchanged, including the speaker bit. That covers noise from direct toggling, pitches above the FM
+chip's 6182 Hz and odd timer modes. The switch between OPL and speaker is immediate. `/OFF` and
+Ctrl+Alt+B take the same path for a sounding tone.
+
+`/R:0` mutes the fallback. ReBeep then holds bit 1 of the real `61h` clear in every state, so the
+speaker never moves, while the gate and the timer still run as the game set them. Muting while a
+note holds the gate moves the hold to bit 1, which is one step on the speaker. Ctrl+Alt+B still
+gives the game the real speaker, unmuted.
+
+## Residency, AMIS and the hotkey
+
+`REBEEP.COM` is a resident part followed by a startup part. When the program goes resident, the
+startup part is freed. Nothing resident calls DOS.
+
+The resident copy answers on `INT 2Dh` as an AMIS program (manufacturer `MetalHex`, product
+`REBEEP`, on a free multiplex number). The command line talks to it through that interface: `/S`
+reads its state, `/ON` and `/OFF` switch the traps, a change applies the new voice, volume and
+keys, and `/U` asks it to uninstall. A copy of another version answers too, which is how exit code 6
+is found. Uninstall is refused if another program hooked an interrupt after ReBeep (exit code 8),
+because removing ReBeep would break that chain.
+
+The hotkey hooks `INT 09h`. It tracks Ctrl and Alt from the raw scan codes, so it still works when a
+game replaces the BIOS keyboard handler, but not when a game takes over the interrupt entirely, as
+Grand Prix Circuit does.
+
+## Performance
+
+Each trapped write goes through QPIEMU and ReBeep's callback. `RBTEST /B` measures it by timing
+loops of `OUT 61h` and `OUT 80h` (a harmless port that is not trapped), doubling the number of
+writes until a run lasts at least a second. The cost of the trap is the difference.
+
+Measured by `rebeep test run --suite vm --probe P_BENCH` on `mirror-freedos`, an emulated Pentium
+MMX 233 in 86Box:
+
+| State | `OUT 61h` | One tone change (two `OUT 42h` writes) |
+|---|---|---|
+| ReBeep loaded and trapping | 6.9 µs | 22.6 µs |
+| After `/OFF` | 0.9 µs | 1.9 µs |
+| After unload | 0.9 µs | 1.9 µs |
+
+So the overhead is about 6 µs per `61h` write while ReBeep is trapping, and none after `/OFF`:
+releasing the traps returns the machine to its unloaded speed. A game that toggles the speaker
+thousands of times a second feels it; one that sets a tone and moves on does not. The emulated rows
+are indicative, not a real machine's.
+
+| Profile | `OUT 61h` loaded | `OUT 61h` after `/OFF` |
+|---|---|---|
+| `mirror-freedos` (86Box, Pentium MMX 233) | 6.9 µs | 0.9 µs |
+| `slow-386sx` (86Box, 386SX/16) | Not measured yet | Not measured yet |

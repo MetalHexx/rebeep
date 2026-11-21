@@ -1,4 +1,4 @@
-# The 86Box environment
+# The 86Box lab
 
 How the VMs are defined, what is on their disks, and how a boot loads Jemm, QPIEMU and ReBeep.
 
@@ -64,7 +64,8 @@ D:\ENV\MSDOS622\INSTALL.BAT  one-time C: setup for MS-DOS 6.22
 D:\ENV\FREEDOS\INSTALL.BAT   one-time C: setup after a FreeDOS installer
 D:\JEMM\                     Jemm 5.87, JLOAD, QPIEMU
 D:\GAMES\<NAME>\             your games
-D:\REBEEP\REBEEP.COM         the latest build
+D:\REBEEP\                   REBEEP.COM, RBTEST.COM and AUTOLOAD.FLG, the latest build, and
+                             REBEEPD.COM, the dev-only trace build
 ```
 
 D: is written by the CLI's own FAT16 writer, straight from the repo, the tool archives and your
@@ -78,6 +79,17 @@ DOS needs 8.3 names, so the deploy handles awkward files like this:
 
 Check the output of `rebeep disk deploy` (or `rebeep disk list`) when a game misbehaves.
 
+To move a file between your host and D: without copying it by hand, quit the VM first, then:
+
+| Goal | Command |
+|---|---|
+| See what D: holds now, including what DOS wrote | `rebeep disk show <vm> [path]` |
+| Copy a file or folder off D: | `rebeep disk fetch <vm> <path>`, into `build/disk/<vm>/` unless you give `--out <dir>` |
+| Put a host file on D: | `rebeep disk add <vm> <file> [--to <dir>]` |
+
+The next deploy drops anything you added and anything DOS wrote, so fetch it before then. Game
+folders can't be fetched; your games stay in the media folder.
+
 ## How a boot fits together
 
 1. **CONFIG menu.** The default is **ReBeep dev**, which loads
@@ -87,10 +99,10 @@ Check the output of `rebeep disk deploy` (or `rebeep disk list`) when a game mis
    - sets `PATH` (with `C:\JEMM` first) and `BLASTER=A220 I5 D1 H5 T6`;
    - sets `RBDEV=1` on the dev entry;
    - calls `D:\ENV\BOOT.BAT`.
-3. **BOOT.BAT**, on the dev entry:
+3. **BOOT.BAT** adds `D:\REBEEP` to `PATH` on every boot, then, on the dev entry:
    - runs `JLOAD QPIEMU.DLL`, then `QPICHK`;
-   - `LH D:\REBEEP\REBEEP` if `D:\REBEEP\AUTOLOAD.FLG` exists. Nothing writes that flag yet; it
-     arrives with the first real ReBeep build.
+   - `LH D:\REBEEP\REBEEP` if `D:\REBEEP\AUTOLOAD.FLG` exists. `rebeep build run --deploy` writes
+     that flag for every build target marked `"autoload": true` in `src/targets.json` (`REBEEP.COM` is).
 
 Because `BOOT.BAT` lives on D:, changing the boot steps needs only a deploy, never an edit on C:.
 
@@ -101,6 +113,18 @@ Because `BOOT.BAT` lives on D:, changing the boot steps needs only a deploy, nev
 | Config files | `CONFIG.SYS`, `AUTOEXEC.BAT` | `FDCONFIG.SYS`, `FDAUTO.BAT` |
 | `%CONFIG%` on the dev entry | `REBEEP` (the block name) | `1` (the menu number) |
 | Shell line | ordinary | `SHELL=… /P=C:\FDAUTO.BAT` is required |
+
+## Where ReBeep loads
+
+On the **ReBeep dev** entry, `BOOT.BAT` loads ReBeep high (`LH D:\REBEEP\REBEEP.COM`) after QPIEMU,
+so every boot starts with the newest build resident. `REBEEP /U` unloads it. The **Clean** entry
+loads nothing. `RBTEST.COM` is deployed beside it.
+
+## The `vm` test suite
+
+`rebeep test run --suite vm` runs each `tests/vm/P_*.BAT` probe unattended on `mirror-freedos`. It
+writes a probe D: whose `ENV\BOOT.BAT` is the probe, boots, reads `RESULT.TXT` back and redeploys the
+normal D:. Probe format and rules: [tests/vm/AGENTS.md](../../tests/vm/AGENTS.md).
 
 ## Snapshot and reset
 
@@ -130,7 +154,7 @@ With no baseline:
 - DOSBox-X 2026.10.01.
 
 On Linux and macOS, NASM (and on Linux, DOSBox-X) comes from your package manager instead. To
-re-pin a tool, follow the procedure in [env/AGENTS.md](../env/AGENTS.md).
+re-pin a tool, follow the procedure in [env/AGENTS.md](../../env/AGENTS.md).
 
 ## Troubleshooting
 
@@ -138,9 +162,25 @@ re-pin a tool, follow the procedure in [env/AGENTS.md](../env/AGENTS.md).
 |---|---|
 | "CMOS checksum error" at every boot | Press F1. Take a snapshot after the first good boot, so it's saved |
 | BIOS doesn't see a disk | Del → IDE HDD auto-detection (or set the type to Auto), then save |
-| `DISK BOOT FAILURE` on `slow-386sx` | Del → set Drive C: to the user type with 260 / 16 / 63, precomp 0, landzone 260. See [getting-started](getting-started.md#3-full-path-ms-dos-622-and-your-own-game) |
+| `DISK BOOT FAILURE` on `slow-386sx` | Del → set Drive C: to the user type with 260 / 16 / 63, precomp 0, landzone 260. See [lab setup](setup.md#3-full-path-ms-dos-622-and-your-own-game) |
 | No sound at all, even `ECHO` + Ctrl+G | Check 86Box in the host's volume mixer, then **Action → Hard Reset** |
 | A game hangs on a black screen in `mirror-freedos` | Some old games don't run on FreeDOS. Grand Prix Circuit hangs there in both menu entries; use `mirror-msdos` |
 | `QPICHK: no QPI` | Boot the **ReBeep dev** entry. Clean has no Jemm |
 | `… is running. Quit 86Box first.` | Close the VM window, then retry |
 | Changes made in the 86Box settings dialog vanished | Expected. Edit the profile's `86box.cfg.tmpl` |
+
+## Working with an AI agent
+
+The repo ships three skills for AI coding assistants, such as Claude Code, which picks them up from
+`.claude/skills/`. Agents start at [AGENTS.md](../../AGENTS.md).
+
+| Skill | What it does |
+|---|---|
+| [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build |
+| [`update-docs`](../../.claude/skills/update-docs/SKILL.md) | Keeps the docs and `AGENTS.md` files true before each commit |
+| [`release`](../../.claude/skills/release/SKILL.md) | Cuts a release: the changelog from the branch's commits, your review of the notes, the checks, the merge and the publish |
+
+For this page, its [VMs](../../.claude/skills/rebeep-dev/references/vms.md), [build and
+test](../../.claude/skills/rebeep-dev/references/build-and-test.md) and [D:
+files](../../.claude/skills/rebeep-dev/references/d-files.md) references cover running, deploying
+and probing.

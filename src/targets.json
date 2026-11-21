@@ -4,13 +4,35 @@
       "name": "REBEEP.COM",
       "source": "rebeep.asm",
       "format": "bin",
-      "deploy": "REBEEP"
+      "deploy": "REBEEP",
+      "autoload": true
+    },
+    {
+      "name": "REBEEPD.COM",
+      "source": "rebeep.asm",
+      "format": "bin",
+      "deploy": "REBEEP",
+      "defines": {
+        "REBEEP_TRACE": 1024
+      }
     },
     {
       "name": "QPICHK.COM",
       "source": "diag/qpichk.asm",
       "format": "bin",
       "deploy": "ENV"
+    },
+    {
+      "name": "FDBOOT.BIN",
+      "source": "diag/fdboot.asm",
+      "format": "bin"
+    },
+    {
+      "name": "RBTEST.COM",
+      "source": "exerciser/rbtest.asm",
+      "root": "tests",
+      "format": "bin",
+      "deploy": "REBEEP"
     }
   ]
 }

@@ -1,0 +1,111 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # re-runs a half-done release; only main can release
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: release
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency: release
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install NASM and dosfstools
+        run: sudo apt-get update && sudo apt-get install -y nasm dosfstools
+
+      - name: Use a throwaway rebeep home
+        run: echo "REBEEP_HOME=$RUNNER_TEMP/rebeep-home" >> "$GITHUB_ENV"
+
+      - name: Decide
+        id: decide
+        run: |
+          set -euo pipefail
+          info=$(node tools/rebeep.mjs version show --json)
+          version=$(jq -r .data.version <<<"$info")
+          tag=$(jq -r .data.tag <<<"$info")
+          dated=$(jq -r .data.dated <<<"$info")
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+          } >> "$GITHUB_OUTPUT"
+          if [ "$dated" != "true" ]; then
+            echo "$version has no dated changelog entry: not a release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          assets=$(gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null || true)
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null \
+            && grep -qFx "rebeep-$version.zip" <<<"$assets" \
+            && grep -qFx "rebeep-$version-floppy.img" <<<"$assets"; then
+            echo "$tag is already released."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
+      - name: Check the version for release
+        if: steps.decide.outputs.release == 'true'
+        env:
+          TAG: ${{ steps.decide.outputs.tag }}
+        run: node tools/rebeep.mjs version check --release --tag "$TAG"
+
+      - name: Create the package
+        if: steps.decide.outputs.release == 'true'
+        run: node tools/rebeep.mjs release create
+
+      - name: Check the floppy image
+        if: steps.decide.outputs.release == 'true'
+        env:
+          VERSION: ${{ steps.decide.outputs.version }}
+        run: fsck.fat -n "build/release/rebeep-$VERSION-floppy.img"
+
+      - name: Tag the release commit
+        if: steps.decide.outputs.release == 'true'
+        env:
+          TAG: ${{ steps.decide.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            at=$(git rev-list -n 1 "$TAG")
+            if [ "$at" != "$GITHUB_SHA" ]; then
+              echo "::error::$TAG already exists at $at, not at $GITHUB_SHA"
+              exit 1
+            fi
+          else
+            git tag "$TAG" "$GITHUB_SHA"
+            git push origin "refs/tags/$TAG"
+          fi
+
+      - name: Publish the GitHub Release
+        if: steps.decide.outputs.release == 'true'
+        env:
+          TAG: ${{ steps.decide.outputs.tag }}
+          VERSION: ${{ steps.decide.outputs.version }}
+        run: |
+          set -euo pipefail
+          files=("build/release/rebeep-$VERSION.zip" "build/release/rebeep-$VERSION-floppy.img" build/release/SHA256SUMS.txt)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+          else
+            gh release create "$TAG" "${files[@]}" \
+              --title "ReBeep $VERSION" \
+              --notes-file build/release/NOTES.md \
+              --verify-tag
+          fi

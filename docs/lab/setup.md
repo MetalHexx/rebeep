@@ -1,4 +1,4 @@
-# Getting started
+# Lab setup
 
 From a fresh clone to a booted DOS VM with ReBeep's environment loaded.
 
@@ -28,9 +28,10 @@ rebeep vm run mirror-freedos
 
 - **First boot:** the BIOS says "CMOS checksum error - Defaults loaded". Press **F1**. The VM keeps
   its CMOS from then on.
-- The boot menu picks **ReBeep dev** after 5 seconds. It loads Jemm, then QPIEMU, and prints
-  `QPICHK: QPI ready (QPIEMU), version 07.03`.
-- `D:\REBEEP\REBEEP` runs the latest build.
+- The boot menu picks **ReBeep dev** after 5 seconds. It loads Jemm, then QPIEMU, prints
+  `QPICHK: QPI ready (QPIEMU), version 07.03`, and loads the latest ReBeep build (autoload).
+- `REBEEP /S` shows its status. `D:\REBEEP\RBTEST` plays test sounds and checks ReBeep; see
+  [the RBTEST reference](../guide/reference.md#rbtest).
 
 When it looks right, save it as the VM's baseline:
 
@@ -94,8 +95,16 @@ Its 1990 Award BIOS forgets the disks when it loads defaults, so the first boot 
 
 ```sh
 rebeep build run --deploy      # edit src/, assemble, rewrite every VM's D:
-rebeep vm run mirror-freedos   # then run D:\REBEEP\REBEEP in the VM
+rebeep vm run mirror-freedos   # the dev entry autoloads the new REBEEP.COM
 rebeep test run --suite tools  # the CLI's own tests
+```
+
+In the VM, `REBEEP /U` unloads the autoloaded copy so you can load another with options, and
+`D:\REBEEP\RBTEST /A /R` checks it. The DOS-side tests run unattended:
+
+```sh
+rebeep test run --suite interpreter           # in DOSBox-X, no VM
+rebeep test run --suite vm [--probe P_TSR]    # boots mirror-freedos; opens 86Box
 ```
 
 Something broken? `rebeep vm reset <vm> --preview`, then `--yes`.
@@ -109,3 +118,18 @@ Something broken? `rebeep vm reset <vm> --preview`, then `--yes`.
 | macOS (Apple Silicon / Intel) | unverified; CI runs the tools tests and build |
 
 Tried it on Linux or macOS? A PR adding your result to this table is very welcome.
+
+## Working with an AI agent
+
+The repo ships three skills for AI coding assistants, such as Claude Code, which picks them up from
+`.claude/skills/`. Agents start at [AGENTS.md](../../AGENTS.md).
+
+| Skill | What it does |
+|---|---|
+| [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build |
+| [`update-docs`](../../.claude/skills/update-docs/SKILL.md) | Keeps the docs and `AGENTS.md` files true before each commit |
+| [`release`](../../.claude/skills/release/SKILL.md) | Cuts a release: the changelog from the branch's commits, your review of the notes, the checks, the merge and the publish |
+
+For this page, its [environment](../../.claude/skills/rebeep-dev/references/environment.md) and
+[VMs](../../.claude/skills/rebeep-dev/references/vms.md) references cover setup, media and first
+boots.
