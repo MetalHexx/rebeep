@@ -10,8 +10,9 @@ What ReBeep has been tried on, the settings each game wants, and what doesn't mi
 | Grand Prix Circuit | MS-DOS 7.1 (Windows 98) | Real PC, FIC PA-2010 (Socket 7), Sound Blaster Vibra 16 | With `REBEEP /P:1 /R:0`, loaded high under JemmEx: a practice race and a full race to the win screen, with no crash and no click |
 | Grand Prix Circuit | FreeDOS 1.4 | 86Box, Pentium MMX 233 | The game hangs on a black screen, with or without ReBeep and Jemm. Use MS-DOS |
 
-Tried another game? Open an [issue](https://github.com/MetalHexx/rebeep/issues) or a pull request
-adding a row.
+Tried another game? That is the biggest help right now. File a
+[game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.md), or open a
+pull request adding a row.
 
 ### Grand Prix Circuit
 

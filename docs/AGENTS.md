@@ -19,6 +19,7 @@
 | `lab/86box-lab.md` | Lab | The lab's VMs, disks, boot flow, snapshot and reset |
 | `lab/contributing.md` | Lab | Workflow and checks, commits, PR and payload rules |
 | `lab/releasing.md` | Lab | The release procedure and the checks by a person |
+| `roadmap.md` | — | Where ReBeep is headed, and how to help. The only page with plans |
 | `images/` | — | Pictures. `rebeep-logo.png` is the README's logo, on a transparent background |
 
 ## Rules
@@ -37,8 +38,7 @@
 **Guide pages:**
 - Explain each term on first use, in a few words: TSR, FM chip, Jemm, QPIEMU, upper memory, boot menu.
 - Every step is a command to copy, then what you should see.
-- No `rebeep` CLI, no Node, no repo. Link to architecture only as "want to know why?".
-- Write only what has been verified. Not sure? Write less.
+- No `rebeep` CLI, Node or repo; architecture only as "want to know why?". Verified facts only.
 
 **Everywhere:** style and budgets are in the root [AGENTS.md](../AGENTS.md) "Writing docs". A new
 page gets a row here, and a line in its level's group of the [README](../README.md)'s index.

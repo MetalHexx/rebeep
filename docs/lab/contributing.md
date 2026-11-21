@@ -2,6 +2,17 @@
 
 Thanks for helping. Here is what you need to know.
 
+## Before you start
+
+- **The biggest help right now is testing games.** Try ReBeep with your speaker-only games and
+  file a [game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.md), or
+  add a row to [compatibility](../guide/compatibility.md). No setup beyond the player guide.
+- **Talk over a feature before you build it.** Open a
+  [feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.md) to
+  discuss it with the maintainer, [@MetalHexx](https://github.com/MetalHexx), so it fits the
+  [roadmap](../roadmap.md). Bigger ideas are good to raise on
+  [Discord](https://discord.gg/4wkPZnCfz) first. Bug fixes need no ask.
+
 ## Set up
 
 [Lab setup](setup.md) takes a fresh clone to a booted DOS VM with ReBeep's
@@ -53,6 +64,9 @@ description.
   archives. `rebeep repo check` scans the tree, the index and your commits, and CI runs it too.
 - **Untrusted games stay in the VM.** Game files run only inside 86Box or on real hardware.
 - **Zero npm dependencies.** The tooling is Node 22+ built-ins only.
+- **Ask before adding a dependency.** A new library, tool or download needs the maintainer's OK
+  first, and the PR says why: what it does, why the code can't do without it, and what else was
+  tried.
 - **Cross-platform.** Use `path.join`, no shell-specific commands. CI runs on Windows, Linux and
   macOS.
 - **Pin every download.** Add it to `env/86box/manifest.json` with its SHA-256.

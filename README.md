@@ -105,10 +105,17 @@ ReBeep comes with a ready-made 86Box lab: one command-line tool fetches 86Box, F
 pinned versions, builds the DOS VMs, and puts each new build on them. Start at
 [lab setup](docs/lab/setup.md).
 
+## Roadmap
+
+What's next, and the ideas being considered: [roadmap](docs/roadmap.md).
+
 ## Contributing
 
-Issues and pull requests are welcome. Start with [contributing](docs/lab/contributing.md); AI agents
-start at [AGENTS.md](AGENTS.md).
+The biggest help right now is testing games: try ReBeep with yours and file a
+[game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.md). Planning a
+feature? Talk it over first in a
+[feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.md). Start with
+[contributing](docs/lab/contributing.md); AI agents start at [AGENTS.md](AGENTS.md).
 
 ## Community
 

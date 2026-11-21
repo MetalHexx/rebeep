@@ -8,6 +8,8 @@
 
 ## Checklist
 
+- [ ] A new feature was talked over first, in a Feature idea issue, or this PR adds no feature
+- [ ] No new library, tool or download, or "What and why" says why it's needed and the maintainer agreed
 - [ ] No payloads: no DOS images, ROMs, game files, disk images or archives (`rebeep repo check` passes)
 - [ ] No `Co-Authored-By` or other agent-harness attribution trailer in any commit or in this description
 - [ ] Docs checked with the `update-docs` skill: `AGENTS.md`, docs and skill references match the change
