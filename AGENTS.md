@@ -22,7 +22,7 @@ everything to vanilla.
 | `env/` | The 86Box environment definition: tool manifest, VM profiles, DOS boot files | [env/AGENTS.md](env/AGENTS.md) |
 | `release/` | The package's hand-made files: the manual, `INSTALL.BAT`, `RBPLAY.BAT`, sample configs | [release/AGENTS.md](release/AGENTS.md) |
 | `tools/` | The `rebeep` CLI, its libraries and its unit tests | [tools/AGENTS.md](tools/AGENTS.md) |
-| `docs/` | Human docs: usage, how it works, compatibility, getting started, the environment guide, contributing, releasing | [docs/AGENTS.md](docs/AGENTS.md) |
+| `docs/` | Human docs in three levels: `guide/` for players, `architecture/` for how it works, `lab/` for contributors | [docs/AGENTS.md](docs/AGENTS.md) |
 | `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI) and `update-docs` (doc health) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) |
 | `.github/` | CI workflow and PR template | — |
 | `build/` | Build output (ignored) | — |
@@ -128,13 +128,9 @@ doc has one job. When two docs need the same fact, one owns it and the others li
 | Doc | Job |
 |---|---|
 | `README.md` | The front door, for players: why, highlights, how in brief, what you need, install in brief, tested on, and the docs index. Build details live in `docs/` |
-| `docs/usage.md` | The player reference: options, hotkeys, voices, exit codes, `RBTEST`, troubleshooting. `release/README.TXT` mirrors its tables; change both together |
-| `docs/architecture/how-it-works.md` | The design for curious readers and the measured cost (`P_BENCH` numbers) |
-| `docs/compatibility.md` | Tested games and hardware, known conflicts |
-| `docs/lab/setup.md` | Zero to first boot on both paths, plus the Verified-on table |
-| `docs/lab/86box-lab.md` | VMs, disks, boot flow, snapshot and reset. Owns troubleshooting |
-| `docs/lab/contributing.md` | Set up, workflow and checks, commits, PR rules, payload rules |
-| `docs/lab/releasing.md` | The release procedure and the checks by a person |
+| `docs/guide/` | The player guide, for a DOS user with no dev tools: getting started, a real PC, 86Box, playing, troubleshooting, compatibility, the reference. `reference.md` owns the option, hotkey and exit-code tables that `release/README.TXT` mirrors |
+| `docs/architecture/` | How it works, for the curious: the design, the measured cost (`P_BENCH` numbers), the GPC case study |
+| `docs/lab/` | For contributors: lab setup and the Verified-on table, the 86Box lab (owns lab troubleshooting), contributing, releasing |
 | `CHANGELOG.md` | Player-facing changes |
 | Folder `AGENTS.md` | That folder's rules and pitfalls |
 | CLI help | The source of truth for commands and options (`rebeep <noun> <verb> --help`) |
@@ -147,7 +143,7 @@ with its own invariants, split into a nested `AGENTS.md`. Never raise a budget.
 | Folder `AGENTS.md` | Intent, invariants, pitfalls, how to run. Never a code walkthrough | ≤ 60 lines |
 | Root `AGENTS.md` | Map, commands, hard rules, doc rules | ≤ 200 lines |
 | `README.md` | Front door | ≤ 150 lines |
-| `docs/*.md` | Tasks and outcomes for people | ≤ 250 lines per page |
+| `docs/**/*.md` | One level per page: guide, architecture or lab ([docs/AGENTS.md](docs/AGENTS.md) says who reads each and how to write for them) | ≤ 250 lines per page |
 | Skill `SKILL.md` · skill reference | Routing and procedure; points to `AGENTS.md` | ≤ 100 · ≤ 60 lines |
 | `CHANGELOG.md` | Player language only | Short entries |
 

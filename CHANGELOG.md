@@ -22,8 +22,9 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
   and FreeDOS boot configs with a ReBeep menu entry. `README.TXT` walks through setup.
 - RBTEST, a speaker exerciser: it plays test sounds, checks that ReBeep handles the speaker correctly,
   and measures free memory and the cost of ReBeep's speaker handling. Run `RBTEST /?` for the options.
-- Docs for players: a usage guide (options, hotkeys, exit codes, troubleshooting), how ReBeep works with
-  its measured cost, and a compatibility page with tested games and known conflicts.
+- A player's guide: setting up on a real PC or in 86Box, step by step through Jemm and the boot menu
+  entry, then playing, troubleshooting, compatibility and a reference. How ReBeep works, with its
+  measured cost, is a page of its own.
 
 ### Known issues
 

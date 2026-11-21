@@ -32,6 +32,8 @@ Find the owner of each fact in the doc map (AGENTS.md section 10), then:
 - Every number matches the code: versions, sizes, geometry, counts.
 - Nothing describes behaviour the code no longer has.
 - Every link resolves to an existing path.
+- Each touched page sits at its level (guide, architecture or lab) and follows the voice in
+  [docs/AGENTS.md](../../../docs/AGENTS.md).
 
 ## 4. Rewrite in place
 

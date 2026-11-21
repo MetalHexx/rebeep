@@ -1,31 +1,55 @@
 # docs
 
-> Docs for people: how to use ReBeep, how it works, what it is tested on, how to get started, how the environment works, how to contribute and how to release.
+> Docs for people, in three levels: the player guide, how it works, and the lab for contributors.
 
 ## What's here
 
-| Path | Role |
-|---|---|
-| `usage.md` | The player reference: options, hotkeys, voices, exit codes, `RBTEST`, troubleshooting. `release/README.TXT` mirrors its tables |
-| `architecture/how-it-works.md` | The design for curious readers, and the `RBTEST /B` numbers measured by `P_BENCH` |
-| `compatibility.md` | Tested games and hardware, known conflicts |
-| `gpc.md` | How GPC drives the speaker, ReBeep's handling, what still differs |
-| `lab/setup.md` | Zero to first boot, Free and Full paths, and the Verified-on table |
-| `lab/86box-lab.md` | The VMs, disks, boot flow, snapshot and reset |
-| `lab/contributing.md` | Set up, workflow and checks, commits, PR rules, payload rules |
-| `images/` | Pictures the docs show. `rebeep-logo.png` is the README's logo, on a transparent background |
-| `lab/releasing.md` | The maintainer's release procedure, with the checks by a person that gate the merge |
+| Path | Level | Role |
+|---|---|---|
+| `guide/getting-started.md` | Guide | What ReBeep is, what you need, which setup to follow |
+| `guide/real-pc.md` | Guide | Jemm, install, the boot menu entry, check, undo. `release/README.TXT` section 3 follows it |
+| `guide/86box.md` | Guide | A player's own 86Box VM, then the real PC steps |
+| `guide/playing.md` | Guide | Everyday use: RBPLAY, voices, muting, hotkeys, `/OFF`, unload |
+| `guide/troubleshooting.md` | Guide | By symptom, then every message |
+| `guide/compatibility.md` | Guide | Tested games (with game notes) and machines, conflicts with the command to run |
+| `guide/reference.md` | Guide | Options, hotkeys, exit codes, RBTEST. `release/README.TXT` and `REBEEP /?` mirror it |
+| `architecture/how-it-works.md` | Architecture | The design, and the `P_BENCH` numbers |
+| `architecture/gpc-case-study.md` | Architecture | How GPC drives the speaker, ReBeep's handling, what still differs |
+| `lab/setup.md` | Lab | Clone to first VM boot, Free and Full paths, the Verified-on table |
+| `lab/86box-lab.md` | Lab | The lab's VMs, disks, boot flow, snapshot and reset |
+| `lab/contributing.md` | Lab | Workflow and checks, commits, PR and payload rules |
+| `lab/releasing.md` | Lab | The release procedure and the checks by a person |
+| `images/` | — | Pictures. `rebeep-logo.png` is the README's logo, on a transparent background |
 
 ## Rules
 
-- Style, altitude and budgets: the root [AGENTS.md](../AGENTS.md) "Writing docs" section.
-- A new doc gets a line in the root [README.md](../README.md)'s Documentation index, under Playing or Working on ReBeep.
+**Who reads these docs, and how we write for them.**
+- **Guide:** a DOS gamer who is a little technical, as every DOS user was, but has never heard of
+  QPIEMU. Memory managers, `CONFIG.SYS` and `AUTOEXEC.BAT` are part of the ticket, so teach them
+  fully: whole examples, each line explained, how to undo.
+- **Architecture:** the curious. Technical and exact: the design and its measured cost.
+- **Lab:** contributors. Commands, the `rebeep` CLI, the VMs.
+- **The voice:** concise and high signal. Steps first; tables and code blocks over prose; no filler;
+  link, never repeat. Never paper over what a newcomer can't know: show the real command, not "turn
+  that feature off". Complete but lean: a cold reader needs nothing else, and reads nothing extra.
+- **The goal:** deliberate, good-looking docs, each page at one level.
+
+**Guide pages:**
+- Explain each term on first use, in a few words: TSR, FM chip, Jemm, QPIEMU, upper memory, boot menu.
+- Every step is a command to copy, then what you should see.
+- No `rebeep` CLI, no Node, no repo. Link to architecture only as "want to know why?".
+- Write only what has been verified. Not sure? Write less.
+
+**Everywhere:** style and budgets are in the root [AGENTS.md](../AGENTS.md) "Writing docs". A new
+page gets a row here, and a line in its level's group of the [README](../README.md)'s index.
 
 ## Pitfalls
 
-- `usage.md` and `release/README.TXT` hold the same option, hotkey and exit-code tables. Change both together.
-- The benchmark numbers in `architecture/how-it-works.md` come from `rebeep test run --suite vm --probe P_BENCH`. Re-measure when the trap code changes.
-- Host-specific steps (Windows, Linux, macOS) drift fastest. Mark anything not verified on a host.
+- `guide/reference.md`, `release/README.TXT` and `REBEEP /?` hold the same tables. Change all three.
+- No version number in a doc: `rebeep version check` rejects one. Write `x.y.z`.
+- `architecture/how-it-works.md`'s numbers come from the `P_BENCH` probe. Re-measure them when the
+  trap code changes.
+- Host-specific lab steps (Windows, Linux, macOS) drift fastest. Mark anything not verified.
 
 ## Run / test
 
@@ -33,5 +57,4 @@ _No commands._
 
 ## Related
 
-- [../README.md](../README.md)
-- [../AGENTS.md](../AGENTS.md)
+- [../README.md](../README.md) · [../AGENTS.md](../AGENTS.md)
