@@ -7,7 +7,7 @@ What ReBeep has been tried on, and what is known not to work. Machine options an
 
 | Game | DOS | Machine | Result |
 |---|---|---|---|
-| Grand Prix Circuit | MS-DOS 6.22 | 86Box `mirror-msdos` | Pending its listening check at release |
+| Grand Prix Circuit | MS-DOS 6.22 | 86Box `mirror-msdos` | Engine, effects and music play on the OPL in all four patches. At the default `/R:1` the music's percussion and each screen change click on the real speaker, as on a real PC; `REBEEP /R:0` mutes them. The hotkeys don't work inside the game |
 | Grand Prix Circuit | FreeDOS 1.4 | 86Box `mirror-freedos` | Hangs on a black screen in both menu entries, with and without Jemm, so ReBeep is not the cause. Use MS-DOS |
 
 How Grand Prix Circuit drives the speaker, and what still sounds different, is on

@@ -13,8 +13,9 @@ on the `mirror-msdos` VM. The other executables may differ. The result is in
   Ctrl+Alt+B and Ctrl+Alt+N do nothing inside it. Pick the voice and volume at the DOS prompt.
 - **`/L:0`, the default,** keeps the engine's rests silent, as on a real PC. With `/L:1` the
   engine drops to a low FM note in those slots instead.
-- **`/R:0`** mutes the real speaker, so only the OPL plays, and the music loses its percussion
-  voice. It doesn't remove the clicks described under the music.
+- **`/R:0` is the setting to use.** It mutes the real speaker, so only the OPL plays. That
+  removes the clicks at the intro and at each screen change, and the music loses its percussion
+  voice.
 
 ## The race: engine and effects
 
@@ -55,12 +56,10 @@ rather than bit 1, so the parked speaker doesn't move at each note on and off. T
 and the song start and stop are direct control of the speaker bit, which ReBeep can't turn into a
 tone, so they reach the real speaker unchanged, unless `/R:0` mutes it.
 
-**What you hear.** On `mirror-msdos` the intro has a few clicks, and each screen change, forward or
-back, makes one. They sound the same with `/R:0` and in either patch tried (1 and 2). With `/R:0`
-the real speaker can't move, so they are not the percussion voice or the song start and stop, as
-reading the code had suggested. Whether they come from ReBeep's OPL notes or from 86Box itself
-isn't known yet. With `REBEEP /R:0 /V:0` ReBeep makes no sound at all, so any click left is not
-ReBeep's.
+**What you hear.** On `mirror-msdos`, at the default `/R:1`, the intro has a few clicks, and each
+screen change, forward or back, makes one. They are the percussion voice and the song start and
+stop on the real speaker, which click the same way on a real PC. With `/R:0` they are gone, in all
+four patches, and the melody plays on the OPL alone.
 
 ## Port reads and the keyboard
 
