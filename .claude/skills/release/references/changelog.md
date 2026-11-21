@@ -48,3 +48,13 @@ dropped, spaces to hyphens) and compare.
 - **Long races** no longer crash on real PCs
   ([compatibility](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/compatibility.md)).
 ```
+
+## Discord announcement
+
+The release notes cut down for a chat, drafted after the publish for the user to post, never posted.
+
+- A bold first line, `**ReBeep X.Y.Z is out**`, then one sentence on what ReBeep is.
+- Three to five short bullets: the highlights a player cares about, in plain words, with no doc
+  links and no options unless one is the news.
+- One line for what could stop someone: the requirements, or a known issue that bites.
+- Last, the link for details: `https://github.com/MetalHexx/rebeep/releases/tag/vX.Y.Z`.

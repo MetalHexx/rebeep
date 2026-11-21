@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a ReBeep release from a branch to a published GitHub Release. Reads the branch's commits, offers to update docs the commits missed, picks the version with the user, writes a concise changelog and has the user review the release notes, bumps the version, runs the checks, walks the user through the checks by a person, and sees the merge and the publish through. Use when the user wants to release, ship, publish or tag a version, prepare a release PR, bump the version, write the changelog or release notes, or make a hotfix.
+description: Cut a ReBeep release from a branch to a published GitHub Release. Reads the branch's commits, offers to update docs the commits missed, picks the version with the user, writes a concise changelog and has the user review the release notes, bumps the version, runs the checks, walks the user through the checks by a person, sees the merge and the publish through, and drafts a Discord announcement. Use when the user wants to release, ship, publish or tag a version, prepare a release PR, bump the version, write the changelog or release notes, or make a hotfix.
 ---
 
 # release
@@ -11,7 +11,7 @@ says what the agent does at each step.
 
 | Need | Reference |
 |---|---|
-| The changelog rules | [references/changelog.md](references/changelog.md) |
+| The changelog rules, and the Discord announcement | [references/changelog.md](references/changelog.md) |
 | The package, the version on every surface, and the version and publish commands | [references/package.md](references/package.md) |
 
 **Always:**
@@ -92,7 +92,7 @@ Watch it with `gh run list --workflow release.yml --limit 1`, then `gh run watch
 - Compare the release's `SHA256SUMS.txt` with `build/release/SHA256SUMS.txt`. A match means the
   downloads are the bytes that were tested.
 - Have the user install the download by following `README.TXT`: ReBeep loads and names its version.
-- Offer a short announcement for Discord, for the user to post.
+- Draft the [Discord post](references/changelog.md#discord-announcement) for the user to post.
 - Half done? Re-run the workflow on `main` (`gh workflow run release.yml --ref main`); it never
   makes a second tag. Broken? Make a patch release. Never move or delete a published tag.
 
