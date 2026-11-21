@@ -22,7 +22,7 @@ everything to vanilla.
 | `env/` | The 86Box environment definition: tool manifest, VM profiles, DOS boot files | [env/AGENTS.md](env/AGENTS.md) |
 | `release/` | The package's hand-made files: the manual, `INSTALL.BAT`, `RBPLAY.BAT`, sample configs | [release/AGENTS.md](release/AGENTS.md) |
 | `tools/` | The `rebeep` CLI, its libraries and its unit tests | [tools/AGENTS.md](tools/AGENTS.md) |
-| `docs/` | Human docs: usage, how it works, compatibility, getting started, the environment guide, contributing | [docs/AGENTS.md](docs/AGENTS.md) |
+| `docs/` | Human docs: usage, how it works, compatibility, getting started, the environment guide, contributing, releasing | [docs/AGENTS.md](docs/AGENTS.md) |
 | `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI) and `update-docs` (doc health) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) |
 | `.github/` | CI workflow and PR template | — |
 | `build/` | Build output (ignored) | — |
@@ -134,7 +134,8 @@ doc has one job. When two docs need the same fact, one owns it and the others li
 | `docs/compatibility.md` | Tested games and hardware, known conflicts |
 | `docs/getting-started.md` | Zero to first boot on both paths, plus the Verified-on table |
 | `docs/86box-environment.md` | VMs, disks, boot flow, snapshot and reset. Owns troubleshooting |
-| `docs/contributing.md` | Workflow, commits, PR rules, payload rules |
+| `docs/contributing.md` | Set up, workflow and checks, commits, PR rules, payload rules |
+| `docs/releasing.md` | The release procedure and the checks by a person |
 | `CHANGELOG.md` | Player-facing changes |
 | Folder `AGENTS.md` | That folder's rules and pitfalls |
 | CLI help | The source of truth for commands and options (`rebeep <noun> <verb> --help`) |
