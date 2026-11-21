@@ -78,6 +78,10 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM (the dev e
 - **CPU boundary.** `src/engine/` assembles under `CPU 8086`. Only `src/capture/` and
   `src/startup/` may use 386 instructions.
 - **NASM versions.** The source must assemble on the pinned NASM 3.02 and on NASM ≥ 2.16.
+- **No game-specific code.** ReBeep works the same for every game: nothing in `src/` detects a game
+  or behaves differently for one. A bug found in one game gets a fix that holds for any game, and a
+  setting one game needs becomes a general option. Per-game advice lives in
+  `docs/guide/compatibility.md`.
 - **No payloads.** Never commit DOS images, ROMs, emulator binaries, game files, disk images or
   archives. `rebeep repo check` enforces this, and CI runs it.
 - **The game is untrusted.** It runs only inside 86Box or on real hardware, never on the host. The
