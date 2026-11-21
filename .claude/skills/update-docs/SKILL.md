@@ -23,7 +23,7 @@ Find the owner of each fact in the doc map (AGENTS.md section 10), then:
 |---|---|
 | Code in a folder | That folder's `AGENTS.md` |
 | A CLI command or option | Its spec (help is generated from it), then the root `AGENTS.md` commands table, and the `docs/` page that owns the task |
-| A user-visible change | A player-facing line under `## [Unreleased]` in `CHANGELOG.md` |
+| A user-visible change | A line under `## [Unreleased]` in `CHANGELOG.md`, in the shape AGENTS.md section 10 sets: sections, bold lead, a doc link |
 | A new top-level folder | A new `AGENTS.md` from the template, and a root map row |
 
 ## 3. Check each touched doc for drift

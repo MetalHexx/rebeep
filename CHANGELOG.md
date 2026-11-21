@@ -4,31 +4,38 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-11-18
+## [0.1.0] - 2026-11-21
 
 ### Added
 
-- First release. ReBeep is a TSR for DOS games that only know the PC speaker. It plays their speaker
-  tones on the Sound Blaster's FM chip (OPL2 or OPL3) instead. Anything it can't translate, such as
-  noise or a pitch the FM chip can't reach, still plays on the real speaker (`REBEEP /R:0` mutes it),
-  and the switch between the two is immediate. Pitches below 20 Hz, which games use as rests, stay
-  silent; `REBEEP /L:1` plays them as a low FM note.
-- Load it with `REBEEP`, or `LH REBEEP` to keep it out of conventional memory. Ctrl+Alt+B toggles
-  between the FM chip and the speaker, and Ctrl+Alt+N cycles the voice. `REBEEP /S` shows the status,
-  `/OFF`, `/ON` and `/U` release, retake and unload it, and `REBEEP /?` lists every option and exit
-  code. `/OFF` and the hotkey hand a sounding tone back to the speaker without a gap.
-- The package, as a zip and as a floppy image: `INSTALL.BAT` copies ReBeep to a folder and prints the
-  lines to add, `RBPLAY.BAT` runs one game with ReBeep loaded, and `SAMPLES\` holds ready-made MS-DOS
-  and FreeDOS boot configs with a ReBeep menu entry. `README.TXT` walks through setup.
-- RBTEST, a speaker exerciser: it plays test sounds, checks that ReBeep handles the speaker correctly,
-  and measures free memory and the cost of ReBeep's speaker handling. Run `RBTEST /?` for the options.
-- A player's guide: setting up on a real PC or in 86Box, step by step through Jemm and the boot menu
-  entry, then playing, troubleshooting, compatibility and a reference. How ReBeep works, with its
-  measured cost, is a page of its own.
+- **ReBeep**, a TSR that plays DOS games' PC-speaker beeps on a Sound Blaster's OPL2 or OPL3 FM
+  chip. It needs a 386 or better and Jemm 5.87 or later with its QPIEMU module
+  ([getting started](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/getting-started.md)).
+- **Five voices:** a faithful square wave (`/F`) or one of four FM patches (`/P:1` to `/P:4`:
+  Organ, Flute, Brass, Bell), with the volume set by `/V`
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
+- **Nothing lost:** sounds the FM chip can't play still go to the real speaker, and `/R:0` mutes
+  them. Pitches below 20 Hz stay silent, and `/L:1` plays them as a low note
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#mute-the-leftover-speaker-sounds)).
+- **Hotkeys:** Ctrl+Alt+B switches between the sound card and the speaker, and Ctrl+Alt+N cycles
+  the voice. `/K` changes the keys
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#hotkeys)).
+- **Control at the prompt:** `/S` shows the status, `/OFF` and `/ON` pause and resume, and `/U`
+  unloads. `LH REBEEP` loads it into upper memory, where it takes about 3.4 KB
+  ([reference](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/reference.md)).
+- **The package**, as a zip and a floppy image: `INSTALL`, `RBPLAY` to run one game with ReBeep,
+  sample MS-DOS and FreeDOS boot menus, `RBTEST` to check your setup, and the `README.TXT` manual
+  ([set up on a real PC](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/real-pc.md),
+  [in 86Box](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/86box.md)).
 
 ### Known issues
 
-- Grand Prix Circuit hangs on FreeDOS 1.4 whether or not ReBeep is loaded.
-- The hotkeys don't fire in games that take over the keyboard, such as Grand Prix Circuit. Set the voice,
-  or `REBEEP /OFF`, at the DOS prompt before starting them.
-- Games with their own FM music need `REBEEP /OFF` first, or ReBeep and the game fight over the FM chip.
+- `INSTALL` can fail on Windows 98's DOS with "Invalid drive or directory". Copy the files by hand
+  ([real PC, step 3](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/real-pc.md#3-install-rebeep)).
+- The hotkeys don't work in games that take over the keyboard, such as Grand Prix Circuit. Set the
+  voice at the DOS prompt before you start them
+  ([known conflicts](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/compatibility.md#known-conflicts)).
+- Games with their own FM music need `REBEEP /OFF` first
+  ([known conflicts](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/compatibility.md#known-conflicts)).
+- Grand Prix Circuit hangs on FreeDOS 1.4, with or without ReBeep
+  ([Grand Prix Circuit](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/compatibility.md#grand-prix-circuit)).

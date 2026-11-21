@@ -13,5 +13,5 @@
 - [ ] No payloads: no DOS images, ROMs, game files, disk images or archives (`rebeep repo check` passes)
 - [ ] No `Co-Authored-By` or other agent-harness attribution trailer in any commit or in this description
 - [ ] Docs checked with the `update-docs` skill: `AGENTS.md`, docs and skill references match the change
-- [ ] `CHANGELOG.md` has a player-facing line under `## [Unreleased]`, or this change is not user-visible
+- [ ] `CHANGELOG.md` has a line under `## [Unreleased]` in the shape AGENTS.md section 10 sets (with a doc link), or this change is not user-visible
 - [ ] `rebeep test run --suite tools` passes

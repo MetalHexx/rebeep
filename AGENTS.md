@@ -116,9 +116,8 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM (the dev e
 - PRs target `main` and open as drafts. Fill in the PR template.
 - Update the affected `AGENTS.md`, skill reference and docs in the same PR as the code.
 - Doc rules and the pre-commit `update-docs` run: [section 10](#10-writing-docs).
-- Every user-visible change adds a player-facing line under `## [Unreleased]` in
-  [CHANGELOG.md](CHANGELOG.md), in the same PR. Write for players: "The hotkey now cycles instrument
-  patches", not "refactored the trap handler".
+- Every user-visible change adds a line under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md), in
+  the same PR, in the shape [section 10](#10-writing-docs) sets.
 
 ## 9. Security
 
@@ -153,7 +152,7 @@ with its own invariants, split into a nested `AGENTS.md`. Never raise a budget.
 | `README.md` | Front door | ≤ 150 lines |
 | `docs/**/*.md` | One level per page: guide, architecture or lab ([docs/AGENTS.md](docs/AGENTS.md) says who reads each and how to write for them) | ≤ 250 lines per page |
 | Skill `SKILL.md` · skill reference | Routing and procedure; points to `AGENTS.md` | ≤ 100 · ≤ 60 lines |
-| `CHANGELOG.md` | Player language only | Short entries |
+| `CHANGELOG.md` | Players and features, never the code | One or two lines per bullet |
 
 **Rules:**
 
@@ -169,6 +168,13 @@ with its own invariants, split into a nested `AGENTS.md`. Never raise a budget.
   private paths, no references to planning documents, no agent attribution.
 - A nested `AGENTS.md` is allowed only for a subfolder with its own invariants, and its parent
   links to it.
+
+**`CHANGELOG.md`.** Every release reads the same, whoever writes it:
+- `###` sections in this order, only those with lines: Added, Changed, Fixed, Removed, Known issues.
+- One bullet per thing a player notices, opening with it in bold. Say what it does for them:
+  "**Hotkeys** now cycle the patches", never "refactored the trap handler".
+- Each bullet ends with a link to the doc that covers it, as a full
+  `https://github.com/MetalHexx/rebeep/blob/main/...` URL, so it works in the release notes too.
 
 **Template:**
 
