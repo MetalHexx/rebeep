@@ -127,8 +127,7 @@ doc has one job. When two docs need the same fact, one owns it and the others li
 
 | Doc | Job |
 |---|---|
-| `README.md` | The front door: pitch, run it on your DOS PC, then build and test it, links out |
-| `docs/README.md` | The index: one line per doc |
+| `README.md` | The front door, for players: why, highlights, how in brief, what you need, install in brief, tested on, and the docs index. Build details live in `docs/` |
 | `docs/usage.md` | The player reference: options, hotkeys, voices, exit codes, `RBTEST`, troubleshooting. `release/README.TXT` mirrors its tables; change both together |
 | `docs/how-it-works.md` | The design for curious readers and the measured cost (`P_BENCH` numbers) |
 | `docs/compatibility.md` | Tested games and hardware, known conflicts |

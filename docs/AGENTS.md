@@ -6,7 +6,6 @@
 
 | Path | Role |
 |---|---|
-| `README.md` | Index: one line per doc |
 | `usage.md` | The player reference: options, hotkeys, voices, exit codes, `RBTEST`, troubleshooting. `release/README.TXT` mirrors its tables |
 | `how-it-works.md` | The design for curious readers, and the `RBTEST /B` numbers measured by `P_BENCH` |
 | `compatibility.md` | Tested games and hardware, known conflicts |
@@ -20,7 +19,7 @@
 ## Rules
 
 - Style, altitude and budgets: the root [AGENTS.md](../AGENTS.md) "Writing docs" section.
-- A new doc gets a line in `README.md` here.
+- A new doc gets a line in the root [README.md](../README.md)'s Documentation index, under Playing or Working on ReBeep.
 
 ## Pitfalls
 

@@ -4,27 +4,44 @@
 
 **Hear your beeper-only DOS games through a real sound card.**
 
-A tiny DOS TSR that catches PC-speaker tones and plays them on a Sound Blaster's OPL2/OPL3 FM chip,
-plus a ready-made 86Box lab to build and test it.
-
-[Usage](docs/usage.md) · [How it works](docs/how-it-works.md) · [Compatibility](docs/compatibility.md) ·
-[Getting started](docs/getting-started.md) · [The 86Box lab](docs/86box-environment.md) ·
-[Contributing](docs/contributing.md) · [Docs](docs/README.md)
+[![CI](https://github.com/MetalHexx/rebeep/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MetalHexx/rebeep/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/MetalHexx/rebeep)](https://github.com/MetalHexx/rebeep/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 </div>
 
 ---
 
-Many 1980s DOS games can only beep through the PC speaker. ReBeep traps the speaker ports
-(`42h`, `43h`, `61h`) through Jemm's QPIEMU module, turns what the game sends into tones, and plays
-them on the OPL synth. Anything it can't translate still reaches the real speaker.
+Plenty of 1980s DOS games can only beep: one square wave, through a tiny speaker inside the case.
+Your Sound Blaster sits there silent. ReBeep is a small DOS program that catches those beeps and
+plays them on the card's FM chip instead, so the same tunes and effects come out of your speakers.
+
+## Highlights
+
+- **The game's beeps on your sound card.** Melodies, engines and effects play on the OPL2 or OPL3 FM
+  chip of a Sound Blaster or a clone, and the PC speaker stays quiet.
+- **Nothing goes missing.** Sounds the FM chip can't play, such as noise or very high pitches, still
+  go to the real speaker. `/R:0` mutes them instead.
+- **Five voices.** A faithful square wave close to the original, or one of four FM patches: Organ,
+  Flute, Brass and Bell. Volume runs from 0 to 15.
+- **Change it while you play.** Ctrl+Alt+B swaps between the sound card and the speaker, and
+  Ctrl+Alt+N cycles the voice. The keys can be changed.
+- **Small and tidy.** One `.COM` file under 7 KB that loads high and unloads cleanly. The game is
+  never patched.
+
+## How it works
 
 ```
 game ──OUT 42h/43h/61h──▶ Jemm + QPIEMU ──▶ ReBeep ──▶ OPL2/OPL3 at 388h
                                                └──────▶ PC speaker (fallback)
 ```
 
-## Run it on your DOS PC
+A game beeps by setting a pitch on the PC's timer chip and switching the speaker on. Jemm's QPIEMU
+module lets ReBeep catch those port writes as they happen. ReBeep works out the note the game asked
+for, plays it on the FM chip, and holds the real speaker still. The details, and what it costs in
+speed, are in [how it works](docs/how-it-works.md).
+
+## What you need
 
 | Need | |
 |---|---|
@@ -33,92 +50,52 @@ game ──OUT 42h/43h/61h──▶ Jemm + QPIEMU ──▶ ReBeep ──▶ OPL
 | Memory manager | Jemm 5.87 or later, with its QPIEMU module |
 | Sound | An OPL2 or OPL3 FM chip at `388h` (Sound Blaster cards and most clones) |
 
+## Install it
+
 1. Download the zip or the floppy image from the
-   [latest release](https://github.com/MetalHexx/rebeep/releases/latest) and copy it to the PC.
+   [latest release](https://github.com/MetalHexx/rebeep/releases/latest), and copy it to the PC.
 2. Run `INSTALL` from the folder that holds `REBEEP.COM`.
-3. Start ReBeep with `RBPLAY GAME.EXE` for one game, or from a sample config in the
-   package's `SAMPLES` folder.
+3. Run one game with `RBPLAY GAME.EXE`, or load ReBeep at boot from a sample config in the package's
+   `SAMPLES` folder.
 
-Usage, hotkeys and troubleshooting: [usage](docs/usage.md). How it works:
-[how-it-works](docs/how-it-works.md). Which games and machines were tried:
-[compatibility](docs/compatibility.md).
+Options, hotkeys and troubleshooting are in [usage](docs/usage.md).
 
-## Build and test it
+## Tested on
 
-Only needed to work on ReBeep itself. The lab needs Node.js 22 or newer and runs on Windows, Linux
-or macOS.
+Grand Prix Circuit, raced on a real Socket 7 PC with a Sound Blaster Vibra 16, and in 86Box on an
+emulated Pentium MMX and a 386SX/16, backed by automated checks that run in DOS VMs.
+[Compatibility](docs/compatibility.md) lists every result and the known conflicts.
 
-| | Free path | Full path |
-|---|---|---|
-| DOS | FreeDOS 1.4, fetched for you | your own MS-DOS 6.22 floppy images |
-| Games | ReBeep's own test programs | your own copy of a speaker-only game |
-| Cost | nothing | what you already own |
+## Documentation
 
-86Box, its ROMs, Jemm and FreeDOS are downloaded at pinned versions and checked by SHA-256, into
-`~/.rebeep`. So are NASM and DOSBox-X on Windows. On Linux and macOS, NASM comes from your package
-manager, and so does DOSBox-X on Linux.
+**Playing**
 
-### Quick start
-
-```sh
-git clone https://github.com/MetalHexx/rebeep.git && cd rebeep
-node tools/rebeep.mjs env setup        # fetch tools, build the FreeDOS VM, write D:
-node tools/rebeep.mjs vm run mirror-freedos
-```
-
-First boot shows a BIOS "CMOS checksum error". Press **F1** once; the VM remembers it.
-
-### The lab
-
-| VM | What it is |
+| Doc | What it covers |
 |---|---|
-| `mirror-freedos` | Pentium MMX 233, 16 MB, Sound Blaster Vibra 16S, FreeDOS 1.4 built by script |
-| `mirror-msdos` | The same machine with your MS-DOS 6.22 |
-| `slow-386sx` | A 386SX/16 with 4 MB, for measuring overhead near the bottom of the range |
+| [Usage](docs/usage.md) | Options, hotkeys, voices, exit codes, RBTEST, troubleshooting |
+| [How it works](docs/how-it-works.md) | The design, and the measured cost |
+| [Compatibility](docs/compatibility.md) | Tested games and machines, known conflicts |
+| [Grand Prix Circuit](docs/gpc.md) | How the game drives the speaker, and what ReBeep makes of it |
 
-Each VM has its own **C:** and a **D:** "delivery disk" the host rewrites on every deploy, with
-Jemm, your games and the latest ReBeep build. The edit loop is:
+**Working on ReBeep**
 
-```sh
-node tools/rebeep.mjs build run --deploy   # assemble, then write every VM's D:
-node tools/rebeep.mjs vm run mirror-freedos
-```
-
-Broke something? `rebeep vm reset <vm>` puts a VM back to its saved baseline.
-
-### The `rebeep` CLI
-
-One command, `rebeep <noun> <verb>`, with `--help` at every level and `--json` for scripts.
-
-| Noun | Verbs |
+| Doc | What it covers |
 |---|---|
-| `env` | `setup` `status` `check` `reset` `clean` |
-| `tool` | `list` `fetch` `verify` |
-| `media` | `list` `add` `remove` |
-| `vm` | `list` `show` `create` `run` `snapshot` `reset` |
-| `disk` | `list` `deploy` |
-| `build` | `run` `clean` |
-| `test` | `list` `run` |
-| `repo` | `check` |
+| [Getting started](docs/getting-started.md) | From a fresh clone to a booted DOS VM, on the Free and Full paths |
+| [The 86Box lab](docs/86box-environment.md) | The VMs, their disks, the boot flow, snapshot and reset |
+| [Contributing](docs/contributing.md) | Set up, workflow and checks, commits, payload rules |
+| [Releasing](docs/releasing.md) | The release procedure and the checks by a person |
 
-Run it as `node tools/rebeep.mjs …`, or `npm link` once and type `rebeep …`.
+## Build it yourself
 
-### Full path: MS-DOS 6.22 and your own game
-
-```sh
-rebeep media add msdos622 path/to/folder-with-3-floppy-images
-rebeep media add game path/to/game.zip --name GPC
-rebeep vm create mirror-msdos              # skip if env setup already made it
-rebeep vm run mirror-msdos --install       # run DOS Setup, swap floppies from the Media menu
-```
-
-Step by step in [getting started](docs/getting-started.md).
+ReBeep comes with a ready-made 86Box lab: one command-line tool fetches 86Box, FreeDOS and Jemm at
+pinned versions, builds the DOS VMs, and puts each new build on them. Start at
+[getting started](docs/getting-started.md).
 
 ## Contributing
 
-Issues and pull requests are welcome; start with [contributing](docs/contributing.md). AI agents
-start at [AGENTS.md](AGENTS.md). Never commit DOS images, ROMs or game files:
-`rebeep repo check` and CI guard against it.
+Issues and pull requests are welcome. Start with [contributing](docs/contributing.md); AI agents
+start at [AGENTS.md](AGENTS.md).
 
 ## License
 
