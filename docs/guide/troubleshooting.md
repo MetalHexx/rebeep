@@ -1,7 +1,7 @@
 # Troubleshooting
 
-Find what you see, then try the fix. If nothing here helps, open an
-[issue](https://github.com/MetalHexx/rebeep/issues) with the game, your DOS and what happened.
+Find what you see, then try the fix. If nothing here helps, file a
+[bug report](https://github.com/MetalHexx/rebeep/issues/new?template=bug-report.yml).
 
 ## By symptom
 

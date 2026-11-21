@@ -111,11 +111,19 @@ What's next, and the ideas being considered: [roadmap](docs/roadmap.md).
 
 ## Contributing
 
-The biggest help right now is testing games: try ReBeep with yours and file a
-[game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.yml). Planning a
-feature? Talk it over first in a
-[feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.yml). Start with
-[contributing](docs/lab/contributing.md); AI agents start at [AGENTS.md](AGENTS.md).
+[![Report a game](https://img.shields.io/badge/Report_a_game-2ea44f?style=for-the-badge)](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.yml)
+[![Report a bug](https://img.shields.io/badge/Report_a_bug-d73a4a?style=for-the-badge)](https://github.com/MetalHexx/rebeep/issues/new?template=bug-report.yml)
+[![Suggest a feature](https://img.shields.io/badge/Suggest_a_feature-0969da?style=for-the-badge)](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.yml)
+
+- **Test games.** The biggest help right now: try ReBeep with yours and file a
+  [game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.yml).
+- **Found a bug?** File a [bug report](https://github.com/MetalHexx/rebeep/issues/new?template=bug-report.yml). The
+  [troubleshooting page](docs/guide/troubleshooting.md) may already have the fix.
+- **Planning a feature?** Talk it over first in a
+  [feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.yml), so it fits the
+  [roadmap](docs/roadmap.md).
+
+Start with [contributing](docs/lab/contributing.md); AI agents start at [AGENTS.md](AGENTS.md).
 
 ## Community
 
