@@ -1,0 +1,47 @@
+name: "Feature idea"
+description: "Talk a feature over with the maintainer before you build it."
+title: "Idea: "
+body:
+  - type: markdown
+    attributes:
+      value: "Please open this before writing code, so we can check the idea fits the [roadmap](https://github.com/MetalHexx/rebeep/blob/main/docs/roadmap.md). Bigger ideas are good to raise on [Discord](https://discord.gg/4wkPZnCfz) first."
+  - type: textarea
+    id: idea
+    attributes:
+      label: "The idea"
+    validations:
+      required: true
+  - type: textarea
+    id: who
+    attributes:
+      label: "Who it helps, and why"
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: "How you'd build it, roughly"
+  - type: textarea
+    id: deps
+    attributes:
+      label: "New libraries, tools or downloads it would need, and why"
+      description: "\"None\" is the best answer. Anything new needs a reason and the maintainer's OK."
+    validations:
+      required: true
+  - type: dropdown
+    id: build
+    attributes:
+      label: "Would you build it?"
+      options:
+        - "Yes"
+        - "With help"
+        - "Just suggesting"
+    validations:
+      required: true
+  - type: checkboxes
+    id: roadmap
+    attributes:
+      label: "Roadmap"
+      options:
+        - label: "I've read the roadmap"
+          required: true

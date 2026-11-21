@@ -112,9 +112,9 @@ What's next, and the ideas being considered: [roadmap](docs/roadmap.md).
 ## Contributing
 
 The biggest help right now is testing games: try ReBeep with yours and file a
-[game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.md). Planning a
+[game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.yml). Planning a
 feature? Talk it over first in a
-[feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.md). Start with
+[feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.yml). Start with
 [contributing](docs/lab/contributing.md); AI agents start at [AGENTS.md](AGENTS.md).
 
 ## Community

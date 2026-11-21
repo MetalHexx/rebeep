@@ -32,9 +32,9 @@ OPL2 or OPL3 FM chip. It is proven on Grand Prix Circuit, on a real PC and in 86
 
 - **Test games.** This is the biggest help right now. Try ReBeep with your speaker-only games and
   tell us what you hear in a
-  [game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.md), or add a
+  [game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.yml), or add a
   row to [compatibility](guide/compatibility.md) in a pull request.
 - **Help build the roadmap.** Bring an idea to [Discord](https://discord.gg/4wkPZnCfz) first. Once
   it's agreed there, open a
-  [feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.md) and see
+  [feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.yml) and see
   [contributing](lab/contributing.md).

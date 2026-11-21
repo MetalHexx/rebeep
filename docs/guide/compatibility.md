@@ -11,7 +11,7 @@ What ReBeep has been tried on, the settings each game wants, and what doesn't mi
 | Grand Prix Circuit | FreeDOS 1.4 | 86Box, Pentium MMX 233 | The game hangs on a black screen, with or without ReBeep and Jemm. Use MS-DOS |
 
 Tried another game? That is the biggest help right now. File a
-[game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.md), or open a
+[game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.yml), or open a
 pull request adding a row.
 
 ### Grand Prix Circuit

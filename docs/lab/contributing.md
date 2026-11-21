@@ -5,10 +5,10 @@ Thanks for helping. Here is what you need to know.
 ## Before you start
 
 - **The biggest help right now is testing games.** Try ReBeep with your speaker-only games and
-  file a [game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.md), or
+  file a [game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.yml), or
   add a row to [compatibility](../guide/compatibility.md). No setup beyond the player guide.
 - **Talk over a feature before you build it.** Open a
-  [feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.md) to
+  [feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.yml) to
   discuss it with the maintainer, [@MetalHexx](https://github.com/MetalHexx), so it fits the
   [roadmap](../roadmap.md). Bigger ideas are good to raise on
   [Discord](https://discord.gg/4wkPZnCfz) first. Bug fixes need no ask.

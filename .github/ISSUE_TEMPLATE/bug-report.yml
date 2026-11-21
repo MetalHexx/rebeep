@@ -1,0 +1,69 @@
+name: "Bug report"
+description: "ReBeep doesn't load, shows an error, crashes, or sounds wrong."
+title: "Bug: "
+body:
+  - type: markdown
+    attributes:
+      value: "Before you file, try the [troubleshooting page](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/troubleshooting.md)."
+  - type: textarea
+    id: happened
+    attributes:
+      label: "What happened"
+      description: "What you saw or heard. Copy any message word for word."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "What you expected"
+  - type: textarea
+    id: steps
+    attributes:
+      label: "How to make it happen"
+      placeholder: |
+        1.
+        2.
+    validations:
+      required: true
+  - type: input
+    id: dos
+    attributes:
+      label: "DOS"
+      placeholder: "MS-DOS 6.22, MS-DOS 7.1, FreeDOS 1.4..."
+    validations:
+      required: true
+  - type: input
+    id: machine
+    attributes:
+      label: "Machine"
+      description: "A real PC (board and CPU), or an emulator (which one, its machine and CPU)."
+    validations:
+      required: true
+  - type: input
+    id: sound
+    attributes:
+      label: "Sound card"
+    validations:
+      required: true
+  - type: input
+    id: jemm
+    attributes:
+      label: "Jemm version"
+  - type: input
+    id: options
+    attributes:
+      label: "ReBeep options"
+  - type: input
+    id: game
+    attributes:
+      label: "Game, if any"
+  - type: textarea
+    id: boot
+    attributes:
+      label: "Your boot files"
+      description: "Paste the ReBeep entry's lines from CONFIG.SYS and AUTOEXEC.BAT."
+      render: bat
+  - type: textarea
+    id: tried
+    attributes:
+      label: "Already tried"
