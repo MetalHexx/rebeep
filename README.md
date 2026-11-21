@@ -2,8 +2,6 @@
 
 <img src="docs/images/rebeep-logo.png" alt="A green frog at a retro PC, saying ReBeep!" width="300">
 
-# ReBeep
-
 **Hear your beeper-only DOS games through a real sound card.**
 
 A tiny DOS TSR that catches PC-speaker tones and plays them on a Sound Blaster's OPL2/OPL3 FM chip,
