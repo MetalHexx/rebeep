@@ -56,7 +56,7 @@ speed, are in [how it works](docs/architecture/how-it-works.md).
 
 1. Download the zip or the floppy image from the
    [latest release](https://github.com/MetalHexx/rebeep/releases/latest).
-2. Run `INSTALL` from the folder that holds `REBEEP.COM`.
+2. Run `INSTALL` from the folder that holds `REBEEP.COM`, and choose install or update.
 3. Add a ReBeep entry to your boot menu that loads Jemm, then ReBeep.
 
 The full walkthrough, from getting Jemm to the boot menu lines, starts at

@@ -15,6 +15,8 @@ const BINARY_EXTENSIONS = new Set(['COM']);
 const BOOT_CONFIGS = new Set(['CONFIG.SYS', 'AUTOEXEC.BAT', 'FDCONFIG.SYS', 'FDAUTO.BAT']);
 export const PACKAGED_TARGETS = ['REBEEP.COM', 'RBTEST.COM'];
 const REQUIRED_FILES = ['README.TXT', 'INSTALL.BAT', 'RBPLAY.BAT'];
+/** Package files whose `@VERSION@` is filled in with the version. */
+const VERSIONED = new Set(['README.TXT', 'INSTALL.BAT']);
 
 // ---------------------------------------------------------------------------------------------
 // Changelog
@@ -202,8 +204,9 @@ export function readBuiltTarget(repo, name, buildJson = readBuildJson(repo)) {
 
 /**
  * Builds the package tree: the built programs, everything under `release/` except its AGENTS.md
- * (README.TXT with `@VERSION@` replaced) and a generated CHANGES.TXT. Paths use `/`. `problems` lists everything
- * `checkPackageText` found, any boot config file at the top level, and every CHANGELOG.md rule `version check` applies.
+ * (README.TXT and INSTALL.BAT with `@VERSION@` replaced) and a generated CHANGES.TXT. Paths use `/`. `problems`
+ * lists everything `checkPackageText` found, any boot config file at the top level, any `@VERSION@` left unfilled, a
+ * REBEEP.COM that doesn't name the version (a stale build), and every CHANGELOG.md rule `version check` applies.
  * @param {{repo: object}} ctx
  * @param {{version: string}} options
  * @returns {{files: {path: string, bytes: Buffer}[], dirs: string[], problems: string[]}}
@@ -219,7 +222,7 @@ export function composeRelease(ctx, { version }) {
   if (!fs.existsSync(releaseDir)) throw new CliError(`${releaseDir} is missing`);
   for (const rel of listTree(releaseDir, '').map((p) => p.slice(1)).filter((p) => p.toUpperCase() !== 'AGENTS.MD')) {
     let bytes = fs.readFileSync(path.join(releaseDir, ...rel.split('/')));
-    if (rel === 'README.TXT') bytes = Buffer.from(bytes.toString('latin1').replaceAll('@VERSION@', version), 'latin1');
+    if (VERSIONED.has(rel)) bytes = Buffer.from(bytes.toString('latin1').replaceAll('@VERSION@', version), 'latin1');
     files.push({ path: rel, bytes });
   }
   for (const name of REQUIRED_FILES) {
@@ -239,6 +242,13 @@ export function composeRelease(ctx, { version }) {
     if (!file.path.includes('/') && BOOT_CONFIGS.has(file.path)) {
       problems.push(`${file.path}: a boot config file must not sit at the top level of the package`);
     }
+    if (file.bytes.includes('@VERSION@')) {
+      problems.push(`${file.path}: @VERSION@ is filled in only in ${[...VERSIONED].join(' and ')}`);
+    }
+  }
+  const program = files.find((f) => f.path === 'REBEEP.COM');
+  if (!program.bytes.includes(`ReBeep ${version}`)) {
+    problems.push(`REBEEP.COM: does not say "ReBeep ${version}"; rebuild it with rebeep build run`);
   }
   const dirs = [...new Set(files.flatMap((f) => f.path.split('/').slice(0, -1).map((_, i, parts) => parts.slice(0, i + 1).join('/'))))].sort();
   return { files, dirs, problems };

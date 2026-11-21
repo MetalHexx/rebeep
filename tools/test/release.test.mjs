@@ -138,7 +138,8 @@ describe('release create', () => {
     sector.writeUInt16LE(0xaa55, 510);
     return sector;
   })();
-  const REBEEP = Buffer.from('fake rebeep program');
+  const programFor = (version) => Buffer.from(`fake rebeep program, ReBeep ${version}`);
+  const REBEEP = programFor('1.1.0');
   const RBTEST = Buffer.from('fake rbtest program');
 
   const put = (rel, bytes) => {
@@ -153,7 +154,7 @@ describe('release create', () => {
     put('package.json', JSON.stringify({ name: 'rebeep', version: '1.1.0' }));
     put('CHANGELOG.md', CHANGELOG);
     put('release/README.TXT', text('ReBeep @VERSION@\nA readme.\n'));
-    put('release/INSTALL.BAT', text('@echo off\necho install\n'));
+    put('release/INSTALL.BAT', text('@echo off\necho ReBeep @VERSION@ setup\n'));
     put('release/RBPLAY.BAT', text('@echo off\necho play\n'));
     put('release/AGENTS.md', 'not packaged\n');
     put('release/SAMPLES/MSDOS/CONFIG.SYS', text('DEVICE=C:\\DOS\\HIMEM.SYS\n'));
@@ -170,6 +171,13 @@ describe('release create', () => {
     }));
   });
   afterEach(() => removeDir(root));
+
+  const putProgram = (bytes) => {
+    put('build/REBEEP.COM', bytes);
+    const built = JSON.parse(fs.readFileSync(path.join(root, 'build', 'build.json'), 'utf8'));
+    built.targets.find((t) => t.name === 'REBEEP.COM').sha256 = sha256(bytes);
+    put('build/build.json', JSON.stringify(built));
+  };
 
   const create = (extra = []) =>
     runRebeep(['release', 'create', '--skip-build', '--json', ...extra], { env: { REBEEP_REPO_ROOT: root } });
@@ -200,6 +208,7 @@ describe('release create', () => {
     }
     assert.equal(disk.readFile('SAMPLES\\MSDOS\\CONFIG.SYS').toString(), 'DEVICE=C:\\DOS\\HIMEM.SYS\r\n');
     assert.match(zip.entries.find((e) => e.name === 'README.TXT').read().toString(), /^ReBeep 1\.1\.0\r\n/);
+    assert.match(zip.entries.find((e) => e.name === 'INSTALL.BAT').read().toString(), /echo ReBeep 1\.1\.0 setup\r\n/);
     assert.ok(!zip.entries.some((e) => e.name.includes('AGENTS')));
 
     assert.equal(floppy.toString('latin1', 0x3e, 0x3e + 11), 'FDBOOT-CODE');
@@ -251,6 +260,7 @@ describe('release create', () => {
 
   test('heads the notes "Unreleased preview" when the version has no dated entry', () => {
     put('package.json', JSON.stringify({ name: 'rebeep', version: '1.2.0' }));
+    putProgram(programFor('1.2.0'));
     assert.equal(create().code, 0);
     const notes = out('NOTES.md').toString();
     assert.match(notes, /^# ReBeep 1\.2\.0 - Unreleased preview\n/);
@@ -282,6 +292,17 @@ describe('release create', () => {
     const message = typeof error === 'string' ? error : error.message;
     assert.match(message, /CHANGELOG\.md: heading "## \[1\.1\.0-rc1\] - 2026-03-02" is not/);
     assert.ok(!fs.existsSync(path.join(root, 'build', 'release')));
+  });
+
+  test('fails when a version is out of step: an unfilled @VERSION@, or a stale REBEEP.COM', () => {
+    put('release/RBPLAY.BAT', text('@echo off\necho ReBeep @VERSION@\n'));
+    put('package.json', JSON.stringify({ name: 'rebeep', version: '1.2.0' }));
+    const result = create();
+    assert.equal(result.code, 1);
+    const { error } = JSON.parse(result.stdout);
+    const message = typeof error === 'string' ? error : error.message;
+    assert.match(message, /RBPLAY\.BAT: @VERSION@ is filled in only in README\.TXT and INSTALL\.BAT/);
+    assert.match(message, /REBEEP\.COM: does not say "ReBeep 1\.2\.0"/);
   });
 
   test('fails when the package does not fit on the floppy', () => {

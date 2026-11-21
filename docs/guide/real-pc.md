@@ -63,8 +63,15 @@ A:
 INSTALL
 ```
 
-You should see `ReBeep is in C:\REBEEP\`, then the lines to add to your boot files. `INSTALL`
-copies the files and changes nothing else. To use another folder, name it: `INSTALL D:\REBEEP`.
+A menu appears. Press `I` to install ReBeep into `C:\REBEEP`. You should see the files copied, then
+`ReBeep x.y.z is in C:\REBEEP` and the lines to add to your boot files. `INSTALL` copies the files
+and changes nothing else.
+
+| To | Type |
+|---|---|
+| Install into another folder | `INSTALL D:\REBEEP` |
+| Update a copy you already have | `INSTALL`, then `U`. Your boot files need no change; reboot to load the new copy |
+| Skip the menu | `INSTALL /I` to install, or `INSTALL /U` to update. Use these on MS-DOS 5, which can't show the menu |
 
 **If `INSTALL` fails,** as it can on Windows 98's DOS with `Invalid drive or directory`, copy the
 files by hand:

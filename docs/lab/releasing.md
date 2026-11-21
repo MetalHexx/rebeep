@@ -38,9 +38,9 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
 - [ ] At the DOS prompt, with `RBTEST /C:1`, Ctrl+Alt+B toggles between the OPL and the speaker and
   Ctrl+Alt+N cycles the voice. GPC takes over the keyboard, so the hotkeys do nothing inside it.
 - [ ] Last, attach `build/release/rebeep-<v>-floppy.img` as A: from 86Box's Media menu, run
-  `A:\INSTALL`, copy the MS-DOS samples over C:'s configs and reboot: ReBeep loads from the sample
-  config. Then quit 86Box and run `rebeep vm reset mirror-msdos --yes` to put the VM back on its
-  dev configs.
+  `INSTALL` from A: and press `I`, then run it again and press `U`: it updates the copy. Copy the
+  MS-DOS samples over C:'s configs and reboot: ReBeep loads from the sample config. Then quit 86Box
+  and run `rebeep vm reset mirror-msdos --yes` to put the VM back on its dev configs.
 
 **`mirror-freedos`**, with ReBeep autoloaded. GPC hangs there, so FreeDOS acceptance rests on RBTEST:
 

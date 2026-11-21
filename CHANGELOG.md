@@ -23,8 +23,9 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 - **Control at the prompt:** `/S` shows the status, `/OFF` and `/ON` pause and resume, and `/U`
   unloads. `LH REBEEP` loads it into upper memory, where it takes about 3.4 KB
   ([reference](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/reference.md)).
-- **The package**, as a zip and a floppy image: `INSTALL`, `RBPLAY` to run one game with ReBeep,
-  sample MS-DOS and FreeDOS boot menus, `RBTEST` to check your setup, and the `README.TXT` manual
+- **The package**, as a zip and a floppy image: `INSTALL` to install or update, `RBPLAY` to run one
+  game with ReBeep, sample MS-DOS and FreeDOS boot menus, `RBTEST` to check your setup, and the
+  `README.TXT` manual
   ([set up on a real PC](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/real-pc.md),
   [in 86Box](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/86box.md)).
 

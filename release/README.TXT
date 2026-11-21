@@ -66,10 +66,14 @@ ReBeep loads on every boot.
      MS-DOS..." appears (MS-DOS 6), or boot from a DOS floppy. Then copy
      the .BAK files back.
 
-  2. Run INSTALL from the folder that holds REBEEP.COM. It copies the
-     files to C:\REBEEP, or to the folder you name, and edits nothing:
+  2. Run INSTALL from the folder that holds REBEEP.COM. Its menu installs
+     ReBeep in C:\REBEEP, or updates a copy already there. It copies the
+     files and edits nothing. To use another folder, name it:
 
-       INSTALL [dir]
+       INSTALL D:\REBEEP
+
+     INSTALL /I installs and INSTALL /U updates without the menu. The
+     menu needs CHOICE, which MS-DOS 5 lacks, so use them there.
 
      If INSTALL fails, as it can on Windows 98's DOS with "Invalid drive
      or directory", copy the files by hand:
