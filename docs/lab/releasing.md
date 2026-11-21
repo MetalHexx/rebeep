@@ -23,7 +23,7 @@ CI also runs `version check` and a package dry run on the PR.
 ## 3. Checks by a person
 
 These gate the merge. A failed check means a fix on the branch, then section 2 again, never a
-merge. Commit the results (the GPC and real hardware rows in [compatibility.md](../compatibility.md),
+merge. Commit the results (the GPC and real hardware rows in [compatibility.md](../guide/compatibility.md),
 the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) before the PR is marked ready.
 
 **`mirror-msdos`**, on the normal dev boot, which autoloads ReBeep. Play Grand Prix Circuit

@@ -1,21 +1,10 @@
-# Grand Prix Circuit
+# Grand Prix Circuit: a case study
 
 Accolade's Grand Prix Circuit is the game ReBeep's first release was proven on. This page covers how it
 drives the PC speaker, what ReBeep makes of that, and what still sounds different. It comes from
 reading the game's EGA executable (`GPEGA.EXE`) as data, without running it, and from listening
-on the `mirror-msdos` VM. The other executables may differ. The result is in
-[compatibility](compatibility.md).
-
-## Settings
-
-- **Run it on MS-DOS.** It hangs on FreeDOS 1.4 whether or not ReBeep is loaded.
-- **Set everything before starting it.** The game takes over the keyboard interrupt, so
-  Ctrl+Alt+B and Ctrl+Alt+N do nothing inside it. Pick the voice and volume at the DOS prompt.
-- **`/L:0`, the default,** keeps the engine's rests silent, as on a real PC. With `/L:1` the
-  engine drops to a low FM note in those slots instead.
-- **`/R:0` is the setting to use.** It mutes the real speaker, so only the OPL plays. That
-  removes the clicks at the intro and at each screen change, and the music loses its percussion
-  voice.
+on the `mirror-msdos` VM. The other executables may differ. The settings to play it with are in
+[compatibility](../guide/compatibility.md#grand-prix-circuit).
 
 ## The race: engine and effects
 

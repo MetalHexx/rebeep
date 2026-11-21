@@ -31,7 +31,7 @@ rebeep vm run mirror-freedos
 - The boot menu picks **ReBeep dev** after 5 seconds. It loads Jemm, then QPIEMU, prints
   `QPICHK: QPI ready (QPIEMU), version 07.03`, and loads the latest ReBeep build (autoload).
 - `REBEEP /S` shows its status. `D:\REBEEP\RBTEST` plays test sounds and checks ReBeep; see
-  [usage](../usage.md#check-your-hardware-with-rbtest).
+  [the RBTEST reference](../guide/reference.md#rbtest).
 
 When it looks right, save it as the VM's baseline:
 

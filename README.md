@@ -7,6 +7,7 @@
 [![CI](https://github.com/MetalHexx/rebeep/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MetalHexx/rebeep/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/MetalHexx/rebeep)](https://github.com/MetalHexx/rebeep/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/4wkPZnCfz)
 
 </div>
 
@@ -14,18 +15,19 @@
 
 Plenty of 1980s DOS games can only beep: one square wave, through a tiny speaker inside the case.
 Your Sound Blaster sits there silent. ReBeep is a small DOS program that catches those beeps and
-plays them on the card's FM chip instead, so the same tunes and effects come out of your speakers.
+plays them on the card's FM chip instead.
 
 ## Highlights
 
-- **The game's beeps on your sound card.** Melodies, engines and effects play on the OPL2 or OPL3 FM
+- **The game's beeps on your sound card.** Melodies and sound effects play on the OPL2 or OPL3 FM
   chip of a Sound Blaster or a clone, and the PC speaker stays quiet.
 - **Nothing goes missing.** Sounds the FM chip can't play, such as noise or very high pitches, still
   go to the real speaker. `/R:0` mutes them instead.
 - **Five voices.** A faithful square wave close to the original, or one of four FM patches: Organ,
-  Flute, Brass and Bell. Volume runs from 0 to 15.
+  Flute, Brass and Bell.
 - **Change it while you play.** Ctrl+Alt+B swaps between the sound card and the speaker, and
-  Ctrl+Alt+N cycles the voice. The keys can be changed.
+  Ctrl+Alt+N cycles the voice. The keys can be changed. They don't work yet in games that take over
+  the keyboard; set those up at the DOS prompt first.
 - **Small and tidy.** One `.COM` file under 7 KB that loads high and unloads cleanly. The game is
   never patched.
 
@@ -53,35 +55,46 @@ speed, are in [how it works](docs/architecture/how-it-works.md).
 ## Install it
 
 1. Download the zip or the floppy image from the
-   [latest release](https://github.com/MetalHexx/rebeep/releases/latest), and copy it to the PC.
+   [latest release](https://github.com/MetalHexx/rebeep/releases/latest).
 2. Run `INSTALL` from the folder that holds `REBEEP.COM`.
-3. Run one game with `RBPLAY GAME.EXE`, or load ReBeep at boot from a sample config in the package's
-   `SAMPLES` folder.
+3. Add a ReBeep entry to your boot menu that loads Jemm, then ReBeep.
 
-Options, hotkeys and troubleshooting are in [usage](docs/usage.md).
+The full walkthrough, from getting Jemm to the boot menu lines, starts at
+[getting started](docs/guide/getting-started.md), for a [real PC](docs/guide/real-pc.md) or
+[86Box](docs/guide/86box.md).
 
 ## Tested on
 
 Grand Prix Circuit, raced on a real Socket 7 PC with a Sound Blaster Vibra 16, and in 86Box on an
 emulated Pentium MMX and a 386SX/16, backed by automated checks that run in DOS VMs.
-[Compatibility](docs/compatibility.md) lists every result and the known conflicts.
+[Compatibility](docs/guide/compatibility.md) lists every result and the known conflicts.
 
 ## Documentation
 
-**Playing**
+**Using ReBeep**
 
 | Doc | What it covers |
 |---|---|
-| [Usage](docs/usage.md) | Options, hotkeys, voices, exit codes, RBTEST, troubleshooting |
+| [Getting started](docs/guide/getting-started.md) | What it is, what you need, which setup to follow |
+| [Set up on a real PC](docs/guide/real-pc.md) | Jemm, installing, a boot menu entry, checking it, undoing it |
+| [Set up in 86Box](docs/guide/86box.md) | The VM's settings, getting the files in, then the same steps |
+| [Playing](docs/guide/playing.md) | Voices, volume, muting, hotkeys, turning it off |
+| [Troubleshooting](docs/guide/troubleshooting.md) | By symptom, then every message |
+| [Compatibility](docs/guide/compatibility.md) | Tested games and machines, settings per game, known conflicts |
+| [Reference](docs/guide/reference.md) | Every option, hotkey, exit code and RBTEST command |
+
+**How it works**
+
+| Doc | What it covers |
+|---|---|
 | [How it works](docs/architecture/how-it-works.md) | The design, and the measured cost |
-| [Compatibility](docs/compatibility.md) | Tested games and machines, known conflicts |
-| [Grand Prix Circuit](docs/gpc.md) | How the game drives the speaker, and what ReBeep makes of it |
+| [Grand Prix Circuit](docs/architecture/gpc-case-study.md) | A case study: how the game drives the speaker, and what ReBeep makes of it |
 
-**Working on ReBeep**
+**The lab and contributing**
 
 | Doc | What it covers |
 |---|---|
-| [Getting started](docs/lab/setup.md) | From a fresh clone to a booted DOS VM, on the Free and Full paths |
+| [Lab setup](docs/lab/setup.md) | From a fresh clone to a booted DOS VM, on the Free and Full paths |
 | [The 86Box lab](docs/lab/86box-lab.md) | The VMs, their disks, the boot flow, snapshot and reset |
 | [Contributing](docs/lab/contributing.md) | Set up, workflow and checks, commits, payload rules |
 | [Releasing](docs/lab/releasing.md) | The release procedure and the checks by a person |
@@ -90,12 +103,17 @@ emulated Pentium MMX and a 386SX/16, backed by automated checks that run in DOS 
 
 ReBeep comes with a ready-made 86Box lab: one command-line tool fetches 86Box, FreeDOS and Jemm at
 pinned versions, builds the DOS VMs, and puts each new build on them. Start at
-[getting started](docs/lab/setup.md).
+[lab setup](docs/lab/setup.md).
 
 ## Contributing
 
 Issues and pull requests are welcome. Start with [contributing](docs/lab/contributing.md); AI agents
 start at [AGENTS.md](AGENTS.md).
+
+## Community
+
+Come chat on [Discord](https://discord.gg/4wkPZnCfz) about ReBeep, the games you've tried it with,
+or other ideas for giving old DOS games better sound.
 
 ## License
 
