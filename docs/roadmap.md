@@ -17,6 +17,7 @@ OPL2 or OPL3 FM chip. It is proven on Grand Prix Circuit, on a real PC and in 86
 | Idea | What it would bring |
 |---|---|
 | One-click 86Box setup | A ready VM with DOS, Jemm and ReBeep, and a folder to drop your games into |
+| A full DOS installer | A menu to install, update or remove ReBeep in the folder you choose, and the boot menu set up for you, with backups |
 | An AI setup helper | An assistant plugin that walks newcomers through Jemm and the boot files |
 | Jemm in the package | One download instead of two, if Jemm's license allows it |
 | Hotkeys in every game | Catching the keys at the keyboard's port, so games that own the keyboard can't block them |
