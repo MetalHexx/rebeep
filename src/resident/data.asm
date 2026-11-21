@@ -36,11 +36,13 @@ game_61         db      0               ; the last byte the game wrote to 61h (w
 masked          db      0               ; the bit held clear in the real 61h (OPL, rest, /R:0), or 0
 out2_fake       db      20h             ; 61h bit 5 as IN 61h reports it while the gate is held
 
-; The QPI callback runs on its own stack: the client's may be tiny. client_sp and client_ss
-; must stay adjacent (LSS reads them as one pointer).
+; The QPI callback runs on its own stack and pushes nothing on the client's, which may be a
+; small DOS or BIOS stack. client_sp and client_ss must stay adjacent (LSS reads them as one
+; pointer); client_ax holds AX while the stack is switched.
 in_callback     db      0
 client_sp       dw      0
 client_ss       dw      0
+client_ax       dw      0
 
                 times 320 db 0
 stack_top:

@@ -403,6 +403,9 @@ note_state:
 ; client's EAX (OUT data in AL), BX the client's BX, CL the access type, DX the port;
 ; IF and TF are clear. QPIEMU restores only ECX, EDX and the flags, so every other
 ; register is saved and restored here. Accesses to our ports go through handle_access.
+; QPIEMU calls on the game's stack, which may be a small DOS or BIOS one that a game's
+; interrupt handler happened to land on, so nothing is pushed there: the stack is switched
+; first, and the saved registers (the frame handle_access reads) sit on ReBeep's own.
 qpi_callback:
         cmp     dx, PIT_CH2
         je      .ours
@@ -423,17 +426,21 @@ qpi_callback:
         cmp     byte [cs:in_callback], 0
         jne     .reenter
         mov     byte [cs:in_callback], 1
+        mov     [cs:client_sp], sp
+        mov     [cs:client_ss], ss
+        mov     [cs:client_ax], ax
+        mov     ax, cs
+        mov     ss, ax
+        mov     sp, stack_top
+        mov     ax, [cs:client_ax]
         pushad
         push    ds
         push    es
-        mov     [cs:client_sp], sp
-        mov     [cs:client_ss], ss
-        push    cs
-        pop     ss
-        mov     sp, stack_top
+        mov     di, sp                  ; ES:DI -> the frame
         push    cs
         pop     ds
-        les     di, [client_sp]
+        push    cs
+        pop     es
         mov     al, [es:di + IMG_ECX]
         and     al, TYPE_OUT | TYPE_SIZE
         cmp     al, TYPE_OUT            ; a byte OUT
@@ -442,10 +449,10 @@ qpi_callback:
 .handle:
         call    handle_access
         TRACE_SITE TK_REBEEP
-        lss     sp, [client_sp]
         pop     es
         pop     ds
         popad
+        lss     sp, [cs:client_sp]
         mov     byte [cs:in_callback], 0
         retf
 

@@ -15,7 +15,9 @@ and switching the speaker on through port `61h`. Real-mode code can't be told wh
 Jemm's QPIEMU module can trap port accesses in V86 mode and hands each one to a callback through its
 QPI interface. ReBeep installs that callback and traps `42h`, `43h` and `61h`, so it needs a 386 and
 Jemm. It reads and writes those ports itself only through QPI, because a direct access would trap
-again.
+again. QPIEMU calls the callback on the game's stack, and a game's interrupt handler may have landed
+on a small DOS or BIOS one, so the callback switches to its own stack before saving anything. A
+trapped write takes only QPIEMU's 8 bytes of the game's stack.
 
 Every byte a game writes reaches the real port, so the timer runs as the game set it. The one
 change is to `61h`: while the FM chip plays a tone, or the game rests, ReBeep holds one of its bits
@@ -129,7 +131,7 @@ MMX 233 in 86Box:
 
 | State | `OUT 61h` | One tone change (two `OUT 42h` writes) |
 |---|---|---|
-| ReBeep loaded and trapping | 7.1 µs | 23.4 µs |
+| ReBeep loaded and trapping | 6.9 µs | 22.6 µs |
 | After `/OFF` | 0.9 µs | 1.9 µs |
 | After unload | 0.9 µs | 1.9 µs |
 
@@ -140,5 +142,5 @@ are indicative, not a real machine's.
 
 | Profile | `OUT 61h` loaded | `OUT 61h` after `/OFF` |
 |---|---|---|
-| `mirror-freedos` (86Box, Pentium MMX 233) | 7.1 µs | 0.9 µs |
+| `mirror-freedos` (86Box, Pentium MMX 233) | 6.9 µs | 0.9 µs |
 | `slow-386sx` (86Box, 386SX/16) | _filled in at release time_ | _filled in at release time_ |

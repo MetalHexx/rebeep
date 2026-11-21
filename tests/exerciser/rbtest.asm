@@ -16,6 +16,9 @@ MEM_MIN         equ 1000h       ; paragraphs (64 KB): below this a reading is no
 GOOD_DIV        equ 1193        ; 1 kHz, inside the translatable range
 OTHER_DIV       equ 1194
 BAD_DIV         equ 100         ; above the OPL's range: the real speaker must play it
+STACK_PROBE     equ 128         ; bytes below SP that stack-footprint watches
+STACK_FILL      equ 0A5h
+STACK_MAX       equ 8           ; QPIEMU's own call frame (Jemm 5.87); ReBeep adds nothing
 BENCH_TICKS     equ 18          ; at least one second per timing run
 CAL_TICKS       equ 9
 
@@ -1008,6 +1011,7 @@ run_auto:
         mov     [g_mute0], al
         xor     al, al
         call    set_mute
+        call    chk_stack
         call    chk_masked
         call    chk_raw_unmasked
         call    chk_handoff
@@ -1338,6 +1342,55 @@ qpi_read61:
         pop     dx
         pop     cx
         pop     bx
+        ret
+
+; chk_stack: how far below the caller's SP one trapped OUT 61h writes. A game's
+; interrupt handler runs on whatever stack it interrupted, a small DOS or BIOS one
+; included (Grand Prix Circuit's do), so only QPIEMU's own call frame may land there.
+; Interrupts stay off from the fill to the scan, so nothing else writes below SP.
+chk_stack:
+        call    spk_off
+        in      al, SYS_CTRL
+        mov     bl, al                  ; written back unchanged
+        mov     ax, ss
+        mov     es, ax
+        cld
+        cli
+        mov     di, sp
+        sub     di, STACK_PROBE
+        mov     cx, STACK_PROBE
+        mov     al, STACK_FILL
+        rep     stosb
+        mov     al, bl
+        out     SYS_CTRL, al
+        mov     di, sp
+        sub     di, STACK_PROBE
+        mov     cx, STACK_PROBE
+        mov     al, STACK_FILL
+        repe    scasb                   ; stops past the lowest byte that changed
+        sti
+        push    ds
+        pop     es
+        mov     ax, 0                   ; ZF set: no byte changed
+        je      .counted
+        mov     ax, cx
+        inc     ax                      ; from the lowest changed byte up to SP
+.counted:
+        push    ax
+        mov     dx, s_stack
+        call    print
+        pop     ax
+        call    printdec
+        push    ax
+        mov     dx, s_stackb
+        call    print
+        pop     ax
+        cmp     ax, STACK_MAX
+        jbe     .ok
+        FAILB   "stack-footprint", "bytes below SP="
+        ret
+.ok:
+        PASS    "stack-footprint"
         ret
 
 chk_masked:
@@ -1953,6 +2006,8 @@ s_b80       db "BENCH OUT80 $"
 s_btrap     db "BENCH TRAP $"
 s_btone     db "BENCH TONE $"
 s_us        db " us", 13, 10, "$"
+s_stack     db "STACK $"
+s_stackb    db " bytes below SP", 13, 10, "$"
 s_noshrink  db "RBTEST: cannot resize its memory block", 13, 10, "$"
 s_usage     db "RBTEST: bad option. RBTEST /? lists them.", 13, 10, "$"
 
