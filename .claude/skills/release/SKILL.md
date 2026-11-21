@@ -12,7 +12,7 @@ says what the agent does at each step.
 | Need | Reference |
 |---|---|
 | The changelog rules | [references/changelog.md](references/changelog.md) |
-| The package, and the version and publish commands | [references/package.md](references/package.md) |
+| The package, the version on every surface, and the version and publish commands | [references/package.md](references/package.md) |
 
 **Always:**
 
@@ -63,13 +63,13 @@ Suggest one, then let the user choose:
 ## 4. Bump and run the automatic checks
 
 ```sh
-rebeep version bump <patch|minor|major|X.Y.Z> --preview
-rebeep version bump <patch|minor|major|X.Y.Z> --yes
+rebeep version bump <patch|minor|major|X.Y.Z> --preview   # then the same with --yes
 ```
 
 The bump dates the entry today and sets `package.json`. Already dated, because the release was
 prepared earlier? Skip the bump, and fix the date on merge day (step 6). Then run section 2 of
-`releasing.md`, commit `chore: release X.Y.Z`, push, and open or update the release PR as a draft.
+`releasing.md`, check that every surface shows the same version ([lockstep](references/package.md#lockstep)),
+commit `chore: release X.Y.Z`, push, and open or update the release PR as a draft.
 
 ## 5. The checks by a person
 
@@ -90,7 +90,8 @@ Watch it with `gh run list --workflow release.yml --limit 1`, then `gh run watch
 
 - Compare the release's `SHA256SUMS.txt` with `build/release/SHA256SUMS.txt`. A match means the
   downloads are the bytes that were tested.
-- Ask the user to download it, install it by following `README.TXT`, and check that ReBeep loads.
+- Ask the user to download it, install it by following `README.TXT`, and check that ReBeep loads
+  and names the version.
 - Offer a short announcement for Discord, for the user to post.
 - Half done? Re-run the workflow on `main` (`gh workflow run release.yml --ref main`); it never
   makes a second tag. Broken? Make a patch release. Never move or delete a published tag.
