@@ -22,6 +22,7 @@ export const VERBS = [
   'reset',
   'deploy',
   'clean',
+  'bump',
 ];
 
 const RESERVED_OPTIONS = ['json', 'home', 'verbose', 'help', 'version', 'yes', 'preview'];

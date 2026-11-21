@@ -439,3 +439,69 @@ export function extractZip(zipPath, dest, { stripRoot, into, extractor, log } = 
   if (links.length) assertLinksContained(root, realRoot, links);
   return { files };
 }
+
+/** MS-DOS time and date words (local wall-clock fields) for a zip header. */
+function zipStamp(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) throw new TypeError('date must be a valid Date');
+  const year = date.getFullYear();
+  if (year < 1980 || year > 2107) throw new RangeError(`date ${date.toISOString()} is outside the zip range 1980-2107`);
+  return {
+    time: (date.getHours() << 11) | (date.getMinutes() << 5) | (date.getSeconds() >> 1),
+    date: ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate(),
+  };
+}
+
+/**
+ * Writes a zip: every entry deflated, or stored when that is not smaller, with its CRC-32, no
+ * extra fields, version 20 and the given DOS timestamp, so the same input always gives the same
+ * bytes. Names are used as given (`/` separators); there are no directory entries.
+ *
+ * @param {{name: string, bytes: Buffer, date: Date}[]} entries
+ * @returns {Buffer}
+ */
+export function writeZip(entries) {
+  if (entries.length >= U16_MAX) throw new RangeError(`a zip holds at most ${U16_MAX - 1} entries here, got ${entries.length}`);
+  const locals = [];
+  const centrals = [];
+  let offset = 0;
+  for (const { name, bytes, date } of entries) {
+    checkEntryName(name);
+    const nameBytes = Buffer.from(name, 'utf8');
+    const deflated = zlib.deflateRawSync(bytes, { level: 9 });
+    const stored = deflated.length >= bytes.length;
+    const data = stored ? bytes : deflated;
+    const method = stored ? 0 : 8;
+    const stamp = zipStamp(date);
+    if (offset + 30 + nameBytes.length + data.length >= U32_MAX) throw new RangeError('the zip is too large (zip64 is not written)');
+
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(SIG_LOCAL, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(method, 8);
+    local.writeUInt16LE(stamp.time, 10);
+    local.writeUInt16LE(stamp.date, 12);
+    local.writeUInt32LE(crc32(bytes), 14);
+    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(bytes.length, 22);
+    local.writeUInt16LE(nameBytes.length, 26);
+
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(SIG_CENTRAL, 0);
+    central.writeUInt16LE(20, 4);
+    local.copy(central, 6, 4, 30); // the local header's fields from the version on have the same layout
+    central.writeUInt16LE(nameBytes.length, 28);
+    central.writeUInt32LE(offset, 42);
+
+    locals.push(local, nameBytes, data);
+    centrals.push(central, nameBytes);
+    offset += local.length + nameBytes.length + data.length;
+  }
+  const directory = Buffer.concat(centrals);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(SIG_EOCD, 0);
+  end.writeUInt16LE(entries.length, 8);
+  end.writeUInt16LE(entries.length, 10);
+  end.writeUInt32LE(directory.length, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, directory, end]);
+}

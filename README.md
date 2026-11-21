@@ -7,6 +7,7 @@
 A tiny DOS TSR that catches PC-speaker tones and plays them on a Sound Blaster's OPL2/OPL3 FM chip,
 plus a ready-made 86Box lab to build and test it.
 
+[Usage](docs/usage.md) · [How it works](docs/how-it-works.md) · [Compatibility](docs/compatibility.md) ·
 [Getting started](docs/getting-started.md) · [The 86Box lab](docs/86box-environment.md) ·
 [Contributing](docs/contributing.md) · [Docs](docs/README.md)
 
@@ -23,24 +24,41 @@ game ──OUT 42h/43h/61h──▶ Jemm + QPIEMU ──▶ ReBeep ──▶ OPL
                                                └──────▶ PC speaker (fallback)
 ```
 
-> **Status:** the dev environment works. The TSR itself is in progress; today `REBEEP.COM` is a
-> placeholder that prints its version.
+## Run it on your DOS PC
 
-## What you need
+| Need | |
+|---|---|
+| CPU | A 386 or better |
+| DOS | MS-DOS 5 or later, or FreeDOS |
+| Memory manager | Jemm 5.87 or later, with its QPIEMU module |
+| Sound | An OPL2 or OPL3 FM chip at `388h` (Sound Blaster cards and most clones) |
+
+1. Download the zip or the floppy image from the
+   [latest release](https://github.com/MetalHexx/rebeep/releases/latest) and copy it to the PC.
+2. Run `INSTALL` from the folder that holds `REBEEP.COM`.
+3. Start ReBeep with `RBPLAY GAME.EXE` for one game, or from a sample config in the
+   package's `SAMPLES` folder.
+
+Usage, hotkeys and troubleshooting: [usage](docs/usage.md). How it works:
+[how-it-works](docs/how-it-works.md). Which games and machines were tried:
+[compatibility](docs/compatibility.md).
+
+## Build and test it
+
+Only needed to work on ReBeep itself. The lab needs Node.js 22 or newer and runs on Windows, Linux
+or macOS.
 
 | | Free path | Full path |
 |---|---|---|
-| Host | Windows, Linux or macOS | same |
-| Node.js | 22 or newer | same |
 | DOS | FreeDOS 1.4, fetched for you | your own MS-DOS 6.22 floppy images |
-| Games | ReBeep's own test programs (coming with the TSR) | your own copy of a speaker-only game |
+| Games | ReBeep's own test programs | your own copy of a speaker-only game |
 | Cost | nothing | what you already own |
 
 86Box, its ROMs, Jemm and FreeDOS are downloaded at pinned versions and checked by SHA-256, into
 `~/.rebeep`. So are NASM and DOSBox-X on Windows. On Linux and macOS, NASM comes from your package
 manager, and so does DOSBox-X on Linux.
 
-## Quick start
+### Quick start
 
 ```sh
 git clone https://github.com/MetalHexx/rebeep.git && cd rebeep
@@ -50,7 +68,7 @@ node tools/rebeep.mjs vm run mirror-freedos
 
 First boot shows a BIOS "CMOS checksum error". Press **F1** once; the VM remembers it.
 
-## The lab
+### The lab
 
 | VM | What it is |
 |---|---|
@@ -68,7 +86,7 @@ node tools/rebeep.mjs vm run mirror-freedos
 
 Broke something? `rebeep vm reset <vm>` puts a VM back to its saved baseline.
 
-## The `rebeep` CLI
+### The `rebeep` CLI
 
 One command, `rebeep <noun> <verb>`, with `--help` at every level and `--json` for scripts.
 
@@ -85,7 +103,7 @@ One command, `rebeep <noun> <verb>`, with `--help` at every level and `--json` f
 
 Run it as `node tools/rebeep.mjs …`, or `npm link` once and type `rebeep …`.
 
-## Full path: MS-DOS 6.22 and your own game
+### Full path: MS-DOS 6.22 and your own game
 
 ```sh
 rebeep media add msdos622 path/to/folder-with-3-floppy-images

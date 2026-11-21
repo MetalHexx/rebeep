@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { SECTOR, buildImage, checkImage, readImage, to83, toCrlf } from '../lib/fat.mjs';
+import { SECTOR, buildFloppy, buildImage, checkImage, readImage, to83, toCrlf } from '../lib/fat.mjs';
 
 const PART = 63 * SECTOR;
 const SMALL = { cylinders: 30 };
@@ -833,6 +833,137 @@ describe('fsck.fat', () => {
       const slice = join(dir, 'partition.img');
       writeFileSync(slice, image.subarray(PART));
       const result = spawnSync(tool, ['-n', slice], { encoding: 'utf8' });
+      assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('buildFloppy', () => {
+  /** Entry `n` of a FAT12 table, unpacked the long way: three bytes hold two entries. */
+  function fat12(image, n) {
+    const at = SECTOR + Math.floor((n * 3) / 2);
+    const pair = image[at] | (image[at + 1] << 8);
+    return n % 2 === 0 ? pair & 0xfff : pair >> 4;
+  }
+
+  const floppyTree = () => [
+    { path: 'MULTI.BIN', bytes: pattern(512 * 5 + 7, 1) },
+    { path: 'SUB/ONE.TXT', bytes: pattern(300, 2) },
+    { path: 'EMPTY.TXT', bytes: Buffer.alloc(0) },
+  ];
+
+  it('writes the 1.44 MB geometry and an extended BPB', () => {
+    const { image, stats } = buildFloppy({ label: 'rebeep', volumeId: 0x12345678 });
+    assert.equal(image.length, 1474560);
+    assert.deepEqual([...image.subarray(0, 3)], [0xeb, 0x3c, 0x90]);
+    assert.equal(image.toString('latin1', 3, 11), 'MSDOS5.0');
+    assert.equal(image.readUInt16LE(0x0b), 512);
+    assert.equal(image[0x0d], 1);
+    assert.equal(image.readUInt16LE(0x0e), 1);
+    assert.equal(image[0x10], 2);
+    assert.equal(image.readUInt16LE(0x11), 224);
+    assert.equal(image.readUInt16LE(0x13), 2880);
+    assert.equal(image[0x15], 0xf0);
+    assert.equal(image.readUInt16LE(0x16), 9);
+    assert.equal(image.readUInt16LE(0x18), 18);
+    assert.equal(image.readUInt16LE(0x1a), 2);
+    assert.equal(image.readUInt32LE(0x1c), 0);
+    assert.equal(image[0x24], 0);
+    assert.equal(image[0x26], 0x29);
+    assert.equal(image.readUInt32LE(0x27), 0x12345678);
+    assert.equal(image.toString('latin1', 0x2b, 0x36), 'REBEEP     ');
+    assert.equal(image.toString('latin1', 0x36, 0x3e), 'FAT12   ');
+    assert.equal(image.readUInt16LE(510), 0xaa55);
+    assert.deepEqual([...image.subarray(0x3e, 0x40)], [0xcd, 0x18]);
+    assert.deepEqual([...image.subarray(SECTOR, SECTOR + 3)], [0xf0, 0xff, 0xff]);
+    assert.equal(stats.clusterCount, 2847);
+  });
+
+  it('packs FAT12 chains for even and odd clusters, and keeps both FATs equal', () => {
+    const { image } = buildFloppy({ files: floppyTree() });
+    // MULTI.BIN is the first file in the tree: 6 clusters, 2..7.
+    assert.deepEqual([2, 3, 4, 5, 6, 7].map((n) => fat12(image, n)), [3, 4, 5, 6, 7, 0xfff]);
+    assert.equal(fat12(image, 0), 0xff0);
+    assert.equal(fat12(image, 1), 0xfff);
+    assert.equal(fat12(image, 2000), 0);
+    const fat1 = image.subarray(SECTOR, SECTOR + 9 * SECTOR);
+    assert.equal(Buffer.compare(fat1, image.subarray(SECTOR + 9 * SECTOR, SECTOR + 18 * SECTOR)), 0);
+  });
+
+  it('round-trips through readImage and passes checkImage', () => {
+    const files = floppyTree();
+    const { image, stats } = buildFloppy({ files, label: 'TEST', date: new Date(2026, 5, 1, 8, 30, 10) });
+    assert.deepEqual(checkImage(image), { ok: true, errors: [] });
+    const read = readImage(image);
+    assert.equal(read.mbr, null);
+    assert.equal(read.bpb.fsType, 'FAT12');
+    for (const f of files) assert.deepEqual(read.readFile(f.path), f.bytes);
+    assert.ok(read.exists('sub'));
+    assert.equal(stats.usedClusters, 6 + 1 + 1);
+  });
+
+  it('is reproducible', () => {
+    const a = buildFloppy({ files: floppyTree(), label: 'X' }).image;
+    const b = buildFloppy({ files: floppyTree(), label: 'X' }).image;
+    assert.equal(Buffer.compare(a, b), 0);
+  });
+
+  it('patches the BPB into a boot sector template and keeps its code and signature', () => {
+    const template = Buffer.alloc(SECTOR, 0x90);
+    template.set([0xeb, 0x3c, 0x90]);
+    template.set([0xde, 0xad, 0xbe, 0xef], 0x3e);
+    template.writeUInt16LE(0xaa55, 510);
+    template[0x1fd] = 0x77;
+    const { image } = buildFloppy({ bootSectorTemplate: template, label: 'T' });
+    assert.deepEqual([...image.subarray(0x3e, 0x42)], [0xde, 0xad, 0xbe, 0xef]);
+    assert.deepEqual([...image.subarray(0x42, 0x44)], [0x90, 0x90]);
+    assert.equal(image[0x1fd], 0x77);
+    assert.equal(image.readUInt16LE(510), 0xaa55);
+    assert.equal(image.readUInt16LE(0x13), 2880);
+    assert.equal(image.toString('latin1', 0x36, 0x3e), 'FAT12   ');
+    assert.throws(() => buildFloppy({ bootSectorTemplate: Buffer.alloc(100) }), /512 bytes/);
+  });
+
+  it('throws a clear error when the files do not fit', () => {
+    const capacity = 2847 * SECTOR;
+    assert.doesNotThrow(() => buildFloppy({ files: [{ path: 'FULL.BIN', bytes: Buffer.alloc(capacity) }] }));
+    assert.throws(
+      () => buildFloppy({ files: [{ path: 'BIG.BIN', bytes: Buffer.alloc(capacity + 1) }] }),
+      /need at least 2848 clusters of 512 bytes but the volume has 2847/,
+    );
+  });
+
+  it('rejects names that are not 8.3', () => {
+    assert.throws(() => buildFloppy({ files: [{ path: 'TOOLONGNAME.TXT', bytes: Buffer.alloc(1) }] }), /8\.3/);
+  });
+
+  it('checkImage reports a damaged floppy FAT', () => {
+    const { image } = buildFloppy({ files: floppyTree() });
+    image[SECTOR + 3] ^= 0xff;
+    assert.equal(checkImage(image).ok, false);
+  });
+
+  it('still reads hard-disk images as before', () => {
+    const { image } = build({ files: [{ path: 'A.TXT', bytes: Buffer.from('hi') }] });
+    assert.equal(readImage(image).readFile('A.TXT').toString(), 'hi');
+    assert.notEqual(readImage(image).mbr, null);
+  });
+
+  const fsck = ['fsck.fat', 'dosfsck'].find((name) => !spawnSync(name, ['--help']).error);
+
+  it('is clean under fsck.fat', (t) => {
+    if (!fsck) {
+      t.skip('fsck.fat (or dosfsck) is not on PATH');
+      return;
+    }
+    const { image } = buildFloppy({ files: floppyTree(), label: 'REBEEP' });
+    const dir = mkdtempSync(join(tmpdir(), 'rebeep-fat-'));
+    try {
+      const file = join(dir, 'floppy.img');
+      writeFileSync(file, image);
+      const result = spawnSync(fsck, ['-n', file], { encoding: 'utf8' });
       assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
     } finally {
       rmSync(dir, { recursive: true, force: true });

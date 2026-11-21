@@ -2,18 +2,37 @@
 
 Thanks for helping. Here is what you need to know.
 
+## Set up
+
+[Getting started](getting-started.md) takes a fresh clone to a booted DOS VM with ReBeep's
+environment loaded. Below, `rebeep` stands for `node tools/rebeep.mjs`.
+
 ## Workflow
 
 1. Fork, then branch from `main`.
-2. Make the change. Use `rebeep build run --deploy` and a VM boot for anything DOS-side.
-3. Run the checks:
+2. Make the change. For anything DOS-side, run `rebeep build run --deploy`, then boot a VM.
+3. Run the checks for what you changed:
 
-   ```sh
-   rebeep test run --suite tools
-   rebeep repo check
-   ```
+   | Changed | Run |
+   |---|---|
+   | Anything | `rebeep repo check` |
+   | `tools/` | `rebeep test run --suite tools` |
+   | `src/` or `tests/` | Also `rebeep test run --suite interpreter` and `rebeep test run --suite vm` |
+   | Docs | The rules and budgets in the root [AGENTS.md](../AGENTS.md#10-writing-docs) |
 
-4. Open a pull request against `main`, as a draft until it's ready, and fill in the template.
+   CI runs the tools and interpreter suites, the build, a package dry run and the payload guard. It
+   can't run 86Box, so the VM probes are yours to run before you push.
+4. Open a pull request against `main`, as a draft until it's ready, and fill in the template: what
+   you ran, and what you heard.
+
+Releases are the maintainer's: [releasing](releasing.md).
+
+## Seeing what a game does
+
+Load `REBEEPD.COM`, the trace build deployed beside `REBEEP.COM`, instead of ReBeep. It logs every
+speaker step and OPL note, and `REBEEPD /D` writes the log to `D:\REBEEP\RBTRACE.TXT`. It is for
+development only and never ships. The steps and the log format are in the `rebeep-dev` skill's
+[trace reference](../.claude/skills/rebeep-dev/references/trace.md).
 
 ## Commits
 
@@ -38,12 +57,15 @@ description.
   macOS.
 - **Pin every download.** Add it to `env/86box/manifest.json` with its SHA-256.
 
-## Docs and agent docs
+## Docs
 
 - **A change to a command** updates its `--help` (generated from the spec), plus any doc or skill
   reference that mentions it, in the same PR.
-- **Each folder's `AGENTS.md`** must stay true. The rules for writing them are in the root
-  [AGENTS.md](../AGENTS.md).
+- **Each folder's `AGENTS.md`** must stay true. The rules and budgets for every doc are in the root
+  [AGENTS.md](../AGENTS.md#10-writing-docs). Working with an AI agent? Its `update-docs` skill
+  ([SKILL.md](../.claude/skills/update-docs/SKILL.md)) applies them to your change.
+- **Every user-visible change** adds a player-facing line under `## [Unreleased]` in
+  [CHANGELOG.md](../CHANGELOG.md).
 
 ## Report your host
 

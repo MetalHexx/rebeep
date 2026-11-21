@@ -58,6 +58,26 @@ describe('scanEntries: extensions', () => {
     assert.deepEqual(rulesOf([entry('env/86box/dos/DRIVER.EXE')]), ['extension']);
     assert.deepEqual(rulesOf([entry('env/86box/dos/IO.SYS')]), ['name']);
   });
+
+  test('allows text .SYS and .BAT under release/', () => {
+    const entries = [entry('release/SAMPLES/MSDOS/CONFIG.SYS'), entry('release/SAMPLES/FREEDOS/FDAUTO.BAT')];
+    assert.deepEqual(scanEntries(entries), []);
+  });
+
+  test('flags a binary .SYS under release/', () => {
+    const binary = '\u0000\u0001ÿ\u0010MZ';
+    assert.deepEqual(rulesOf([entry('release/SAMPLES/MSDOS/CONFIG.SYS', { head: binary, tail: binary })]), ['extension']);
+  });
+
+  test('flags a text .SYS over 64 KiB under release/', () => {
+    const size = 64 * 1024 + 1;
+    assert.deepEqual(rulesOf([entry('release/SAMPLES/MSDOS/CONFIG.SYS', { size })]), ['extension']);
+  });
+
+  test('keeps flagging executables under release/, and text .SYS outside the DOS folders', () => {
+    assert.deepEqual(rulesOf([entry('release/REBEEP.COM')]), ['extension']);
+    assert.deepEqual(rulesOf([entry('docs/CONFIG.SYS')]), ['extension']);
+  });
 });
 
 describe('scanEntries: size', () => {

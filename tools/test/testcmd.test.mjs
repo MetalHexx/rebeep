@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { after, before, describe, test } from 'node:test';
-import { interpreterPrograms, parseResults, toolTestFiles } from '../commands/test.mjs';
+import { interpreterPrograms, parseResults, toolTestFiles } from '../lib/suites.mjs';
 import { repoLayout } from '../lib/paths.mjs';
 import { makeTempDir, removeDir, runRebeep } from './helpers.mjs';
 
@@ -74,7 +74,7 @@ describe('test list', () => {
     assert.match(tools.runs, /node --test/);
     assert.deepEqual(
       suites.map((s) => s.suite),
-      ['tools', 'interpreter', 'all'],
+      ['tools', 'interpreter', 'vm', 'all'],
     );
   });
 

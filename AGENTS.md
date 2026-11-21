@@ -20,9 +20,10 @@ everything to vanilla.
 | `src/` | ReBeep's NASM source and its build targets | [src/AGENTS.md](src/AGENTS.md) |
 | `tests/` | DOS test programs: interpreter tests and the speaker exerciser | [tests/AGENTS.md](tests/AGENTS.md) |
 | `env/` | The 86Box environment definition: tool manifest, VM profiles, DOS boot files | [env/AGENTS.md](env/AGENTS.md) |
+| `release/` | The package's hand-made files: the manual, `INSTALL.BAT`, `RBPLAY.BAT`, sample configs | [release/AGENTS.md](release/AGENTS.md) |
 | `tools/` | The `rebeep` CLI, its libraries and its unit tests | [tools/AGENTS.md](tools/AGENTS.md) |
-| `docs/` | Human docs: getting started, the environment guide, contributing | [docs/AGENTS.md](docs/AGENTS.md) |
-| `.claude/skills/rebeep-dev/` | Agent skill that routes environment, VM, build and CLI tasks | [SKILL.md](.claude/skills/rebeep-dev/SKILL.md) |
+| `docs/` | Human docs: usage, how it works, compatibility, getting started, the environment guide, contributing, releasing | [docs/AGENTS.md](docs/AGENTS.md) |
+| `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI) and `update-docs` (doc health) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) |
 | `.github/` | CI workflow and PR template | — |
 | `build/` | Build output (ignored) | — |
 
@@ -48,7 +49,10 @@ The environment lives **outside the repo**, in `~/.rebeep` (override with `REBEE
 | Run a VM | `rebeep vm run <vm>` |
 | Build | `rebeep build run` (`npm run build`) |
 | Build and put it on every D: | `rebeep build run --deploy` (`npm run deploy`) |
+| Release package (zip, floppy, sums, notes in `build/release/`) | `rebeep release create` |
+| Version and release (show, check, date `[Unreleased]` and set `package.json`) | `rebeep version show` · `check` · `bump <major\|minor\|patch\|X.Y.Z>` |
 | Unit tests | `rebeep test run --suite tools` (`npm test`) |
+| DOS tests: interpreter (DOSBox-X) · unattended VM probes (opens 86Box) | `rebeep test run --suite interpreter` · `rebeep test run --suite vm [--probe P_TSR]` |
 | Save a VM baseline | `rebeep vm snapshot <vm>` |
 | Back to the baseline | `rebeep vm reset <vm>` · `rebeep env reset` |
 | Payload guard | `rebeep repo check` (`npm run check`) |
@@ -62,11 +66,12 @@ flowchart LR
   C --> I[Interpreter<br/>8086-compatible]
   I -- tone events --> O[OPL target<br/>OPL2/OPL3 at 388h]
   I -- untranslatable --> F[Fallback]
-  C -- "forward, bit 1 masked or not" --> H[Real PIT + speaker]
+  C -- "forward, masked or not" --> H[Real PIT + speaker]
   F --> H
 ```
 
-Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM → run `D:\REBEEP\REBEEP`.
+Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM (the dev entry autoloads the new
+`REBEEP.COM`; `REBEEP /U` unloads it) → `D:\REBEEP\RBTEST /A /R` or a `vm` probe.
 
 ## 6. Hard rules
 
@@ -78,7 +83,7 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM → run `D
 - **The game is untrusted.** It runs only inside 86Box or on real hardware, never on the host. The
   CLI writes game files from the zip straight into the D: image and never extracts them.
 - **D: is disposable.** It is regenerated on every deploy. Names on it are 8.3, uppercase.
-- **DOS text files are CRLF.** `.BAT`, `.SYS` and `.TXT` under `env/86box/dos/` (see
+- **DOS text files are CRLF.** `.BAT`, `.SYS` and `.TXT` under `env/86box/dos/` and `release/` (see
   `.gitattributes`).
 - **Zero npm dependencies.** Tooling is Node ≥ 22 built-ins only.
 - **Cross-platform.** Windows, Linux and macOS. Use `path.join`; never hard-code separators or
@@ -89,6 +94,8 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM → run `D
 
 - `rebeep test run --suite tools` runs the CLI's `node --test` suites in `tools/test/`.
 - `rebeep test run --suite interpreter` runs the DOS interpreter tests headless in DOSBox-X.
+- `rebeep test run --suite vm` boots `mirror-freedos` for each `tests/vm/P_*.BAT` probe, unattended
+  (see [tests/vm/AGENTS.md](tests/vm/AGENTS.md)). It opens 86Box and is not part of `--suite all`.
 - Tests build their own fixtures (small zips and images) in a temp folder. No binary fixtures are
   committed.
 - In the VMs: `CHKDSK D:` must be clean after a deploy.
@@ -101,6 +108,10 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM → run `D
   description.
 - PRs target `main` and open as drafts. Fill in the PR template.
 - Update the affected `AGENTS.md`, skill reference and docs in the same PR as the code.
+- Doc rules and the pre-commit `update-docs` run: [section 10](#10-writing-docs).
+- Every user-visible change adds a player-facing line under `## [Unreleased]` in
+  [CHANGELOG.md](CHANGELOG.md), in the same PR. Write for players: "The hotkey now cycles instrument
+  patches", not "refactored the trap handler".
 
 ## 9. Security
 
@@ -109,17 +120,50 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM → run `D
 - Your own MS-DOS disks and games stay in `~/.rebeep/media/` and are never executed on the host.
 - No secrets, tokens or personal paths in the repo.
 
-## 10. Writing AGENTS.md files
+## 10. Writing docs
+
+Run the `update-docs` skill before every commit or PR; it applies these rules to the change. Each
+doc has one job. When two docs need the same fact, one owns it and the others link to it.
+
+| Doc | Job |
+|---|---|
+| `README.md` | The front door: pitch, run it on your DOS PC, then build and test it, links out |
+| `docs/README.md` | The index: one line per doc |
+| `docs/usage.md` | The player reference: options, hotkeys, voices, exit codes, `RBTEST`, troubleshooting. `release/README.TXT` mirrors its tables; change both together |
+| `docs/how-it-works.md` | The design for curious readers and the measured cost (`P_BENCH` numbers) |
+| `docs/compatibility.md` | Tested games and hardware, known conflicts |
+| `docs/getting-started.md` | Zero to first boot on both paths, plus the Verified-on table |
+| `docs/86box-environment.md` | VMs, disks, boot flow, snapshot and reset. Owns troubleshooting |
+| `docs/contributing.md` | Set up, workflow and checks, commits, PR rules, payload rules |
+| `docs/releasing.md` | The release procedure and the checks by a person |
+| `CHANGELOG.md` | Player-facing changes |
+| Folder `AGENTS.md` | That folder's rules and pitfalls |
+| CLI help | The source of truth for commands and options (`rebeep <noun> <verb> --help`) |
+
+**Budgets.** Hold altitude and length. Over budget means compress, link out, or, only for a subfolder
+with its own invariants, split into a nested `AGENTS.md`. Never raise a budget.
+
+| Doc | Altitude | Budget |
+|---|---|---|
+| Folder `AGENTS.md` | Intent, invariants, pitfalls, how to run. Never a code walkthrough | ≤ 60 lines |
+| Root `AGENTS.md` | Map, commands, hard rules, doc rules | ≤ 200 lines |
+| `README.md` | Front door | ≤ 150 lines |
+| `docs/*.md` | Tasks and outcomes for people | ≤ 250 lines per page |
+| Skill `SKILL.md` · skill reference | Routing and procedure; points to `AGENTS.md` | ≤ 100 · ≤ 60 lines |
+| `CHANGELOG.md` | Player language only | Short entries |
 
 **Rules:**
 
-- Every tracked, hand-written top-level folder has an `AGENTS.md`, linked from the map above.
+- Every tracked, hand-written top-level folder has an `AGENTS.md`, linked from the map in section 2.
   `.claude/`, `.github/` and `build/` are exempt.
-- Every file uses the template below, in that order.
-- Keep folder files to about 60 lines. Link instead of copying; each fact lives in one place.
+- Every folder `AGENTS.md` uses the template below, in that order.
+- Scannable and high signal: tables, short bullets, commands you can copy.
 - Write only what the code can't tell you: intent, invariants, pitfalls, how to run.
-- Update the file in the same change as the code, and delete lines that stopped being true.
-- No roadmap, status or marketing. No private paths or references to planning documents.
+- Link, don't copy. Commands, options and paths match the code.
+- Rewrite in place, and delete lines that stopped being true. Never append "Update:" or dated notes;
+  history lives in git and `CHANGELOG.md`.
+- No roadmap, status or marketing. No private paths, no references to planning documents, no agent
+  attribution.
 - A nested `AGENTS.md` is allowed only for a subfolder with its own invariants, and its parent
   links to it.
 

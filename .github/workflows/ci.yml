@@ -45,6 +45,9 @@ jobs:
       - name: Host check
         run: node tools/rebeep.mjs env check
 
+      - name: Version check
+        run: node tools/rebeep.mjs version check
+
       - name: Tools tests (fsck.fat checks the FAT images on Linux)
         run: node tools/rebeep.mjs test run --suite tools
 
@@ -53,6 +56,22 @@ jobs:
 
       - name: Build
         run: node tools/rebeep.mjs build run
+
+      - name: Package dry run
+        run: node tools/rebeep.mjs release create --skip-build
+
+      - name: Check the floppy image (Linux)
+        if: runner.os == 'Linux'
+        run: fsck.fat -n build/release/*-floppy.img
+
+      - name: Interpreter tests (DOSBox-X, Windows only)
+        if: runner.os == 'Windows'
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          node tools/rebeep.mjs tool fetch dosbox-x
+          node tools/rebeep.mjs test run --suite interpreter
 
       - name: Payload guard
         run: node tools/rebeep.mjs repo check --range origin/main..HEAD --strict

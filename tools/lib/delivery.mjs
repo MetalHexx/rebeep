@@ -8,6 +8,9 @@ import { checkEntryName, readZipFile, stripCommonRoot } from './zip.mjs';
 const TEXT_FILE = /\.(bat|sys|txt)$/i;
 const BASE_DIRS = ['ENV', 'JEMM', 'GAMES', 'REBEEP'];
 const DIR_ENTRY_BYTES = 32;
+/** `BOOT.BAT` loads a deployed target only when this file sits next to it. */
+const AUTOLOAD_FLAG = 'AUTOLOAD.FLG';
+const AUTOLOAD_BYTES = Buffer.from('autoload\r\n');
 
 const fileNames = (dir) =>
   fs
@@ -221,6 +224,9 @@ function buildFiles(ctx, warnings) {
       warnings.push(`build target ${target.name} is listed in build.json but missing from build/`);
     } else {
       files.push({ path: where, read: () => fs.readFileSync(source), size: fs.statSync(source).size });
+      if (target.autoload === true) {
+        files.push({ path: `${target.deploy}/${AUTOLOAD_FLAG}`, bytes: AUTOLOAD_BYTES, size: AUTOLOAD_BYTES.length });
+      }
     }
   }
   return files;

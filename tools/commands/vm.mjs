@@ -354,7 +354,13 @@ function launchSettings(ctx) {
   return { bin, prefix };
 }
 
-async function runVm(ctx, name, { install }) {
+/**
+ * Starts a VM in 86Box, detached, and returns `{ vm, pid, cfg, install, floppies }`. `install`
+ * attaches the install media and C: only. Otherwise C: and D: are attached (D: is deployed first
+ * when missing) and, when `floppy` (the path of a floppy image) is given, a copy of it in the VM's
+ * `floppy/` folder as A:. The source image is never written.
+ */
+export async function launchVm(ctx, name, { install = false, floppy } = {}) {
   const profile = loadProfile(ctx.repo, name);
   const vm = ctx.paths.vm(name);
   assertNotRunning(vm, name);
@@ -363,13 +369,21 @@ async function runVm(ctx, name, { install }) {
   const { bin, prefix } = launchSettings(ctx);
 
   let floppies = [];
-  if (install) floppies = installFloppies(ctx, profile);
-  else if (!fs.existsSync(vm.dImg)) deployAndWarn(ctx, name);
+  if (install) {
+    floppies = installFloppies(ctx, profile);
+  } else {
+    if (!fs.existsSync(vm.dImg)) deployAndWarn(ctx, name);
+    if (floppy) floppies = [{ name: path.basename(floppy), source: floppy }];
+  }
 
   fs.mkdirSync(ctx.paths.box86, { recursive: true });
   if (!fs.existsSync(ctx.paths.globalCfg)) fs.writeFileSync(ctx.paths.globalCfg, globalCfgText());
   fs.mkdirSync(vm.floppy, { recursive: true });
-  if (floppies.length) await copyInstallFloppies(ctx, floppies, vm.floppy);
+  if (install) {
+    if (floppies.length) await copyInstallFloppies(ctx, floppies, vm.floppy);
+  } else if (floppies.length) {
+    fs.copyFileSync(floppies[0].source, path.join(vm.floppy, floppies[0].name));
+  }
   const cfg = renderVmCfg(profile, fs.readFileSync(templatePath(ctx.repo, name), 'utf8'), {
     install,
     floppy: floppies[0]?.name,
@@ -620,7 +634,7 @@ export default {
       ],
       destructive: false,
       examples: ['rebeep vm run mirror-msdos', 'rebeep vm run mirror-msdos --install'],
-      run: (ctx) => runVm(ctx, ctx.args.vm, { install: ctx.opts.install }),
+      run: (ctx) => launchVm(ctx, ctx.args.vm, { install: ctx.opts.install }),
       render: reported,
     },
     {
