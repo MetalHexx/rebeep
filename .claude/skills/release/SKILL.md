@@ -25,11 +25,16 @@ says what the agent does at each step.
 
 ```sh
 git fetch origin
+git branch --show-current; gh pr list --head "$(git branch --show-current)" --state open
 git log --no-merges --format='%h %s%n%b' origin/main..HEAD     # every commit to be released
 git log --no-merges --format='%h %s' origin/main..HEAD -- '*.md' release/README.TXT
 rebeep version show
 ```
 
+- **Where you are.** On `main`? Branch first. A PR already open from this branch is the release
+  PR: update it, never open a second. Its version already dated in `CHANGELOG.md`? The release was
+  prepared earlier: the version is set (skip step 2), check the entry in step 3 rather than rewrite
+  it, and skip the bump in step 4.
 - Sort the commits by what a player would notice: new features, changes, fixes, removals. `test`,
   `ci`, `chore`, `refactor` and lab-only commits stay out of the changelog.
 - **Docs check.** The second `git log` lists the commits that touched docs. If a `feat` or `fix`
@@ -81,10 +86,7 @@ again.
 
 ## 7. After the merge
 
-```sh
-gh run list --workflow release.yml --limit 1     # then: gh run watch <id>
-gh release view vX.Y.Z
-```
+Watch it with `gh run list --workflow release.yml --limit 1`, then `gh run watch <id>`.
 
 - Compare the release's `SHA256SUMS.txt` with `build/release/SHA256SUMS.txt`. A match means the
   downloads are the bytes that were tested.
@@ -93,7 +95,5 @@ gh release view vX.Y.Z
 - Half done? Re-run the workflow on `main` (`gh workflow run release.yml --ref main`); it never
   makes a second tag. Broken? Make a patch release. Never move or delete a published tag.
 
-## Hotfix
-
-Branch from `main`, fix, then steps 1 to 7 with a patch version. In step 5, run the checks the fix
-touches, and the real machine.
+**Hotfix:** branch from `main`, fix, then steps 1 to 7 with a patch version. In step 5, run the
+checks the fix touches, and the real machine.
