@@ -38,3 +38,6 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
   ([known conflicts](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/compatibility.md#known-conflicts)).
 - Grand Prix Circuit hangs on FreeDOS 1.4, with or without ReBeep
   ([Grand Prix Circuit](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/compatibility.md#grand-prix-circuit)).
+- On a card with only an OPL2, such as an AdLib, the faithful voice hasn't been checked by ear. If
+  it sounds wrong, pick a patch, such as `REBEEP /P:1`
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).

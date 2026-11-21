@@ -144,4 +144,4 @@ are indicative, not a real machine's.
 | Profile | `OUT 61h` loaded | `OUT 61h` after `/OFF` |
 |---|---|---|
 | `mirror-freedos` (86Box, Pentium MMX 233) | 6.9 µs | 0.9 µs |
-| `slow-386sx` (86Box, 386SX/16) | _filled in at release time_ | _filled in at release time_ |
+| `slow-386sx` (86Box, 386SX/16) | Not measured yet | Not measured yet |

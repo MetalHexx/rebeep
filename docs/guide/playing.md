@@ -33,6 +33,9 @@ REBEEP /P:2
 | `/P:3` | Brass |
 | `/P:4` | Bell |
 
+On a card with only an OPL2, such as an AdLib, `/F` is an FM copy of the square wave. It hasn't
+been checked by ear yet: if it sounds wrong, pick a patch.
+
 On a loaded copy, an option changes only what it names, so the other settings stay as they are.
 
 ## Set the volume
