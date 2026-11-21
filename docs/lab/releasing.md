@@ -83,14 +83,14 @@ fixed in a patch release.
 
 ## Working with an AI agent
 
-The repo ships two skills for AI coding assistants, such as Claude Code, which picks them up from
+The repo ships three skills for AI coding assistants, such as Claude Code, which picks them up from
 `.claude/skills/`. Agents start at [AGENTS.md](../../AGENTS.md).
 
 | Skill | What it does |
 |---|---|
-| [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build, releases |
+| [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build |
 | [`update-docs`](../../.claude/skills/update-docs/SKILL.md) | Keeps the docs and `AGENTS.md` files true before each commit |
+| [`release`](../../.claude/skills/release/SKILL.md) | Cuts a release: the changelog from the branch's commits, your review of the notes, the checks, the merge and the publish |
 
-For this page, the `rebeep-dev` [release
-reference](../../.claude/skills/rebeep-dev/references/release.md) covers the package and the release
-commands.
+For this page, ask the agent to use the `release` skill. It follows the steps above, and asks you to
+review the release notes before anything merges.

@@ -15,7 +15,7 @@ commands and hard rules. Read it first, then the one reference that matches the 
 | Build, deploy to D:, test | [references/build-and-test.md](references/build-and-test.md) |
 | See, fetch or add files on a VM's D: (logs, results, small files) | [references/d-files.md](references/d-files.md) |
 | Log what a game makes ReBeep do (REBEEPD, the trace build) and read the log | [references/trace.md](references/trace.md) |
-| Build the release package: zip, floppy image, checksums, notes | [references/release.md](references/release.md) |
+| Cut a release, or build the release package: zip, floppy image, checksums, notes | The [release skill](../release/SKILL.md) |
 | Add or change a CLI noun, verb or option | [references/cli.md](references/cli.md) |
 | Update docs → `update-docs` skill | [update-docs](../update-docs/SKILL.md) |
 

@@ -23,7 +23,7 @@ everything to vanilla.
 | `release/` | The package's hand-made files: the manual, `INSTALL.BAT`, `RBPLAY.BAT`, sample configs | [release/AGENTS.md](release/AGENTS.md) |
 | `tools/` | The `rebeep` CLI, its libraries and its unit tests | [tools/AGENTS.md](tools/AGENTS.md) |
 | `docs/` | Human docs in three levels: `guide/` for players, `architecture/` for how it works, `lab/` for contributors | [docs/AGENTS.md](docs/AGENTS.md) |
-| `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI) and `update-docs` (doc health) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) |
+| `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI), `update-docs` (doc health) and `release` (cutting a release, the changelog rules) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) · [release](.claude/skills/release/SKILL.md) |
 | `.github/` | CI workflow and PR template | — |
 | `build/` | Build output (ignored) | — |
 
@@ -117,7 +117,7 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM (the dev e
 - Update the affected `AGENTS.md`, skill reference and docs in the same PR as the code.
 - Doc rules and the pre-commit `update-docs` run: [section 10](#10-writing-docs).
 - Every user-visible change adds a line under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md), in
-  the same PR, in the shape [section 10](#10-writing-docs) sets.
+  the same PR, following the [changelog rules](.claude/skills/release/references/changelog.md).
 
 ## 9. Security
 
@@ -169,12 +169,8 @@ with its own invariants, split into a nested `AGENTS.md`. Never raise a budget.
 - A nested `AGENTS.md` is allowed only for a subfolder with its own invariants, and its parent
   links to it.
 
-**`CHANGELOG.md`.** Every release reads the same, whoever writes it:
-- `###` sections in this order, only those with lines: Added, Changed, Fixed, Removed, Known issues.
-- One bullet per thing a player notices, opening with it in bold. Say what it does for them:
-  "**Hotkeys** now cycle the patches", never "refactored the trap handler".
-- Each bullet ends with a link to the doc that covers it, as a full
-  `https://github.com/MetalHexx/rebeep/blob/main/...` URL, so it works in the release notes too.
+**`CHANGELOG.md`** follows the [changelog rules](.claude/skills/release/references/changelog.md): one
+shape for every release, high level and player-facing, each bullet linked to its doc.
 
 **Template:**
 
