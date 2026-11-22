@@ -166,11 +166,13 @@ describe('checkVersions on a fixture repo', () => {
     setup();
     write('docs/page.md', 'Version 1.2.0 ships.\nBuild 11.2.0 and 1.2.01 and 1.2.0.5 are different.\n');
     write('src/v.asm', '%define REBEEP_VERSION "x"\n');
+    write('site/index.html', '<p class="release__version">v1.2.0</p>\n');
+    write('site/css/site.css', '.a { width: 11.2.0px } /* 1.2.0 */\n');
     write('tools/ignored.txt', 'mentions 1.2.0 outside the scanned folders\n');
     track();
     assert.deepEqual(
       checkVersions(repo()).map((p) => p.split(': ')[0]).sort(),
-      ['docs/page.md:1', 'src/v.asm:1'],
+      ['docs/page.md:1', 'site/css/site.css:1', 'site/index.html:1', 'src/v.asm:1'],
     );
   });
 });

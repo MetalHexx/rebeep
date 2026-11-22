@@ -7,7 +7,7 @@ const SEMVER = /^(\d+)\.(\d+)\.(\d+)$/;
 const UNRELEASED_HEADING = /^## \[Unreleased\]\s*$/;
 const DATED_HEADING = /^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})\s*$/;
 const LINK_REFERENCE = /^\[[^\]]+\]:\s/;
-const SCANNED = ['src', 'tests', 'release', 'docs', 'README.md'];
+const SCANNED = ['src', 'tests', 'release', 'docs', 'site', 'README.md'];
 
 /** `{ major, minor, patch }` for a plain `X.Y.Z`, or null for anything else. */
 export function parseSemver(s) {

@@ -1,5 +1,6 @@
-import { UsageError } from '../lib/cli.mjs';
+import { CliError, UsageError } from '../lib/cli.mjs';
 import { buildSite, githubApi, readLatestRelease, readRepoSlug, requireSite } from '../lib/site.mjs';
+import { checkSiteDir } from '../lib/sitecheck.mjs';
 import { DEFAULT_PORT, startSiteServer } from '../lib/siteserve.mjs';
 
 const OFFLINE_OPTION = {
@@ -79,6 +80,24 @@ async function siteRun(ctx) {
   return { url: server.url, ...stampData(server, lookup) };
 }
 
+function printReport(log, report) {
+  for (const check of report.checks) {
+    log.info(`${check.ok ? 'PASS' : 'FAIL'}  ${check.title}`);
+    for (const problem of check.problems) log.info(`        - ${problem}`);
+  }
+}
+
+function siteCheck(ctx) {
+  const report = checkSiteDir(ctx.repo.siteBuild);
+  if (report.ok) return report;
+  const failed = report.checks.filter((c) => !c.ok).length;
+  if (!ctx.json) printReport(ctx.log, report);
+  throw new CliError(`${failed} of ${report.checks.length} site checks failed`, {
+    hint: 'Fix site/, then run `rebeep site create` and `rebeep site check` again.',
+    data: report,
+  });
+}
+
 export default {
   name: 'site',
   summary: 'The ReBeep product page',
@@ -115,6 +134,21 @@ export default {
       examples: ['rebeep site run', 'rebeep site run --port 9000 --offline'],
       run: siteRun,
       render: (_data, log) => log.info('Preview stopped'),
+    },
+    {
+      name: 'check',
+      summary: 'Check the built page in build/site/',
+      description:
+        'Checks the output of `site create` and reports every failure: file sizes and the 400 KB budget, local links that resolve, https only, img alt text, one h1, a Content-Security-Policy, no dev-server injection, the release markers, lang, title and description, and noopener on external target="_blank" links. Exits 1 if any check fails.',
+      args: [],
+      options: [],
+      destructive: false,
+      examples: ['rebeep site create --offline && rebeep site check'],
+      run: siteCheck,
+      render: (data, log) => {
+        printReport(log, data);
+        log.ok(`${data.checks.length} checks passed (${data.files} files, ${Math.round(data.bytes / 1024)} KB)`);
+      },
     },
   ],
 };
