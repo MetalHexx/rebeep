@@ -4,6 +4,8 @@
 
 **Hear your beeper-only DOS games through a real sound card.**
 
+**[metalhexx.github.io/rebeep](https://metalhexx.github.io/rebeep/)**
+
 [![CI](https://github.com/MetalHexx/rebeep/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MetalHexx/rebeep/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/MetalHexx/rebeep)](https://github.com/MetalHexx/rebeep/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -12,8 +14,6 @@
 </div>
 
 ---
-
-**[The ReBeep website](https://metalhexx.github.io/rebeep/)** has the short version, with the latest download.
 
 Plenty of 1980s DOS games can only beep: one square wave, through a tiny speaker inside the case.
 Your Sound Blaster sits there silent. ReBeep is a small DOS program that catches those beeps and
