@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/4wkPZnCfz)
 
-**[metalhexx.github.io/rebeep](https://metalhexx.github.io/rebeep/)**
+**[Visit the ReBeep website →](https://metalhexx.github.io/rebeep/)**
 
 </div>
 
