@@ -81,6 +81,10 @@ its `SHA256SUMS.txt` matches the candidate's, they are the bytes you tested. Eit
 zip or the floppy, install it by following `README.TXT`, and check that ReBeep loads. A failure is
 fixed in a patch release.
 
+Publishing also republishes the product page: the `pages` workflow runs after `release` completes on
+`main` and stamps the new version into it. Open the live site, `https://metalhexx.github.io/rebeep/`,
+and confirm it shows the new version and its download links.
+
 ## Working with an AI agent
 
 The repo ships three skills for AI coding assistants, such as Claude Code, which picks them up from

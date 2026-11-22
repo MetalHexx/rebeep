@@ -13,6 +13,8 @@
 
 ---
 
+**[The ReBeep website](https://metalhexx.github.io/rebeep/)** has the short version, with the latest download.
+
 Plenty of 1980s DOS games can only beep: one square wave, through a tiny speaker inside the case.
 Your Sound Blaster sits there silent. ReBeep is a small DOS program that catches those beeps and
 plays them on the card's FM chip instead.
@@ -107,7 +109,7 @@ pinned versions, builds the DOS VMs, and puts each new build on them. Start at
 
 ## Roadmap
 
-What's next, and the ideas being considered: [roadmap](docs/roadmap.md).
+What's here now, and the ideas being considered: [roadmap](docs/roadmap.md).
 
 ## Contributing
 
