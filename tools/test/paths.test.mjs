@@ -96,6 +96,8 @@ test('repoLayout gives the documented repo paths', () => {
     src: path.join(root, 'src'),
     targets: path.join(root, 'src', 'targets.json'),
     build: path.join(root, 'build'),
+    site: path.join(root, 'site'),
+    siteBuild: path.join(root, 'build', 'site'),
     tests: path.join(root, 'tests'),
     env: path.join(root, 'env', '86box'),
     manifest: path.join(root, 'env', '86box', 'manifest.json'),

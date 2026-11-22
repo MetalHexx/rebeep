@@ -9,6 +9,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/4wkPZnCfz)
 
+**[Visit the ReBeep website →](https://metalhexx.github.io/rebeep/)**
+
 </div>
 
 ---
@@ -107,7 +109,7 @@ pinned versions, builds the DOS VMs, and puts each new build on them. Start at
 
 ## Roadmap
 
-What's next, and the ideas being considered: [roadmap](docs/roadmap.md).
+What's here now, and the ideas being considered: [roadmap](docs/roadmap.md).
 
 ## Contributing
 

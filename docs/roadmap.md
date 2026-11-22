@@ -3,14 +3,14 @@
 Where ReBeep is headed. Nothing here is a promise or a date: ideas are talked over on
 [Discord](https://discord.gg/4wkPZnCfz) before anyone builds them.
 
-## Now: the first release
+## Now
 
-On a 386 or better running Jemm, a real-mode game's PC-speaker sound plays on a Sound Blaster's
-OPL2 or OPL3 FM chip. It is proven on Grand Prix Circuit, on a real PC and in 86Box.
+**The first release.** On a 386 or better running Jemm, a real-mode game's PC-speaker sound plays on
+a Sound Blaster's OPL2 or OPL3 FM chip. It is proven on Grand Prix Circuit, on a real PC and in
+86Box.
 
-## Next
-
-- **A project website** on GitHub Pages: what ReBeep is, what it runs on, and how to get it.
+**A project website**, on GitHub Pages at <https://metalhexx.github.io/rebeep/>: what ReBeep is,
+what it runs on, and how to get it. It shows the latest release on its own.
 
 ## Ideas being considered
 
@@ -28,6 +28,8 @@ OPL2 or OPL3 FM chip. It is proven on Grand Prix Circuit, on a real PC and in 86
 | MIDI and other sound chips | Speaker music on a MIDI synth, or on a Tandy-style tone chip |
 | Other memory managers | EMM386 or QEMM, for setups that can't switch to Jemm |
 | Arranged soundtracks | Recognizing a game's tune and playing a full arrangement in its place |
+| A patch editor | Shape your own FM voices instead of picking from the built-in set |
+| Custom sound effects | Replace or add effects, not only tunes |
 
 ## How you can help
 

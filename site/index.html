@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; font-src 'self'; frame-src https://www.youtube-nocookie.com; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>ReBeep · Hear your beeper-only DOS games through a real sound card</title>
+  <meta name="description" content="ReBeep is a small DOS program that catches PC-speaker beeps and plays them on your Sound Blaster's FM chip instead. Free and open source.">
+  <meta name="theme-color" content="#101010">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="ReBeep · Your beeper-only DOS games, on a real sound card">
+  <meta property="og:description" content="A small DOS program that catches PC-speaker beeps and plays them on the Sound Blaster's FM chip.">
+  <meta property="og:url" content="https://metalhexx.github.io/rebeep/">
+  <meta property="og:image" content="https://metalhexx.github.io/rebeep/img/og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The ReBeep frog at a retro PC, beside the headline: Hear your beeper-only DOS games through a real sound card.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <link rel="preload" href="fonts/Web437_IBM_VGA_8x16.woff" as="font" type="font/woff" crossorigin>
+  <link rel="stylesheet" href="css/site.css">
+  <script src="js/site.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <div class="wrap topbar__in">
+      <a class="brand" href="./" aria-label="ReBeep home">
+        <img class="brand__mark" src="img/favicon-32.png" alt="" width="32" height="32">
+        <span class="brand__word">ReBeep</span>
+      </a>
+      <nav class="topnav" aria-label="Project">
+        <a class="topnav__link topnav__link--wide" href="https://github.com/MetalHexx/rebeep/blob/main/docs/guide/getting-started.md">Docs</a>
+        <a class="topnav__link topnav__link--wide" href="https://github.com/MetalHexx/rebeep/blob/main/docs/roadmap.md">Roadmap</a>
+        <a class="topnav__link" href="https://github.com/MetalHexx/rebeep">GitHub</a>
+        <a class="topnav__link" href="https://discord.gg/4wkPZnCfz">Discord</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ============ HERO ============ -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__dots" aria-hidden="true"></div>
+      <div class="wrap hero__grid">
+        <div class="hero__copy">
+          <p class="eyebrow eyebrow--hero"><span class="pip" aria-hidden="true"></span>A DOS TSR for PC-speaker games</p>
+          <h1 class="hero__title" id="hero-title">Hear your <span class="nowrap">beeper-only</span> DOS games through a <span class="glow-text">real sound card.</span></h1>
+          <p class="hero__lede">Plenty of 1980s DOS games can only beep: one square wave, through a tiny speaker inside the case. ReBeep catches those beeps and plays them on your Sound Blaster's FM chip instead.</p>
+
+          <div class="hero__actions">
+            <a class="btn btn--primary" href="https://github.com/MetalHexx/rebeep/releases/latest">
+              <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v8h2v-1h1v1h1v1h-1v1h-1v1h-1v1H7v-1H6v-1H5v-1H4V9h1V8h1v1h1zM2 13h12v2H2z"/></svg>
+              <span>Download ReBeep</span>
+            </a>
+            <a class="link-arrow" href="https://github.com/MetalHexx/rebeep/blob/main/docs/guide/getting-started.md">Getting started <span aria-hidden="true">→</span></a>
+          </div>
+
+          <div class="hero__release">
+            <span class="hero__release-label">Latest</span>
+            <!-- release:start -->
+            <p class="release" data-release="latest">
+              <a class="release__link" href="https://github.com/MetalHexx/rebeep/releases/latest">See the latest release on GitHub</a>
+            </p>
+            <!-- release:end -->
+          </div>
+        </div>
+
+        <div class="hero__art">
+          <div class="frog">
+            <div class="frog__halo" aria-hidden="true"></div>
+            <picture>
+              <source srcset="img/rebeep-logo-640.webp" type="image/webp">
+              <img class="frog__img" src="img/rebeep-logo-640.png" width="640" height="640" alt="A green frog at a retro PC, saying ReBeep!" fetchpriority="high">
+            </picture>
+            <div class="frog__floor" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HOW IT WORKS ============ -->
+    <section class="section section--how" id="how" aria-labelledby="how-title">
+      <div class="wrap">
+        <header class="sechead sechead--split" data-reveal>
+          <div>
+            <p class="eyebrow"><span class="eyebrow__n">01</span>How it works</p>
+            <h2 class="sechead__title" id="how-title">From one square wave to a whole FM voice</h2>
+          </div>
+          <p class="sechead__lede">ReBeep sits between the game and the hardware. The game is never patched: it beeps as it always did, and the note comes out of the FM chip.</p>
+        </header>
+
+        <figure class="flow" data-reveal>
+          <div class="flow__stage">
+          <!-- Desktop: left to right -->
+          <svg class="flow__svg flow__svg--h" viewBox="0 0 1200 330" role="img" aria-labelledby="flow-h-title flow-h-desc">
+            <title id="flow-h-title">How ReBeep works</title>
+            <desc id="flow-h-desc">The game writes to ports 42h, 43h and 61h. Jemm's QPIEMU module catches those writes and hands them to ReBeep, which plays the note on the OPL2 or OPL3 FM chip at 388h. A dashed branch goes to the PC speaker, as the fallback.</desc>
+            <defs>
+              <filter id="glow-h" x="-20%" y="-60%" width="140%" height="220%">
+                <feGaussianBlur stdDeviation="4" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <clipPath id="clip-w1"><rect x="200" y="95" width="130" height="80"/></clipPath>
+              <clipPath id="clip-w2"><rect x="530" y="95" width="130" height="80"/></clipPath>
+              <clipPath id="clip-w3"><rect x="840" y="95" width="130" height="80"/></clipPath>
+              <linearGradient id="fade-l" x1="0" x2="1"><stop offset="0" stop-color="#101010"/><stop offset="1" stop-color="#101010" stop-opacity="0"/></linearGradient>
+            </defs>
+
+            <!-- quiet speaker branch -->
+            <g class="flow__fallback">
+              <path d="M750 180 V292 H962" fill="none" stroke-dasharray="5 6"/>
+              <path d="M956 286 l8 6 -8 6" fill="none"/>
+              <rect x="970" y="270" width="210" height="44" rx="10"/>
+              <text x="1075" y="297" text-anchor="middle">PC speaker</text>
+            </g>
+
+            <!-- wires: waves -->
+            <g clip-path="url(#clip-w1)">
+              <g transform="translate(200 135)"><path class="wave wave--sq" d="M0 13 H14 V-13 H28 V13 H42 V-13 H56 V13 H70 V-13 H84 V13 H98 V-13 H112 V13 H126 V-13 H140 V13 H154 V-13 H168 V13 H182 V-13 H196 V13"/></g>
+            </g>
+            <g clip-path="url(#clip-w2)">
+              <g transform="translate(530 135)"><path class="wave wave--sq wave--late" d="M0 13 H14 V-13 H28 V13 H42 V-13 H56 V13 H70 V-13 H84 V13 H98 V-13 H112 V13 H126 V-13 H140 V13 H154 V-13 H168 V13 H182 V-13 H196 V13"/></g>
+            </g>
+            <g clip-path="url(#clip-w3)">
+              <g transform="translate(840 135)"><path class="wave wave--fm" filter="url(#glow-h)" d="M0 0.0 L2 -11.3 L4 -17.8 L6 -17.7 L8 -12.9 L10 -7.1 L12 -3.5 L14 -2.7 L16 -2.8 L18 -1.7 L20 1.4 L22 4.9 L24 6.4 L26 4.5 L28 0.0 L30 -4.5 L32 -6.4 L34 -4.9 L36 -1.4 L38 1.7 L40 2.8 L42 2.7 L44 3.5 L46 7.1 L48 12.9 L50 17.7 L52 17.8 L54 11.3 L56 0.0 L58 -11.3 L60 -17.8 L62 -17.7 L64 -12.9 L66 -7.1 L68 -3.5 L70 -2.7 L72 -2.8 L74 -1.7 L76 1.4 L78 4.9 L80 6.4 L82 4.5 L84 0.0 L86 -4.5 L88 -6.4 L90 -4.9 L92 -1.4 L94 1.7 L96 2.8 L98 2.7 L100 3.5 L102 7.1 L104 12.9 L106 17.7 L108 17.8 L110 11.3 L112 0.0 L114 -11.3 L116 -17.8 L118 -17.7 L120 -12.9 L122 -7.1 L124 -3.5 L126 -2.7 L128 -2.8 L130 -1.7 L132 1.4 L134 4.9 L136 6.4 L138 4.5 L140 0.0 L142 -4.5 L144 -6.4 L146 -4.9 L148 -1.4 L150 1.7 L152 2.8 L154 2.7 L156 3.5 L158 7.1 L160 12.9 L162 17.7 L164 17.8 L166 11.3 L168 0.0 L170 -11.3 L172 -17.8 L174 -17.7 L176 -12.9 L178 -7.1 L180 -3.5 L182 -2.7 L184 -2.8 L186 -1.7 L188 1.4 L190 4.9 L192 6.4 L194 4.5 L196 0.0 L198 -4.5 L200 -6.4 L202 -4.9 L204 -1.4 L206 1.7 L208 2.8 L210 2.7 L212 3.5 L214 7.1 L216 12.9 L218 17.7 L220 17.8 L222 11.3 L224 0.0"/></g>
+            </g>
+
+            <text class="flow__port" x="265" y="74" text-anchor="middle">OUT 42h·43h·61h</text>
+            <text class="flow__wlabel" x="265" y="206" text-anchor="middle">square wave</text>
+            <text class="flow__wlabel flow__wlabel--fm" x="905" y="206" text-anchor="middle">FM voice</text>
+
+            <!-- nodes -->
+            <g class="node">
+              <rect x="20" y="90" width="180" height="90" rx="14"/>
+              <text class="node__label" x="110" y="132" text-anchor="middle">Game</text>
+              <text class="node__sub" x="110" y="156" text-anchor="middle">beeps the speaker</text>
+            </g>
+            <g class="node">
+              <rect x="330" y="90" width="200" height="90" rx="14"/>
+              <text class="node__label" x="430" y="132" text-anchor="middle">Jemm</text>
+              <text class="node__sub" x="430" y="156" text-anchor="middle">+ QPIEMU trap</text>
+            </g>
+            <g class="node node--hero">
+              <rect x="660" y="90" width="180" height="90" rx="14"/>
+              <text class="node__label" x="750" y="132" text-anchor="middle">ReBeep</text>
+              <text class="node__sub" x="750" y="156" text-anchor="middle">finds the note</text>
+              <circle class="node__led" cx="822" cy="106" r="4"/>
+            </g>
+            <g class="node node--chip">
+              <rect x="970" y="90" width="210" height="90" rx="14"/>
+              <g class="node__pins">
+                <rect x="992" y="84" width="6" height="6"/><rect x="1012" y="84" width="6" height="6"/><rect x="1032" y="84" width="6" height="6"/><rect x="1132" y="84" width="6" height="6"/><rect x="1152" y="84" width="6" height="6"/>
+                <rect x="992" y="180" width="6" height="6"/><rect x="1012" y="180" width="6" height="6"/><rect x="1032" y="180" width="6" height="6"/><rect x="1052" y="180" width="6" height="6"/><rect x="1072" y="180" width="6" height="6"/><rect x="1092" y="180" width="6" height="6"/><rect x="1112" y="180" width="6" height="6"/><rect x="1132" y="180" width="6" height="6"/><rect x="1152" y="180" width="6" height="6"/>
+              </g>
+              <text class="node__label" x="1075" y="132" text-anchor="middle">OPL2/OPL3</text>
+              <text class="node__sub" x="1075" y="156" text-anchor="middle">FM chip at 388h</text>
+            </g>
+
+            <!-- notes rising from the chip -->
+            <g class="notes" aria-hidden="true">
+              <g transform="translate(1056 58) scale(1.6)"><path class="note note--1" d="M4 0h2v11H4zM6 1h3v1h1v1h1v3h-1V4H9V3H6zM1 9h4v1h1v3H5v1H1v-1H0v-3h1z"/></g>
+              <g transform="translate(1092 52) scale(1.6)"><path class="note note--2" d="M4 0h2v11H4zM6 1h3v1h1v1h1v3h-1V4H9V3H6zM1 9h4v1h1v3H5v1H1v-1H0v-3h1z"/></g>
+              <g transform="translate(1122 62) scale(1.6)"><path class="note note--3" d="M4 0h2v11H4zM6 1h3v1h1v1h1v3h-1V4H9V3H6zM1 9h4v1h1v3H5v1H1v-1H0v-3h1z"/></g>
+            </g>
+          </svg>
+
+          <!-- Phone: top to bottom -->
+          <svg class="flow__svg flow__svg--v" viewBox="0 0 360 770" role="img" aria-labelledby="flow-v-title flow-v-desc">
+            <title id="flow-v-title">How ReBeep works</title>
+            <desc id="flow-v-desc">The game writes to ports 42h, 43h and 61h. Jemm's QPIEMU module catches those writes and hands them to ReBeep, which plays the note on the OPL2 or OPL3 FM chip at 388h. A dashed branch goes to the PC speaker, as the fallback.</desc>
+            <defs>
+              <filter id="glow-v" x="-60%" y="-20%" width="220%" height="140%">
+                <feGaussianBlur stdDeviation="4" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <clipPath id="clip-v1"><rect x="0" y="-30" width="100" height="60"/></clipPath>
+            </defs>
+
+            <g class="flow__fallback">
+              <path d="M290 410 H332 V724 H258" fill="none" stroke-dasharray="5 6"/>
+              <path d="M264 718 l-8 6 8 6" fill="none"/>
+              <rect x="110" y="702" width="140" height="44" rx="10"/>
+              <text x="180" y="729" text-anchor="middle">PC speaker</text>
+            </g>
+
+            <g transform="translate(180 96) rotate(90)"><g clip-path="url(#clip-v1)"><path class="wave wave--sq" d="M0 13 H14 V-13 H28 V13 H42 V-13 H56 V13 H70 V-13 H84 V13 H98 V-13 H112 V13 H126 V-13 H140 V13 H154 V-13 H168 V13 H182 V-13 H196 V13"/></g></g>
+            <g transform="translate(180 272) rotate(90)"><g clip-path="url(#clip-v1)"><path class="wave wave--sq wave--late" d="M0 13 H14 V-13 H28 V13 H42 V-13 H56 V13 H70 V-13 H84 V13 H98 V-13 H112 V13 H126 V-13 H140 V13 H154 V-13 H168 V13 H182 V-13 H196 V13"/></g></g>
+            <g transform="translate(180 448) rotate(90)"><g clip-path="url(#clip-v1)"><path class="wave wave--fm" filter="url(#glow-v)" d="M0 0.0 L2 -11.3 L4 -17.8 L6 -17.7 L8 -12.9 L10 -7.1 L12 -3.5 L14 -2.7 L16 -2.8 L18 -1.7 L20 1.4 L22 4.9 L24 6.4 L26 4.5 L28 0.0 L30 -4.5 L32 -6.4 L34 -4.9 L36 -1.4 L38 1.7 L40 2.8 L42 2.7 L44 3.5 L46 7.1 L48 12.9 L50 17.7 L52 17.8 L54 11.3 L56 0.0 L58 -11.3 L60 -17.8 L62 -17.7 L64 -12.9 L66 -7.1 L68 -3.5 L70 -2.7 L72 -2.8 L74 -1.7 L76 1.4 L78 4.9 L80 6.4 L82 4.5 L84 0.0 L86 -4.5 L88 -6.4 L90 -4.9 L92 -1.4 L94 1.7 L96 2.8 L98 2.7 L100 3.5 L102 7.1 L104 12.9 L106 17.7 L108 17.8 L110 11.3 L112 0.0 L114 -11.3 L116 -17.8 L118 -17.7 L120 -12.9 L122 -7.1 L124 -3.5 L126 -2.7 L128 -2.8 L130 -1.7 L132 1.4 L134 4.9 L136 6.4 L138 4.5 L140 0.0 L142 -4.5 L144 -6.4 L146 -4.9 L148 -1.4 L150 1.7 L152 2.8 L154 2.7 L156 3.5 L158 7.1 L160 12.9 L162 17.7 L164 17.8 L166 11.3 L168 0.0"/></g></g>
+
+            <text class="flow__port" x="198" y="150">OUT 42h·43h·61h</text>
+            <text class="flow__wlabel" x="160" y="326" text-anchor="end">square wave</text>
+            <text class="flow__wlabel flow__wlabel--fm" x="160" y="502" text-anchor="end">FM voice</text>
+
+            <g class="node">
+              <rect x="70" y="20" width="220" height="76" rx="14"/>
+              <text class="node__label" x="180" y="52" text-anchor="middle">Game</text>
+              <text class="node__sub" x="180" y="81" text-anchor="middle">beeps the speaker</text>
+            </g>
+            <g class="node">
+              <rect x="70" y="196" width="220" height="76" rx="14"/>
+              <text class="node__label" x="180" y="228" text-anchor="middle">Jemm</text>
+              <text class="node__sub" x="180" y="257" text-anchor="middle">+ QPIEMU trap</text>
+            </g>
+            <g class="node node--hero">
+              <rect x="70" y="372" width="220" height="76" rx="14"/>
+              <text class="node__label" x="180" y="404" text-anchor="middle">ReBeep</text>
+              <text class="node__sub" x="180" y="433" text-anchor="middle">finds the note</text>
+              <circle class="node__led" cx="272" cy="388" r="4"/>
+            </g>
+            <g class="node node--chip">
+              <rect x="70" y="548" width="220" height="76" rx="14"/>
+              <g class="node__pins">
+                <rect x="64" y="566" width="6" height="6"/><rect x="64" y="584" width="6" height="6"/><rect x="64" y="602" width="6" height="6"/>
+                <rect x="290" y="566" width="6" height="6"/><rect x="290" y="584" width="6" height="6"/><rect x="290" y="602" width="6" height="6"/>
+              </g>
+              <text class="node__label" x="180" y="580" text-anchor="middle">OPL2/OPL3</text>
+              <text class="node__sub" x="180" y="609" text-anchor="middle">FM chip at 388h</text>
+            </g>
+            <g class="notes notes--side" aria-hidden="true">
+              <g transform="translate(40 562) scale(1.6)"><path class="note note--1" d="M4 0h2v11H4zM6 1h3v1h1v1h1v3h-1V4H9V3H6zM1 9h4v1h1v3H5v1H1v-1H0v-3h1z"/></g>
+              <g transform="translate(22 584) scale(1.6)"><path class="note note--2" d="M4 0h2v11H4zM6 1h3v1h1v1h1v3h-1V4H9V3H6zM1 9h4v1h1v3H5v1H1v-1H0v-3h1z"/></g>
+              <g transform="translate(42 604) scale(1.6)"><path class="note note--3" d="M4 0h2v11H4zM6 1h3v1h1v1h1v3h-1V4H9V3H6zM1 9h4v1h1v3H5v1H1v-1H0v-3h1z"/></g>
+            </g>
+          </svg>
+          </div>
+
+          <figcaption class="steps3">
+            <p class="steps3__item"><span class="steps3__n">1</span><span><b>The game beeps.</b> It sets a pitch on the PC's timer chip and switches the speaker on.</span></p>
+            <p class="steps3__item"><span class="steps3__n">2</span><span><b>Jemm catches it.</b> Its QPIEMU module lets ReBeep catch those port writes as they happen.</span></p>
+            <p class="steps3__item"><span class="steps3__n">3</span><span><b>The FM chip plays it.</b> ReBeep works out the note the game asked for and plays it on the card.</span></p>
+          </figcaption>
+        </figure>
+
+        <div class="flow__foot" data-reveal>
+          <button class="btn btn--ghost flow__pause" type="button" aria-pressed="false" hidden>
+            <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path class="i-pause" fill="currentColor" d="M3 2h4v12H3zM9 2h4v12H9z"/><path class="i-play" fill="currentColor" d="M4 2h2v1h2v1h2v1h2v1h2v4h-2v1h-2v1H8v1H6v1H4z"/></svg>
+            <span class="flow__pause-label">Pause animation</span>
+          </button>
+          <a class="link-arrow" href="https://github.com/MetalHexx/rebeep/blob/main/docs/architecture/how-it-works.md">How ReBeep works, in detail <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VIDEO ============ -->
+    <section class="section section--video" id="demo" aria-labelledby="demo-title">
+      <div class="wrap">
+        <header class="sechead sechead--center" data-reveal>
+          <p class="eyebrow"><span class="eyebrow__n">02</span>Hear it</p>
+          <h2 class="sechead__title" id="demo-title">Hear the difference</h2>
+          <p class="sechead__lede">The same moment of the same game, through the PC speaker and then the Sound Blaster.</p>
+        </header>
+
+        <div class="monitor" data-reveal>
+          <div class="monitor__bezel">
+            <div class="monitor__screen video" data-video-id="" data-video-title="ReBeep demo: the PC speaker, then the Sound Blaster">
+              <div class="soon">
+                <div class="soon__scan" aria-hidden="true"></div>
+                <span class="soon__osd soon__osd--tl" aria-hidden="true">CH 01</span>
+                <span class="soon__osd soon__osd--tr" aria-hidden="true"><span class="soon__rec"></span>REC</span>
+                <p class="soon__tag">Demo disk</p>
+                <p class="soon__title">Coming soon<span class="cursor" aria-hidden="true"></span></p>
+                <div class="soon__ab" aria-hidden="true">
+                  <span class="soon__chip soon__chip--a">PC speaker</span>
+                  <svg class="soon__arrow" viewBox="0 0 40 12"><path d="M0 6h34M28 1l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                  <span class="soon__chip soon__chip--b">Sound Blaster FM</span>
+                </div>
+                <p class="soon__note">A one-minute before and after is being cut now.</p>
+              </div>
+            </div>
+            <div class="monitor__chin" aria-hidden="true">
+              <span class="monitor__badge">ReBeep</span>
+              <span class="monitor__vents"></span>
+              <span class="monitor__led"></span>
+            </div>
+          </div>
+          <div class="monitor__stand" aria-hidden="true"><span class="monitor__neck"></span><span class="monitor__base"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FEATURES ============ -->
+    <section class="section section--features" id="features" aria-labelledby="features-title">
+      <div class="wrap">
+        <header class="sechead sechead--split" data-reveal>
+          <div>
+            <p class="eyebrow"><span class="eyebrow__n">03</span>Highlights</p>
+            <h2 class="sechead__title" id="features-title">Your Sound Blaster, finally in the game</h2>
+          </div>
+          <p class="sechead__lede">Load it before the game, and the beeps play on the card's FM chip instead of the tiny speaker inside the case.</p>
+        </header>
+
+        <div class="cards">
+          <article class="card" data-reveal data-glow>
+            <svg class="card__icon" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges">
+              <g fill="#50d010"><rect x="1" y="9" width="2" height="6"/><rect x="4" y="5" width="2" height="10"/><rect x="7" y="2" width="2" height="13"/><rect x="10" y="6" width="2" height="9"/><rect x="13" y="10" width="2" height="5"/></g>
+              <g fill="#f0f0d0"><rect x="1" y="8" width="2" height="1"/><rect x="4" y="4" width="2" height="1"/><rect x="7" y="1" width="2" height="1"/><rect x="10" y="5" width="2" height="1"/><rect x="13" y="9" width="2" height="1"/></g>
+            </svg>
+            <h3 class="card__title">Five voices</h3>
+            <p class="card__text">A faithful square wave close to the original, or one of four FM patches.</p>
+            <ul class="tags" aria-label="Voices">
+              <li>Square</li><li>Organ</li><li>Flute</li><li>Brass</li><li>Bell</li>
+            </ul>
+          </article>
+
+          <article class="card" data-reveal data-glow>
+            <svg class="card__icon" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges">
+              <rect x="0" y="2" width="1" height="12" fill="#b0b090"/>
+              <rect x="1" y="3" width="14" height="8" fill="#109030"/>
+              <rect x="3" y="5" width="5" height="4" fill="#101010"/>
+              <rect x="4" y="6" width="3" height="2" fill="#50d010"/>
+              <rect x="10" y="5" width="3" height="2" fill="#101010"/>
+              <g fill="#f0d0b0"><rect x="3" y="11" width="1" height="2"/><rect x="5" y="11" width="1" height="2"/><rect x="7" y="11" width="1" height="2"/><rect x="9" y="11" width="1" height="2"/><rect x="11" y="11" width="1" height="2"/><rect x="13" y="11" width="1" height="2"/></g>
+            </svg>
+            <h3 class="card__title">Plays on the card you have</h3>
+            <p class="card__text">OPL2 or OPL3 FM on a Sound Blaster or most clones, on a real PC or in 86Box.</p>
+            <ul class="tags" aria-label="Works with">
+              <li>OPL2</li><li>OPL3</li><li>388h</li>
+            </ul>
+          </article>
+
+          <article class="card" data-reveal data-glow>
+            <svg class="card__icon" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges">
+              <rect x="0" y="3" width="7" height="9" fill="#f0d0b0"/><rect x="0" y="11" width="7" height="2" fill="#b0b090"/>
+              <rect x="9" y="3" width="7" height="9" fill="#50d010"/><rect x="9" y="11" width="7" height="2" fill="#109030"/>
+              <g fill="#101010"><rect x="2" y="5" width="2" height="1"/><rect x="2" y="6" width="1" height="3"/><rect x="2" y="9" width="2" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="4" y="8" width="1" height="1"/><rect x="2" y="7" width="2" height="1"/></g>
+              <g fill="#101010"><rect x="11" y="5" width="1" height="5"/><rect x="14" y="5" width="1" height="5"/><rect x="12" y="6" width="1" height="1"/><rect x="13" y="7" width="1" height="1"/></g>
+            </svg>
+            <h3 class="card__title">Change it while you play</h3>
+            <p class="card__text"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>B</kbd> swaps the sound card and the speaker. <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> cycles the voice.</p>
+          </article>
+
+          <article class="card" data-reveal data-glow>
+            <svg class="card__icon" viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges">
+              <rect x="1" y="1" width="14" height="14" fill="#b0b090"/>
+              <rect x="1" y="1" width="1" height="1" fill="#101010"/>
+              <rect x="4" y="1" width="8" height="5" fill="#3a3a36"/>
+              <rect x="9" y="2" width="2" height="3" fill="#b0b090"/>
+              <rect x="3" y="8" width="10" height="6" fill="#f0f0d0"/>
+              <rect x="4" y="10" width="6" height="1" fill="#50d010"/>
+              <rect x="4" y="12" width="4" height="1" fill="#b0b090"/>
+            </svg>
+            <h3 class="card__title">Small and tidy</h3>
+            <p class="card__text">One <code>.COM</code> file under 7&nbsp;KB that loads high and unloads cleanly. The game is never patched.</p>
+            <ul class="tags" aria-label="Facts">
+              <li>&lt; 7 KB</li><li>Loads high</li><li>Unloads clean</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ GET IT ============ -->
+    <section class="section section--get" id="get" aria-labelledby="get-title">
+      <div class="wrap">
+        <header class="sechead sechead--split" data-reveal>
+          <div>
+            <p class="eyebrow"><span class="eyebrow__n">04</span>Get it</p>
+            <h2 class="sechead__title" id="get-title">What you need, and three steps to install</h2>
+          </div>        </header>
+
+        <div class="get">
+          <div class="panel need" data-reveal>
+            <h3 class="panel__title">What you need</h3>
+            <dl class="spec">
+              <div class="spec__row"><dt>CPU</dt><dd>A 386 or better</dd></div>
+              <div class="spec__row"><dt>DOS</dt><dd>MS-DOS 5 or later, or FreeDOS</dd></div>
+              <div class="spec__row"><dt>Memory</dt><dd>Jemm 5.87 or later, with its QPIEMU module</dd></div>
+              <div class="spec__row"><dt>Sound</dt><dd>An OPL2 or OPL3 FM chip at <code>388h</code>: Sound Blaster cards and most clones</dd></div>
+            </dl>
+          </div>
+
+          <div class="panel install" data-reveal>
+            <h3 class="panel__title">Install in three steps</h3>
+            <ol class="install__steps">
+              <li><span class="install__n" aria-hidden="true">1</span><span>Download the zip or the floppy image from the <a href="https://github.com/MetalHexx/rebeep/releases/latest">latest release</a>.</span></li>
+              <li><span class="install__n" aria-hidden="true">2</span><span>Run <code>INSTALL</code> from the folder that holds <code>REBEEP.COM</code>, and choose install or update.</span></li>
+              <li><span class="install__n" aria-hidden="true">3</span><span>Add a ReBeep entry to your boot menu that loads Jemm, then ReBeep.</span></li>
+            </ol>
+            <p class="install__more">Full step-by-step install guides:</p>
+            <div class="linkrow">
+              <a class="link-arrow" href="https://github.com/MetalHexx/rebeep/blob/main/docs/guide/real-pc.md">Real PC guide <span aria-hidden="true">→</span></a>
+              <a class="link-arrow" href="https://github.com/MetalHexx/rebeep/blob/main/docs/guide/86box.md">86Box guide <span aria-hidden="true">→</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ NO VINTAGE PC ============ -->
+    <section class="section section--novintage" aria-labelledby="nv-title">
+      <div class="wrap">
+        <div class="banner" data-reveal>
+          <div class="banner__art" aria-hidden="true">
+            <svg viewBox="0 0 32 24" shape-rendering="crispEdges">
+              <rect x="2" y="1" width="28" height="17" fill="#f0d0b0"/>
+              <rect x="4" y="3" width="24" height="13" fill="#101010"/>
+              <rect x="6" y="5" width="2" height="2" fill="#50d010"/><rect x="8" y="5" width="8" height="2" fill="#50d010"/>
+              <rect x="6" y="8" width="13" height="1" fill="#70d030"/><rect x="6" y="10" width="9" height="1" fill="#70d030"/><rect x="6" y="12" width="3" height="2" fill="#f0f0d0"/>
+              <rect x="10" y="18" width="12" height="2" fill="#b0b090"/><rect x="6" y="20" width="20" height="3" fill="#f0d0b0"/>
+              <rect x="25" y="14" width="2" height="1" fill="#50d010"/>
+            </svg>
+          </div>
+          <div class="banner__copy">
+            <h2 class="banner__title" id="nv-title">No vintage PC?</h2>
+            <p class="banner__text">86Box emulates old PCs, down to the sound card and the PC speaker. ReBeep runs in an 86Box VM just as it does on a real PC, so the setup is the same once the VM is ready.</p>
+          </div>
+          <div class="banner__links">
+            <a class="link-arrow" href="https://github.com/MetalHexx/rebeep/blob/main/docs/guide/86box.md">Set up in 86Box <span aria-hidden="true">→</span></a>
+            <a class="link-arrow link-arrow--quiet" href="https://github.com/MetalHexx/rebeep/blob/main/docs/lab/setup.md">Build the dev lab <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ NEXT ============ -->
+    <section class="section section--next" id="next" aria-labelledby="next-title">
+      <div class="wrap">
+        <header class="sechead" data-reveal>
+          <p class="eyebrow"><span class="eyebrow__n">05</span>What's coming next</p>
+          <h2 class="sechead__title" id="next-title">More disks in the box</h2>
+          <p class="sechead__lede">Ideas being talked over, not promises, and no dates. Bring yours to Discord.</p>
+        </header>
+
+        <div class="locked">
+          <article class="lock" data-reveal>
+            <span class="lock__shutter" aria-hidden="true"></span>
+            <p class="lock__tag"><svg class="lock__icon" viewBox="0 0 10 12" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h4v1h1v1h1v3H8V2H7V1H3v1H2v3H1V2h1V1h1zM0 5h10v7H0zm4 2v3h2V7z"/></svg>Disk 2 · Idea</p>
+            <h3 class="lock__title">Per-game profiles</h3>
+            <p class="lock__text">Settings picked for each game, such as the voice, the volume and how low notes play.</p>
+          </article>
+          <article class="lock" data-reveal>
+            <span class="lock__shutter" aria-hidden="true"></span>
+            <p class="lock__tag"><svg class="lock__icon" viewBox="0 0 10 12" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h4v1h1v1h1v3H8V2H7V1H3v1H2v3H1V2h1V1h1zM0 5h10v7H0zm4 2v3h2V7z"/></svg>Disk 3 · Idea</p>
+            <h3 class="lock__title">Custom soundtracks and effects</h3>
+            <p class="lock__text">A game's tune and its effects, recognized and swapped for full arrangements.</p>
+          </article>
+          <article class="lock" data-reveal>
+            <span class="lock__shutter" aria-hidden="true"></span>
+            <p class="lock__tag"><svg class="lock__icon" viewBox="0 0 10 12" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h4v1h1v1h1v3H8V2H7V1H3v1H2v3H1V2h1V1h1zM0 5h10v7H0zm4 2v3h2V7z"/></svg>Disk 4 · Idea</p>
+            <h3 class="lock__title">Patch editor</h3>
+            <p class="lock__text">Shape your own FM voices, and hear them in the game.</p>
+          </article>
+        </div>
+
+        <div class="linkrow linkrow--center" data-reveal>
+          <a class="link-arrow" href="https://github.com/MetalHexx/rebeep/blob/main/docs/roadmap.md">The roadmap <span aria-hidden="true">→</span></a>
+          <a class="link-arrow" href="https://discord.gg/4wkPZnCfz">Talk it over on Discord <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="wrap footer__in">
+      <div class="footer__brand">
+        <a class="brand" href="./" aria-label="ReBeep home">
+          <img class="brand__mark" src="img/favicon-32.png" alt="" width="32" height="32">
+          <span class="brand__word">ReBeep</span>
+        </a>
+        <p class="footer__tag">Real sound for beeper-only DOS games.</p>
+      </div>
+      <nav class="footer__cols" aria-label="Footer">
+        <div class="footer__col">
+          <h2 class="footer__h">Project</h2>
+          <a href="https://github.com/MetalHexx/rebeep">GitHub</a>
+          <a href="https://github.com/MetalHexx/rebeep/releases/latest">Releases</a>
+          <a href="https://github.com/MetalHexx/rebeep/blob/main/docs/guide/getting-started.md">Docs</a>
+          <a href="https://github.com/MetalHexx/rebeep/blob/main/docs/roadmap.md">Roadmap</a>
+        </div>
+        <div class="footer__col">
+          <h2 class="footer__h">Community</h2>
+          <a href="https://discord.gg/4wkPZnCfz">Discord</a>
+          <a href="https://github.com/MetalHexx/rebeep/issues/new?template=game-report.yml">Report a game</a>
+          <a href="https://github.com/MetalHexx/rebeep/issues/new?template=bug-report.yml">Report a bug</a>
+          <a href="https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.yml">Suggest a feature</a>
+        </div>
+      </nav>
+    </div>
+    <div class="wrap footer__fine">
+      <div class="footer__credits">
+        <p>ReBeep is free and open source under the <a href="https://github.com/MetalHexx/rebeep/blob/main/LICENSE">MIT licence</a>.</p>
+        <p>Headlines are set in Web437 IBM VGA 8x16, from VileR&#39;s <a href="https://int10h.org/oldschool-pc-fonts/">Ultimate Oldschool PC Font Pack</a>, under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.</p>
+      </div>
+      <p class="footer__prompt" aria-hidden="true">C:\&gt; REBEEP /U<span class="cursor"></span></p>
+    </div>
+  </footer>
+</body>
+</html>

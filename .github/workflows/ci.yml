@@ -60,6 +60,11 @@ jobs:
       - name: Package dry run
         run: node tools/rebeep.mjs release create --skip-build
 
+      - name: Site build and check (offline, so no release lookup)
+        run: |
+          node tools/rebeep.mjs site create --offline
+          node tools/rebeep.mjs site check
+
       - name: Check the floppy image (Linux)
         if: runner.os == 'Linux'
         run: fsck.fat -n build/release/*-floppy.img

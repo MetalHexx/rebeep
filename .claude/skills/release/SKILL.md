@@ -89,9 +89,9 @@ report (game and machine rows in `docs/guide/compatibility.md`, the `slow-386sx`
 
 Watch it with `gh run list --workflow release.yml --limit 1`, then `gh run watch <id>`.
 
-- Compare the release's `SHA256SUMS.txt` with `build/release/SHA256SUMS.txt`. A match means the
-  downloads are the bytes that were tested.
+- Compare the release's `SHA256SUMS.txt` with `build/release/SHA256SUMS.txt`: a match is the tested bytes.
 - Have the user install the download by following `README.TXT`: ReBeep loads and names its version.
+  Once the `pages` workflow finishes, open the live site and confirm it shows the new version.
 - Draft the [Discord post](references/changelog.md#discord-announcement) for the user to post.
 - Half done? Re-run the workflow on `main` (`gh workflow run release.yml --ref main`); it never
   makes a second tag. Broken? Make a patch release. Never move or delete a published tag.

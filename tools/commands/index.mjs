@@ -8,6 +8,7 @@ import test from './test.mjs';
 import release from './release.mjs';
 import repo from './repo.mjs';
 import version from './version.mjs';
+import site from './site.mjs';
 
 /** Every noun, in the order help lists them. */
-export default [env, tool, media, vm, disk, build, test, release, version, repo];
+export default [env, tool, media, vm, disk, build, test, release, version, repo, site];

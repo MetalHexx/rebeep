@@ -22,9 +22,10 @@ everything to vanilla.
 | `env/` | The 86Box environment definition: tool manifest, VM profiles, DOS boot files | [env/AGENTS.md](env/AGENTS.md) |
 | `release/` | The package's hand-made files: the manual, `INSTALL.BAT`, `RBPLAY.BAT`, sample configs | [release/AGENTS.md](release/AGENTS.md) |
 | `tools/` | The `rebeep` CLI, its libraries and its unit tests | [tools/AGENTS.md](tools/AGENTS.md) |
+| `site/` | The product page for the GitHub Pages site: plain HTML, CSS and JS | [site/AGENTS.md](site/AGENTS.md) |
 | `docs/` | Human docs in three levels: `guide/` for players, `architecture/` for how it works, `lab/` for contributors | [docs/AGENTS.md](docs/AGENTS.md) |
 | `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI), `update-docs` (doc health) and `release` (cutting a release, the changelog rules) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) · [release](.claude/skills/release/SKILL.md) |
-| `.github/` | CI workflow and PR template | — |
+| `.github/` | CI, release and Pages workflows, and the PR template | — |
 | `build/` | Build output (ignored) | — |
 
 ## 3. Orient fast
@@ -56,6 +57,8 @@ The environment lives **outside the repo**, in `~/.rebeep` (override with `REBEE
 | Save a VM baseline | `rebeep vm snapshot <vm>` |
 | Back to the baseline | `rebeep vm reset <vm>` · `rebeep env reset` |
 | Payload guard | `rebeep repo check` (`npm run check`) |
+| Preview the product page (`http://127.0.0.1:8086/rebeep/`, reloads on save) | `rebeep site run [--offline]` (`npm run site`) |
+| Build `build/site/`, stamped with the latest release · check it | `rebeep site create [--offline]` · `rebeep site check` |
 
 ## 5. Architecture
 
@@ -110,7 +113,7 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM (the dev e
 ## 8. Commits & PRs
 
 - Conventional Commits: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`, scoped by area
-  (`tools`, `env`, `src`, `tests`, `docs`), for example `feat(tools): add disk list`.
+  (`tools`, `env`, `src`, `tests`, `docs`, `site`), for example `feat(tools): add disk list`.
 - **Never** write `Co-Authored-By` or any other agent-harness attribution trailer on a commit or PR
   description.
 - PRs target `main` and open as drafts. Fill in the PR template.
@@ -136,7 +139,7 @@ doc has one job. When two docs need the same fact, one owns it and the others li
 | `README.md` | The front door, for players: why, highlights, how in brief, what you need, install in brief, tested on, and the docs index. Build details live in `docs/` |
 | `docs/guide/` | The player guide, for a DOS user with no dev tools: getting started, a real PC, 86Box, playing, troubleshooting, compatibility, the reference. `reference.md` owns the option, hotkey and exit-code tables that `release/README.TXT` mirrors |
 | `docs/architecture/` | How it works, for the curious: the design, the measured cost (`P_BENCH` numbers), the GPC case study |
-| `docs/roadmap.md` | Where ReBeep is headed: now, next, ideas, and how to help |
+| `docs/roadmap.md` | Where ReBeep is headed: now, ideas, and how to help |
 | `docs/lab/` | For contributors: lab setup and the Verified-on table, the 86Box lab (owns lab troubleshooting), contributing, releasing |
 | `CHANGELOG.md` | Player-facing changes |
 | Folder `AGENTS.md` | That folder's rules and pitfalls |

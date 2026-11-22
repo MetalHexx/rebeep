@@ -1,0 +1,65 @@
+name: pages
+
+# Publishes the product page in site/ to GitHub Pages.
+#
+# It runs after the release workflow, not on a push of its own. The release workflow runs on every
+# push to main, and a release it publishes with GITHUB_TOKEN doesn't start other workflows, so this
+# one trigger covers both a change to the site and a new release. The page is therefore never built
+# before the release it shows exists. The site reads the latest *published* release and falls back
+# to a plain link when that lookup fails, so the release run's own conclusion doesn't gate this.
+#
+# workflow_run and workflow_dispatch use the copy of this file on main, so the trigger can't be
+# tried from a pull request branch. The first real run is the merge.
+on:
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: # re-publishes the site by hand; only main can publish
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false # a deploy in flight finishes; the newest queued one runs next
+
+jobs:
+  build:
+    name: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build the site and stamp the latest release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node tools/rebeep.mjs site create
+
+      - name: Check the site
+        run: node tools/rebeep.mjs site check
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/site
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
