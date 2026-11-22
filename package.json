@@ -20,6 +20,7 @@
     "setup": "node tools/rebeep.mjs env setup",
     "build": "node tools/rebeep.mjs build run",
     "deploy": "node tools/rebeep.mjs build run --deploy",
+    "site": "node tools/rebeep.mjs site run",
     "test": "node tools/rebeep.mjs test run --suite tools",
     "check": "node tools/rebeep.mjs repo check"
   }

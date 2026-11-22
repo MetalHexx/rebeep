@@ -97,6 +97,8 @@ export function repoLayout(root = repoRoot()) {
     src: path.join(root, 'src'),
     targets: path.join(root, 'src', 'targets.json'),
     build: path.join(root, 'build'),
+    site: path.join(root, 'site'),
+    siteBuild: path.join(root, 'build', 'site'),
     tests: path.join(root, 'tests'),
     env,
     manifest: path.join(env, 'manifest.json'),
