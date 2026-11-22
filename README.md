@@ -4,12 +4,12 @@
 
 **Hear your beeper-only DOS games through a real sound card.**
 
-**[metalhexx.github.io/rebeep](https://metalhexx.github.io/rebeep/)**
-
 [![CI](https://github.com/MetalHexx/rebeep/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MetalHexx/rebeep/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/MetalHexx/rebeep)](https://github.com/MetalHexx/rebeep/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/4wkPZnCfz)
+
+**[metalhexx.github.io/rebeep](https://metalhexx.github.io/rebeep/)**
 
 </div>
 
