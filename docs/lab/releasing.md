@@ -36,7 +36,8 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
 - [ ] After `REBEEP /V:0 /R:0` the game is silent.
 - [ ] After `REBEEP /L:1` the engine's rests are a low FM note.
 - [ ] At the DOS prompt, with `RBTEST /C:1`, Ctrl+Alt+B toggles between the OPL and the speaker and
-  Ctrl+Alt+N cycles the voice. GPC takes over the keyboard, so the hotkeys do nothing inside it.
+  Ctrl+Alt+N switches between the faithful voice and the loaded patch (load one with `REBEEP /P:FLUTE`).
+  GPC takes over the keyboard, so the hotkeys do nothing inside it.
 - [ ] Last, attach `build/release/rebeep-<v>-floppy.img` as A: from 86Box's Media menu, run
   `INSTALL` from A: and press `I`, then run it again and press `U`: it updates the copy. Copy the
   MS-DOS samples over C:'s configs and reboot: ReBeep loads from the sample config. Then quit 86Box
@@ -47,7 +48,8 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
 - [ ] RBTEST cases 0 to 9 by ear (`RBTEST /C:n`), in faithful mode and in one patch: nothing clicks
   or crackles, especially case 4, the stepped beeps, and case 0, the same beeps keyed the way GPC
   keys them. The real speaker stays silent while the OPL plays.
-- [ ] Ctrl+Alt+B hands the tone to the speaker and back. Ctrl+Alt+N cycles the voice.
+- [ ] Ctrl+Alt+B hands the tone to the speaker and back. After `REBEEP /P:FLUTE`, Ctrl+Alt+N makes
+  `REBEEP /S` say `faithful voice (patch FACTORY\FLUTE loaded)`, and pressed again `patch FACTORY\FLUTE`.
 
 **DOSBox-X:**
 

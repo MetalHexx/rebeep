@@ -415,6 +415,44 @@ patches_resolve:
         clc
         ret
 
+; crit_on: while the startup part reads files, INT 24h fails the call (AL = 3, DOS 3 and later), as
+; the studio's handler does: a PATCHES= path on a drive with no disk is "not found", not an
+; "Abort, Retry, Fail?" prompt. crit_off puts the old handler back; run it before ReBeep exits or
+; goes resident. Both keep every register but the flags.
+crit_on:
+        push    ax
+        push    bx
+        push    dx
+        push    es
+        mov     ax, 3524h
+        int     21h
+        mov     [old24], bx
+        mov     [old24 + 2], es
+        mov     dx, crit_fail
+        mov     ax, 2524h
+        int     21h
+        pop     es
+        pop     dx
+        pop     bx
+        pop     ax
+        ret
+
+crit_off:
+        push    ax
+        push    dx
+        push    ds
+        lds     dx, [old24]
+        mov     ax, 2524h
+        int     21h
+        pop     ds
+        pop     dx
+        pop     ax
+        ret
+
+crit_fail:
+        mov     al, 3
+        iret
+
 ; dir_exists: DX = an ASCIZ path. Out: CF clear when it is a folder.
 dir_exists:
         mov     ax, 4300h
@@ -684,6 +722,7 @@ cfg_seen        db      0
 patches_explicit db     0
 patches_missing db      0
 settings_done   db      0
+old24           dd      0               ; INT 24h as crit_on found it
 fail_who        dw      0
 fail_reason     dw      0
 pbuf            times PBLK_LEN db 0

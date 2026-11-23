@@ -80,7 +80,9 @@ load_path:
 .slot:
         mov     al, [free_id]
         mov     [rb_amis_id], al
+        call    crit_on
         call    load_patch
+        call    crit_off
         push    cs
         pop     es
         mov     bx, RB_STATE
@@ -148,6 +150,9 @@ change_path:
         call    amis_call
         cmp     al, 0FFh
         jne     mismatch
+        mov     es, [res_seg]
+        cmp     byte [es:bx + RBS_VERSION], RBS_LAYOUT
+        jne     mismatch                ; one release, two layouts: a write would land in the wrong fields
         mov     [res_state], bx
         mov     ax, [opt_set]
         test    ax, OPT_U
@@ -207,7 +212,9 @@ do_status:
 do_update:
         test    word [opt_set], OPT_P
         jz      .apply
+        call    crit_on
         call    select_patch
+        call    crit_off
 .apply:
         mov     es, [res_seg]
         mov     bx, [res_state]
@@ -883,7 +890,8 @@ scan_letter:
         ret
 
 ; print_config: "<voice>, volume <n>." then "Ctrl+Alt+<x> toggles, ..." and the /L and /R
-; lines, from the RB_STATE at ES:BX. A patch is named: "patch USER\BELL".
+; lines, from the RB_STATE at ES:BX. A patch is named: "patch USER\BELL"; the faithful voice
+; names the patch it still holds: "faithful voice (patch USER\BELL loaded)".
 print_config:
         push    ax
         push    dx
@@ -891,6 +899,14 @@ print_config:
         cmp     byte [es:bx + RBS_VOICE], 0
         jne     .patch
         mov     dx, msg_faithful
+        call    print
+        test    byte [es:bx + RBS_PFLAGS], RBS_PF_LOADED
+        jz      .volume
+        mov     dx, msg_held_1
+        call    print
+        lea     di, [bx + RBS_PATCH]
+        call    print_asciz
+        mov     dx, msg_held_2
         call    print
         jmp     .volume
 .patch:
@@ -1026,6 +1042,8 @@ msg_loaded_3    db      " bytes resident.", 13, 10, "OPL$"
 msg_loaded_4    db      ", $"
 
 msg_faithful    db      "faithful voice$"
+msg_held_1      db      " (patch $"
+msg_held_2      db      " loaded)$"
 msg_patch       db      "patch $"
 msg_volume      db      ", volume $"
 msg_keys_1      db      ".", 13, 10, "Ctrl+Alt+$"

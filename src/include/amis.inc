@@ -44,6 +44,8 @@ RBS_REC2        equ 42          ; 11 bytes: the two-operator record, in opl.asm'
 RBS_REC4        equ 53          ; 22 bytes: op1..op4 of 20h, 40h, 60h, 80h, E0h, then C0h of the
                                 ;    first and of the second channel
 
+; A change of the layout must bump this: the ident string alone can't tell two layouts of one release
+; apart, and change_path refuses a resident copy whose RBS_VERSION differs (keep that check).
 RBS_LAYOUT      equ 2
 RBS_PF_LOADED   equ 01h
 RBS_PF_4OP      equ 02h

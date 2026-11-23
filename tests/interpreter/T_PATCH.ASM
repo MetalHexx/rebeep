@@ -682,6 +682,31 @@ start:
         mov     byte [patches_missing], 0
         ENDCASE
 
+        CASE    "critical_error_fails_the_call"
+        xor     ax, ax
+        mov     es, ax
+        push    word [es:24h * 4]       ; INT 24h as it was
+        push    word [es:24h * 4 + 2]
+        call    crit_on
+        mov     ax, [es:24h * 4]
+        mov     cx, crit_fail
+        call    t_check
+        mov     ax, [es:24h * 4 + 2]
+        mov     cx, cs
+        call    t_check
+        xor     ax, ax
+        int     24h                     ; what DOS does on a not-ready drive
+        mov     cx, 3
+        call    t_check
+        call    crit_off
+        mov     ax, [es:24h * 4 + 2]
+        pop     cx
+        call    t_check
+        mov     ax, [es:24h * 4]
+        pop     cx
+        call    t_check
+        ENDCASE
+
         jmp     t_done
 
 q_nowhere       db      "NOWHERE", 0

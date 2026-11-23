@@ -1,6 +1,6 @@
 REM VM: mirror-freedos
 REM VM-TIMEOUT: 150
-REM Patch probe: ReBeep loads a patch by name, from the settings file or /P: (a USER override, an exact FACTORY name, a pack patch), and falls back to the faithful voice for a bad file, a missing name or a bad name in the settings file.
+REM Patch probe: ReBeep loads a patch by name from the settings file or /P:, and falls back to the faithful voice.
 @ECHO OFF
 D:
 CD \
@@ -87,9 +87,21 @@ D:\REBEEP\REBEEP.COM /P:2 > NUL
 IF NOT ERRORLEVEL 1 GOTO DIGITSBAD
 IF ERRORLEVEL 2 GOTO DIGITSBAD
 ECHO PASS digits-bad-option>> D:\RESULT.TXT
-GOTO UNLOAD1
+GOTO HELDNAME
 :DIGITSBAD
 ECHO FAIL digits-bad-option: /P:2 did not exit with 1>> D:\RESULT.TXT
+:HELDNAME
+D:REBEEPREBEEP.COM /P:BELL > NUL
+IF ERRORLEVEL 1 GOTO HELDBAD
+D:REBEEPREBEEP.COM /F > NUL
+IF ERRORLEVEL 1 GOTO HELDBAD
+D:REBEEPREBEEP.COM /S > D:OUT.TXT
+C:FREEDOSBINFIND.COM "patch USERBELL loaded" D:OUT.TXT > NUL
+IF ERRORLEVEL 1 GOTO HELDBAD
+ECHO PASS faithful-names-patch>> D:RESULT.TXT
+GOTO UNLOAD1
+:HELDBAD
+ECHO FAIL faithful-names-patch: /S after /P:BELL then /F did not name the loaded patch>> D:RESULT.TXT
 :UNLOAD1
 D:\REBEEP\REBEEP.COM /U > NUL
 IF ERRORLEVEL 1 GOTO LOADBAD

@@ -90,8 +90,10 @@ in an additive voice such as Organ the modulators too, so the voice keeps its ba
 volume. Volume 0 keys no note at all. Divisor 0 plays as 65535, block 0. The faithful voice is a
 square wave on an OPL3. An OPL2 has no square wave, so it gets a two-operator FM approximation.
 The faithful voice fades in over about a millisecond and out over about ten, so a beep never starts
-or stops on a step. The four patches (Organ, Flute, Brass, Bell) are plain FM settings. On an OPL3
-the chip stays in OPL3 mode, with both channels routed to both outputs, while ReBeep is trapping.
+or stops on a step. A patch is a plain FM setting: ReBeep reads its `.RBP` file once, at load (from
+`/P:` or `PATCH=` in `RBSTUDIO.CFG`), and keeps only its two-operator record and octave resident,
+53 bytes however many patches there are. On an OPL3 the chip stays in OPL3 mode, with both channels
+routed to both outputs, while ReBeep is trapping.
 
 ## The fallback
 

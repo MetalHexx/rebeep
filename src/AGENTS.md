@@ -12,7 +12,7 @@
 | `capture/` | `trap.asm`: QPI trap install and remove, the callback, the port semantics (masking, read view, OPL events). `trace.asm`: REBEEPD's log |
 | `engine/` | `interp.asm` the speaker interpreter, `opl.asm` the OPL render target |
 | `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
-| `startup/` | `main.asm`: options, checks, load, change, unload, messages. `patch.asm`: the `.RBP` parser. `files.asm`: program folder, `RBSTUDIO.CFG`, name rules, patch lookup. `dump.asm`: `REBEEPD /D`. All freed when going resident |
+| `startup/` | `main.asm`: options, checks, load, change, unload, messages. `patch.asm`: the `.RBP` parser. `files.asm`: program folder, `RBSTUDIO.CFG`, name rules, patch lookup, an INT 24h fail handler (`crit_on`/`crit_off`) around the file reads. `dump.asm`: `REBEEPD /D`. All freed when going resident |
 | `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [exitcode.inc](include/exitcode.inc): the exit codes. `trace.inc`: REBEEPD's record. None is restated elsewhere |
 | `studio/` | `RBSTUDIO.EXE`, the tracker studio, in C. Its rules: [studio/AGENTS.md](studio/AGENTS.md) |
 | `diag/` | `qpichk.asm` → `QPICHK.COM`, reports whether QPIEMU is up (run by `BOOT.BAT`). `fdboot.asm` → `FDBOOT.BIN`, the release floppy's boot sector: hands the boot to C:, asks for a key only when C: has none |
