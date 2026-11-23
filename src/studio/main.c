@@ -22,9 +22,13 @@
 #include "settings.h"
 #include "video.h"
 
-#define BENCH_FRAMES 200
 #define BENCH_FILE "BENCH.TXT"
+#define BENCH_TICKS 92UL          /* each figure runs at least this many BIOS ticks: just over 5 s */
+#define BENCH_FIGURES 5
+#define BENCH_LINE 96
+#define BENCH_PIANO 0x2C          /* the Z key: piano key 0, not held in the sample editor */
 #define TICKS_PER_DAY 0x1800B0UL
+#define TICK_US 54925UL           /* one BIOS tick (18.2 Hz) in microseconds */
 #define DETECT_PAUSE_TICKS 18UL   /* about a second at 18.2 Hz */
 #define DOUBLE_CLICK_TICKS 8UL    /* two clicks on one row this close are a double click, about 0.4 s */
 
@@ -47,61 +51,9 @@ static void usage(void)
     printf("Usage: RBSTUDIO [/VIEW:MONO] [/TRACE] [/BENCH] [/DUMP:<screen> /O:<file>]\n");
     printf("  /VIEW:MONO  draw for a monochrome display\n");
     printf("  /TRACE      log every OPL register write and key event to RBSTUDIO.LOG\n");
-    printf("  /BENCH      redraw the whole screen %d times, print the time and write %s\n", BENCH_FRAMES, BENCH_FILE);
+    printf("  /BENCH      time the synth screen, print the figures and write %s\n", BENCH_FILE);
     printf("  /DUMP:name  draw a reference screen with its sample data; /O:file is the text screen written\n");
     printf("  /?          show this help\n");
-}
-
-static void draw_box(int x, int y, int w, int h, unsigned char attr)
-{
-    int i;
-
-    video_put(x, y, 0xC9, attr);
-    video_put(x + w - 1, y, 0xBB, attr);
-    video_put(x, y + h - 1, 0xC8, attr);
-    video_put(x + w - 1, y + h - 1, 0xBC, attr);
-    for (i = 1; i < w - 1; i++) {
-        video_put(x + i, y, 0xCD, attr);
-        video_put(x + i, y + h - 1, 0xCD, attr);
-    }
-    for (i = 1; i < h - 1; i++) {
-        video_put(x, y + i, 0xBA, attr);
-        video_put(x + w - 1, y + i, 0xBA, attr);
-    }
-}
-
-/* One full redraw into the back buffer. `frame` shifts the glyphs so successive frames differ. */
-static void draw_screen(unsigned frame, const char *last_key)
-{
-    static const char hex[] = "0123456789ABCDEF";
-    char line[VIDEO_COLS + 1];
-    int x;
-    int y;
-
-    video_fill(0, 0, VIDEO_COLS, VIDEO_ROWS, ' ', 0x07);
-    video_fill(0, 0, VIDEO_COLS, 1, ' ', 0x1F);
-    sprintf(line, "ReBeep Studio %s - test screen", REBEEP_VERSION);
-    video_text(2, 0, line, 0x1F);
-    draw_box(0, 1, VIDEO_COLS, 23, 0x0B);
-
-    video_text(4, 2, "Attributes: background down, foreground across", 0x0F);
-    video_text(56, 2, "Character set", 0x0F);
-    for (y = 0; y < 16; y++) {
-        for (x = 0; x < 16; x++) {
-            unsigned char attr = (unsigned char)((y << 4) | x);
-
-            video_put(4 + x * 3, 4 + y, ' ', attr);
-            video_put(5 + x * 3, 4 + y, (unsigned char)hex[(x + frame) & 15], attr);
-            video_put(6 + x * 3, 4 + y, ' ', attr);
-            video_put(56 + x, 4 + y, (unsigned char)(y * 16 + x), 0x07);
-        }
-    }
-
-    sprintf(line, "Folder: %.70s", dos_program_dir());
-    video_text(4, 21, line, 0x0E);
-    video_text(4, 22, last_key, 0x0A);
-    video_fill(0, 24, VIDEO_COLS, 1, ' ', 0x70);
-    video_text(2, 24, "Esc quits", 0x70);
 }
 
 /* The BIOS tick count at 0040:006C, read twice because the timer can tick between the two halves. */
@@ -116,42 +68,6 @@ static unsigned long bios_ticks(void)
         b = *ticks;
     } while (a != b);
     return a;
-}
-
-static int run_bench(void)
-{
-    char result[120];
-    unsigned long start;
-    unsigned long first;
-    unsigned long end;
-    unsigned long elapsed;
-    unsigned long ms;
-    unsigned i;
-    FILE *out;
-
-    video_init();
-    first = bios_ticks();
-    while ((start = bios_ticks()) == first) {
-    }
-    for (i = 0; i < BENCH_FRAMES; i++) {
-        draw_screen(i, "Benchmark");
-        video_flush();
-    }
-    end = bios_ticks();
-    elapsed = end >= start ? end - start : end + TICKS_PER_DAY - start;
-    video_restore();
-
-    ms = elapsed * 54925UL / 1000UL;
-    sprintf(result, "RBSTUDIO %s bench: %u full redraws in %lu ticks = %lu ms, %lu us per redraw",
-            REBEEP_VERSION, BENCH_FRAMES, elapsed, ms, ms * 1000UL / BENCH_FRAMES);
-    printf("%s\n", result);
-
-    out = fopen(BENCH_FILE, "w");
-    if (out == NULL || fprintf(out, "%s\n", result) < 0 || fclose(out) != 0) {
-        printf("Cannot write %s\n", BENCH_FILE);
-        return EXIT_IO;
-    }
-    return EXIT_OK;
 }
 
 /* The hardware the studio took: the chip, the mouse cursor and a resident ReBeep's traps. Runs once, at exit. */
@@ -283,13 +199,15 @@ static void remember_patch(const Library *lib, int pos)
     sprintf(last_patch, "%s\\%s", en.folder, en.name);
 }
 
-/* What the editor asked of the main loop. Returns 1 when the synth screen is left for the list. */
-static int synth_action(Editor *ed, Library *lib, int act)
+/* What the editor asked of the main loop. Returns 1 when the synth screen is left for the list. `*full` is set when
+   the action can switch patch, so the whole screen is drawn again. */
+static int synth_action(Editor *ed, Library *lib, int act, int *full)
 {
     char err[80];
     int back;
 
     if (act == EA_NONE) return 0;
+    if (act == EA_PREV || act == EA_NEXT || act >= EA_PICK) *full = 1;
     back = editor_act(ed, lib, act, err, sizeof err);
     if (err[0] != '\0') {
         log_line("Cannot open that patch: %s", err);
@@ -300,17 +218,33 @@ static int synth_action(Editor *ed, Library *lib, int act)
     return back;
 }
 
-/* The synth screen, with the help or the save prompt over it when one is open. */
-static void synth_show(const Editor *ed)
+/* The `parts` of the synth screen, with the help or the save prompt over it when one is open. An overlay is drawn
+   over the whole screen, so `parts` is SD_ALL then. */
+static void synth_show(const Editor *ed, unsigned parts)
 {
     char what[48];
 
-    synth_draw(ed);
+    synth_redraw(ed, parts);
     if (ed->help != 0) {
         help_detected(what, sizeof what, detect.chip, detect.card);
         help_draw(ed->help, what, detect.log_path);
     }
     if (ed->prompt) save_draw(ed);
+}
+
+static Editor drawn;   /* the Editor as the synth screen last showed it */
+
+/* Draws what the synth screen shows differently from `drawn` (all of it when `full`), flushes, and takes the copy.
+   Draws nothing when nothing shown has changed. */
+static void synth_refresh(const Editor *ed, int full)
+{
+    unsigned parts = full ? SD_ALL : synth_parts(&drawn, ed);
+
+    if (parts == 0) return;
+    if (ed->help != 0 || ed->prompt) parts = SD_ALL;
+    synth_show(ed, parts);
+    scr_flush();
+    drawn = *ed;
 }
 
 /* A click while the help or the save prompt is open. Returns the action for editor_act. */
@@ -327,11 +261,12 @@ static int overlay_press(Editor *ed, int mx, int my)
 }
 
 /* The synth screen of the patch in `ed`: the keys and the mouse edit and play it, PgUp and PgDn switch patch, Esc goes
-   back to the list. */
+   back to the list. Every queued key and mouse change is taken first, then only the parts of the screen that show
+   something different are drawn. */
 static void run_synth(Editor *ed, Library *lib)
 {
     int back = 0;
-    int redraw = 1;
+    int full = 1;
     int was_down;
     int dragging = 0;
     int drag_x = 0;
@@ -347,42 +282,34 @@ static void run_synth(Editor *ed, Library *lib)
         unsigned event;
         int down;
 
-        while (kbd_next(&event) && !back) {
-            back = synth_action(ed, lib, editor_event(ed, event));
-            redraw = 1;
-        }
+        while (kbd_next(&event) && !back) back = synth_action(ed, lib, editor_event(ed, event), &full);
         while (kbhit()) getch();
 
         down = mouse_read(&mx, &my) & 1;
         if (down && !was_down && !back && (ed->help != 0 || ed->prompt)) {
-            back = synth_action(ed, lib, overlay_press(ed, mx, my));
-            redraw = 1;
+            back = synth_action(ed, lib, overlay_press(ed, mx, my), &full);
         } else if (down && !was_down && !back) {
             SynthHit hit;
 
             synth_hit(ed, mx, my, &hit);
-            back = synth_action(ed, lib, editor_press(ed, &hit, mx));
+            back = synth_action(ed, lib, editor_press(ed, &hit, mx), &full);
             dragging = hit.kind == SH_BAR;
             drag = hit;
             drag_x = mx;
             mouse_key = hit.kind == SH_PIANO ? hit.key : -1;
-            redraw = 1;
         } else if (down && dragging && mx != drag_x && !back) {
             editor_bar(ed, drag.k, drag.key, drag.bx, drag.bw, mx, 1);
             drag_x = mx;
-            redraw = 1;
         } else if (!down && was_down) {
             if (mouse_key >= 0) editor_key_up(ed, mouse_key);
             mouse_key = -1;
             dragging = 0;
-            redraw = 1;
         }
         was_down = down;
 
-        if (redraw && !back) {
-            synth_show(ed);
-            scr_flush();
-            redraw = 0;
+        if (!back) {
+            synth_refresh(ed, full);
+            full = 0;
         }
     }
     editor_release(ed);
@@ -603,6 +530,137 @@ static int run_dump(const char *screen, const char *out, int mono)
     if (rc != 0) {
         printf("Cannot write %s\n", out);
         return EXIT_DUMP;
+    }
+    return EXIT_OK;
+}
+
+/* BIOS ticks since `start`, across midnight. */
+static unsigned long ticks_since(unsigned long start)
+{
+    unsigned long now = bios_ticks();
+
+    return now >= start ? now - start : now + TICKS_PER_DAY - start;
+}
+
+static void bench_discard(unsigned reg, unsigned char val)
+{
+    (void)reg;
+    (void)val;
+}
+
+/* One call of each figure, on the sample editor: a full redraw; a piano key pressed and released; a value changed (Right
+   and Left alternately, so every call changes it); the help opened over the screen. The key figures are the key events
+   through the editor and the redraws the loop makes after each. */
+static void bench_redraw(void)
+{
+    synth_draw(&editor);
+    scr_flush();
+}
+
+static void bench_key(void)
+{
+    editor_event(&editor, BENCH_PIANO);
+    synth_refresh(&editor, 0);
+    editor_event(&editor, BENCH_PIANO | KBD_BREAK);
+    synth_refresh(&editor, 0);
+}
+
+static void bench_value(void)
+{
+    static int left;
+    unsigned event = (left ? 0x4B : 0x4D) | KBD_EXT;
+
+    left = !left;
+    editor_event(&editor, event);
+    synth_refresh(&editor, 0);
+    editor_event(&editor, event | KBD_BREAK);
+    synth_refresh(&editor, 0);
+}
+
+static void bench_help(void)
+{
+    editor_help(&editor, 1);
+    synth_refresh(&editor, 1);
+    editor_help(&editor, 0);
+}
+
+/* Runs `call` for at least BENCH_TICKS from a tick edge and writes a line with the time per call. */
+static void bench_time(const char *name, void (*call)(void), char *line)
+{
+    unsigned long first = bios_ticks();
+    unsigned long start;
+    unsigned long elapsed;
+    unsigned long calls = 0;
+    unsigned long us;
+
+    while ((start = bios_ticks()) == first) {
+    }
+    do {
+        call();
+        calls++;
+        elapsed = ticks_since(start);
+    } while (elapsed < BENCH_TICKS);
+    us = elapsed * TICK_US / calls;
+    sprintf(line, "%-20s %lu.%02lu ms per call (%lu calls in %lu ms)", name, us / 1000UL, us % 1000UL / 10UL, calls,
+            elapsed * TICK_US / 1000UL);
+}
+
+/* Times the synth screen on the sample editor with the chip silenced: the figures in `lines`, one each. */
+static void bench_run(char lines[BENCH_FIGURES][BENCH_LINE])
+{
+    static const struct {
+        const char *name;
+        int variant;
+        void (*call)(void);
+    } figure[BENCH_FIGURES] = {
+        {"Redraw, 4-OP", 4, bench_redraw}, {"Redraw, 2-OP", 2, bench_redraw}, {"Piano key, 4-OP", 4, bench_key},
+        {"Value change, 4-OP", 4, bench_value}, {"Help page 1, 4-OP", 4, bench_help}
+    };
+    int i;
+
+    for (i = 0; i < BENCH_FIGURES; i++) {
+        sample_editor(&editor, figure[i].variant);
+        editor_apply(&editor);
+        synth_refresh(&editor, 1);
+        bench_time(figure[i].name, figure[i].call, lines[i]);
+    }
+}
+
+/* /BENCH: the figures on screen, in the studio's own drawing path, then printed and written to BENCH.TXT. The OPL
+   driver runs with a sink that discards its writes, so nothing sounds and the chip is not touched. */
+static int run_bench(void)
+{
+    static char lines[BENCH_FIGURES][BENCH_LINE];
+    char head[BENCH_LINE];
+    FILE *out;
+    int ok = 1;
+    int i;
+
+    if (editor_init() != 0) {
+        printf("Out of memory for the undo history\n");
+        return EXIT_IO;
+    }
+    opl_sink = bench_discard;
+    opl_init(3);
+    sample_detect(&detect);
+    video_init();
+    bench_run(lines);
+    video_restore();
+    opl_shutdown();
+    editor_done();
+
+    sprintf(head, "RBSTUDIO %s bench: the synth screen, each figure over at least 5 s", REBEEP_VERSION);
+    out = fopen(BENCH_FILE, "w");
+    printf("%s\n", head);
+    if (out != NULL) ok = fprintf(out, "%s\n", head) >= 0;
+    for (i = 0; i < BENCH_FIGURES; i++) {
+        printf("%s\n", lines[i]);
+        if (out != NULL && ok) ok = fprintf(out, "%s\n", lines[i]) >= 0;
+    }
+    if (out != NULL && fclose(out) != 0) ok = 0;
+    if (out == NULL || !ok) {
+        printf("Cannot write %s\n", BENCH_FILE);
+        return EXIT_IO;
     }
     return EXIT_OK;
 }

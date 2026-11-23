@@ -56,8 +56,23 @@ void list_draw(const Library *lib, int sel, int top, const char *msg);
 int list_scroll(const Library *lib, int sel, int top);
 int list_item_at(const Library *lib, int top, int x, int y);
 
-/* The synth screen for the variant `e->n` of the patch in the editor, in the role table's colours. */
+/* The synth screen for the variant `e->n` of the patch in the editor, in the role table's colours. It is drawn in
+   parts, each owning whole rows (the top bar, the voice block, the parameter grid, the band with the frame's bottom
+   edge, the bottom bar) and repainting its own background and frame cells, so one part can be drawn alone over a screen
+   that was right for the old state. synth_draw(e) is synth_redraw(e, SD_ALL). */
+#define SD_TOP 0x01
+#define SD_VOICE 0x02
+#define SD_GRID 0x04
+#define SD_BAND 0x08
+#define SD_BOTTOM 0x10
+#define SD_ALL 0x1F
 void synth_draw(const Editor *e);
+void synth_redraw(const Editor *e, unsigned parts);
+
+/* The parts whose drawing reads a field that differs between the two states, by comparing the fields the drawing reads
+   (not `mods`, `last_make` and the like): 0 means the screen is the same. SD_ALL when the variant, the help, the save
+   prompt or what the prompt shows differs. */
+unsigned synth_parts(const Editor *before, const Editor *after);
 
 /* What the cell (x, y) of the synth screen is, for a click: the control, the operator, the row, the bar with its extent.
    It follows the layout synth_draw uses at the current variant. */
@@ -92,6 +107,10 @@ int save_hit(int x, int y);
    whether `screen` is one of the reference names this program can draw; sample_draw draws it into the back buffer. */
 const char *sample_version(void);
 void sample_detect(Detect *d);
+
+/* The editor the synth-4op and synth-2op reference screens show (`variant` 4 or 2): patch 12 of 40 BRASS, edited, an
+   OPL3, C4 and G4 held. */
+void sample_editor(Editor *e, int variant);
 int sample_known(const char *screen);
 void sample_draw(const char *screen);
 

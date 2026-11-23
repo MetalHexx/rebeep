@@ -57,7 +57,8 @@ compares the dump with its `.scr`. The format and the check are in
 
 **To change a screen, edit its `.scr` first**, in the same change as the code, then make the studio
 draw it. The studio's own [AGENTS.md](../../src/studio/AGENTS.md) has the drawing rules.
-`RBSTUDIO /BENCH` times a full redraw and writes `BENCH.TXT`.
+`RBSTUDIO /BENCH` times the synth screen (a full redraw of the 4-OP and the 2-OP screen, a piano key pressed and released,
+a value changed, the help opened), in milliseconds per call, and writes the same lines to `BENCH.TXT`.
 
 ## Seeing what a game does
 

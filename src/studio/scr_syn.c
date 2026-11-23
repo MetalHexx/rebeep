@@ -11,6 +11,8 @@
 #define L0 23        /* the column of the first operator rule */
 #define ROW_HEAD 5   /* the operator headers' rule; parameter rows follow it */
 #define ROW_BAND 18  /* the rule that closes the table, over the waveform and envelope band */
+#define ROW_END 23   /* the frame's bottom edge, under the band */
+#define ROW_KEYS 24  /* the piano, the held notes and the message area */
 #define WAVE_W 20
 #define ENV_W 55
 #define BAND_ROWS 4
@@ -288,7 +290,7 @@ static void held_text(const Editor *e, char *out)
 
 static void bottom_bar(const Editor *e)
 {
-    int y = 24;
+    int y = ROW_KEYS;
     int i;
     int warn = e->chip == 2 && e->n == 4;
     char held[24];
@@ -524,7 +526,42 @@ static void draw_env(int x, int y, const Op *op, int rim, int body)
     }
 }
 
-void synth_draw(const Editor *e)
+/* The background of rows y0 to y1. */
+static void ground(int y0, int y1)
+{
+    scr_fill(0, y0, VIDEO_COLS, y1 - y0 + 1, ' ', role(R_TEXT), role(R_GROUND));
+}
+
+/* The frame's left and right edges on rows y0 to y1. */
+static void edges(int y0, int y1)
+{
+    scr_fill(0, y0, 1, y1 - y0 + 1, '\xB3', role(R_FRAME), SCR_KEEP);
+    scr_fill(79, y0, 1, y1 - y0 + 1, '\xB3', role(R_FRAME), SCR_KEEP);
+}
+
+static void part_top(const Editor *e)
+{
+    ground(0, 0);
+    top_bar(e);
+}
+
+/* Rows 1 to 4: Connection and Feedback, the frame's top edge and the Connection|Feedback divider (column 51). */
+static void part_voice(const Editor *e)
+{
+    int frame = role(R_FRAME);
+
+    ground(1, ROW_HEAD - 1);
+    voice_block(e);
+    scr_put(0, 1, "\xDA", frame, SCR_KEEP);
+    scr_put(51, 1, "\xC2", frame, SCR_KEEP);
+    scr_put(79, 1, "\xBF", frame, SCR_KEEP);
+    edges(2, ROW_HEAD - 1);
+    scr_fill(51, 2, 1, ROW_HEAD - 2, '\xB3', frame, SCR_KEEP);
+}
+
+/* Rows ROW_HEAD to ROW_BAND - 1: the operator headers, the parameter names and every operator's cells, between one rule
+   per operator and the right edge. The selected operator's two rules are lit. */
+static void part_grid(const Editor *e)
 {
     int n = e->n;
     int z = 4 / n;
@@ -533,47 +570,20 @@ void synth_draw(const Editor *e)
     int j;
     int k;
     int key;
-    int y;
 
-    scr_fill(0, 0, VIDEO_COLS, VIDEO_ROWS, ' ', role(R_TEXT), role(R_GROUND));
-    top_bar(e);
-    bottom_bar(e);
-    voice_block(e);
-
+    ground(ROW_HEAD, ROW_BAND - 1);
     scr_fill(0, ROW_HEAD, 80, 1, H_LINE[0], frame, SCR_KEEP);
-    scr_fill(0, ROW_BAND, 80, 1, H_LINE[0], frame, SCR_KEEP);
-    scr_fill(0, 23, 80, 1, H_LINE[0], frame, SCR_KEEP);
     scr_put(1, ROW_HEAD, " Parameters ", role(R_TEXT), SCR_KEEP);
-
-    /* The closed frame: left and right edges, the Connection|Feedback divider (column 51), the Waveform|Envelope
-       divider (column 23); neighbouring panels share a border cell. */
-    scr_put(0, 1, "\xDA", frame, SCR_KEEP);
-    scr_put(51, 1, "\xC2", frame, SCR_KEEP);
-    scr_put(79, 1, "\xBF", frame, SCR_KEEP);
-    for (y = 2; y <= 22; y++) {
-        if (y != ROW_HEAD && y != ROW_BAND) {
-            scr_put(0, y, "\xB3", frame, SCR_KEEP);
-            scr_put(79, y, "\xB3", frame, SCR_KEEP);
-        }
-    }
-    for (y = 2; y <= 4; y++) scr_put(51, y, "\xB3", frame, SCR_KEEP);
-    for (y = 19; y <= 22; y++) scr_put(L0, y, "\xB3", frame, SCR_KEEP);
+    edges(ROW_HEAD + 1, ROW_BAND - 1);
     scr_put(0, ROW_HEAD, "\xC3", frame, SCR_KEEP);
-    scr_put(0, ROW_BAND, "\xC3", frame, SCR_KEEP);
-    scr_put(0, 23, "\xC0", frame, SCR_KEEP);
-    scr_put(L0, 23, "\xC1", frame, SCR_KEEP);
-    scr_put(79, 23, "\xD9", frame, SCR_KEEP);
     scr_put(79, ROW_HEAD, "\xB4", frame, SCR_KEEP);
-    scr_put(79, ROW_BAND, "\xB4", frame, SCR_KEEP);
 
-    /* One rule per operator and the right edge; the selected operator's two are lit. */
     for (j = 0; j <= n; j++) {
         int x = L0 + j * slot;
         int lc = role(j == e->cur || j == e->cur + 1 ? R_LIT : R_FRAME);
 
         scr_put(x, ROW_HEAD, x == 79 ? "\xB4" : x == 51 ? "\xC5" : "\xC2", lc, SCR_KEEP);
-        for (y = ROW_HEAD + 1; y < ROW_BAND; y++) scr_put(x, y, "\xB3", lc, SCR_KEEP);
-        scr_put(x, ROW_BAND, x == 79 ? "\xB4" : x == L0 ? "\xC5" : "\xC1", lc, SCR_KEEP);
+        scr_fill(x, ROW_HEAD + 1, 1, ROW_BAND - ROW_HEAD - 1, '\xB3', lc, SCR_KEEP);
     }
 
     for (key = 0; key < P_COUNT; key++) {
@@ -590,12 +600,116 @@ void synth_draw(const Editor *e)
         scr_put(cx + 4, ROW_HEAD, is_carrier(e, k) ? "CARRIER" : "MODULATOR", role(k == e->cur ? R_VALUE : is_carrier(e, k) ? R_CARRIER : R_MODULATOR), SCR_KEEP);
         for (key = 0; key < P_COUNT; key++) cell(e, k, key, cx, ROW_HEAD + 1 + key, z);
     }
+}
 
-    /* The band: the selected operator's waveform (under the names) and envelope (under the operators). */
+/* Rows ROW_BAND to ROW_END: the rule that closes the table (with the operator rules' ends), the selected operator's
+   waveform (under the names) and envelope (under the operators), and the frame's bottom edge. The Waveform|Envelope
+   divider is column L0. */
+static void part_band(const Editor *e)
+{
+    int n = e->n;
+    int slot = 14 * (4 / n);
+    int frame = role(R_FRAME);
+    int j;
+
+    ground(ROW_BAND, ROW_END);
+    scr_fill(0, ROW_BAND, 80, 1, H_LINE[0], frame, SCR_KEEP);
+    scr_fill(0, ROW_END, 80, 1, H_LINE[0], frame, SCR_KEEP);
+    edges(ROW_BAND + 1, ROW_END - 1);
+    scr_fill(L0, ROW_BAND + 1, 1, ROW_END - ROW_BAND - 1, '\xB3', frame, SCR_KEEP);
+    scr_put(0, ROW_BAND, "\xC3", frame, SCR_KEEP);
+    scr_put(79, ROW_BAND, "\xB4", frame, SCR_KEEP);
+    scr_put(0, ROW_END, "\xC0", frame, SCR_KEEP);
+    scr_put(L0, ROW_END, "\xC1", frame, SCR_KEEP);
+    scr_put(79, ROW_END, "\xD9", frame, SCR_KEEP);
+
+    for (j = 0; j <= n; j++) {
+        int x = L0 + j * slot;
+        int lc = role(j == e->cur || j == e->cur + 1 ? R_LIT : R_FRAME);
+
+        scr_put(x, ROW_BAND, x == 79 ? "\xB4" : x == L0 ? "\xC5" : "\xC1", lc, SCR_KEEP);
+    }
+
     scr_put(1, ROW_BAND, " Waveform ", role(R_TEXT), SCR_KEEP);
     scr_put(24, ROW_BAND, " Envelope ", role(R_TEXT), SCR_KEEP);
     draw_wave(2, ROW_BAND + 1, voice_of(e)->op[e->cur].v[P_WAVE], rim_colour(e, e->cur));
     draw_env(24, ROW_BAND + 1, &voice_of(e)->op[e->cur], rim_colour(e, e->cur), body_colour(e, e->cur));
+}
+
+static void part_bottom(const Editor *e)
+{
+    ground(ROW_KEYS, ROW_KEYS);
+    bottom_bar(e);
+}
+
+void synth_redraw(const Editor *e, unsigned parts)
+{
+    if (parts & SD_TOP) part_top(e);
+    if (parts & SD_VOICE) part_voice(e);
+    if (parts & SD_GRID) part_grid(e);
+    if (parts & SD_BAND) part_band(e);
+    if (parts & SD_BOTTOM) part_bottom(e);
+}
+
+void synth_draw(const Editor *e)
+{
+    synth_redraw(e, SD_ALL);
+}
+
+/* The parameters the band reads: the waveform and the envelope's six. */
+static const unsigned char BAND_KEYS[] = {P_AR, P_DR, P_SL, P_RR, P_OL, P_WAVE, P_SUS};
+
+/* The parameter row in focus, or -1 when the focus is on another row. */
+static int param_focus(const Editor *e)
+{
+    return e->fk < P_COUNT ? e->fk : -1;
+}
+
+unsigned synth_parts(const Editor *before, const Editor *after)
+{
+    const Voice *a = voice_of(before);
+    const Voice *b = voice_of(after);
+    unsigned parts = 0;
+    int n = after->n;
+    unsigned i;
+
+    if (before->n != n || before->help != after->help || before->prompt != after->prompt) return SD_ALL;
+    if (after->prompt && (before->btn != after->btn || before->pend != after->pend ||
+                          strcmp(before->p.name, after->p.name) != 0)) {
+        return SD_ALL;
+    }
+
+    if (strcmp(before->p.name, after->p.name) != 0 || before->p.octave != after->p.octave ||
+        before->dirty != after->dirty || before->pos != after->pos || before->total != after->total ||
+        (before->fk == F_NAME) != (after->fk == F_NAME) || (before->fk == F_VARIANT) != (after->fk == F_VARIANT) ||
+        (before->fk == F_OCTAVE) != (after->fk == F_OCTAVE)) {
+        parts |= SD_TOP;
+    }
+
+    if (a->conn != b->conn || a->fb != b->fb || (before->fk == F_CONN) != (after->fk == F_CONN) ||
+        (before->fk == F_FB) != (after->fk == F_FB)) {
+        parts |= SD_VOICE;
+    }
+
+    if (before->cur != after->cur || a->conn != b->conn || before->chip != after->chip ||
+        param_focus(before) != param_focus(after) || memcmp(a->op, b->op, (unsigned)n * sizeof(Op)) != 0) {
+        parts |= SD_GRID;
+    }
+
+    if (before->cur != after->cur || a->conn != b->conn) {
+        parts |= SD_BAND;
+    } else {
+        for (i = 0; i < sizeof BAND_KEYS && !(parts & SD_BAND); i++) {
+            if (a->op[after->cur].v[BAND_KEYS[i]] != b->op[after->cur].v[BAND_KEYS[i]]) parts |= SD_BAND;
+        }
+    }
+
+    if (before->nheld != after->nheld || memcmp(before->held, after->held, (unsigned)after->nheld) != 0 ||
+        before->kbOct != after->kbOct || before->chip != after->chip || before->msgRole != after->msgRole ||
+        strcmp(before->msg, after->msg) != 0) {
+        parts |= SD_BOTTOM;
+    }
+    return parts;
 }
 
 static int has_bar(int key)

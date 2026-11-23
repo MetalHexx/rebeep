@@ -17,7 +17,7 @@
 | `opl.c` · `opl.h` | The OPL driver: detection, `opl_regs2`/`opl_regs4` (the one parameter-to-register mapping), live notes on every channel, `opl_sink` for tests, `/TRACE` write logging |
 | `jingle.c` · `jingle.h` | The splash jingle on `FACTORY\BELL`, advanced by `jingle_poll` from the BIOS tick count |
 | `rebeep.c` · `rebeep.h` | The resident ReBeep through AMIS (INT 2Dh): traps off (13h) at start, on (12h) at exit |
-| `video.c` · `video.h` | The 80x25 back buffer, the flush to `B800:0000`, blink and cursor handling; the `scr_*` screen layer (CP437 text, `SCR_KEEP` colours, boxes, the splash ramp, `scr_dump`) |
+| `video.c` · `video.h` | The 80x25 back buffer, the flush to `B800:0000`, blink and cursor handling; the `scr_*` screen layer (CP437 text, `SCR_KEEP` colours, boxes, the splash ramp, `scr_dump`); each call clips once and writes its run straight into the buffer |
 | `roles.c` · `roles.h` | The one role table (a colour and a mono index per role) and the colour or mono view |
 | `ansi.c` · `ansi.h` | `ansi_draw` for the `.ans` art, and `scr_remap_mono` (the shared mono remap) |
 | `mouse.c` · `mouse.h` | INT 33h, used only when a driver answers; cells are pixels / 8 |
@@ -27,20 +27,19 @@
 | `scr_help.c` | The pop-up frame (`dim_under`, `window_draw`) and the two-page help (`help_draw`, `help_hit`, `help_detected`) |
 | `scr_save.c` | The save prompt (`save_draw`, `save_hit`) |
 | `scr_list.c` | The patch list: `list_draw` from the library, `list_scroll` (the window that keeps the selection and its folder heading in view), `list_item_at` (a click's row to an entry) |
-| `scr_syn.c` | The synth screen, a port of the mockup's `synth()` for both variants (`synth_draw`), and `synth_hit`, what a cell is for a click (it shares `top_layout` and the grid constants with the drawing) |
+| `scr_syn.c` | The synth screen, a port of the mockup's `synth()` for both variants, drawn in parts (`synth_draw`, `synth_redraw`; `synth_parts` says which parts differ between two Editors), and `synth_hit`, what a cell is for a click (it shares `top_layout` and the grid constants with the drawing) |
 | `sample.c` | The fixed sample data (version 0.1.0, the sample detection, the sample patch list, patch 12 of 40 BRASS, the help's Detected line and log path) and the screen names `/DUMP:` can draw |
 | `data/SPLASH.ANS` · `data/MENU.ANS` | The art; `targets.json` `files` ships them to `REBEEP\` |
 | `kbd.c` · `kbd.h` | The `INT 09h` handler: make and break codes, a key-state table, an event queue |
 
 ## Rules
 
-- **Build:** `rebeep build run` compiles every `*.c` here with `wcl` (`-bt=dos -mm -0 -os -w4`) and links one EXE.
+- **Build:** `rebeep build run` compiles every `*.c` here with `wcl` (`-bt=dos -mm -0 -os -w4`; `-ot` was measured and gains nothing) and links one EXE.
   The `package.json` version reaches C through the generated `build/gen/version.h` (`REBEEP_VERSION`, `REBEEP_VER_MAJOR/MINOR/PATCH`).
 - **Linking rule:** `rebeep test run --suite studio` links every module here except `main.c` into each test program
   (`tests/studio/T_*.C`, [tests/studio/AGENTS.md](../../tests/studio/AGENTS.md)). So no module may use a symbol defined in
   `main.c`, and `main.c` holds only the entry point, argument handling and the top-level flow.
-- **8086 only, medium model** (far code, near data). The 64 KB data group must hold: big buffers (undo history, the
-  patch list) go in far memory.
+- **8086 only, medium model** (far code, near data). The 64 KB data group must hold: big buffers (undo history, the patch list) go in far memory.
 - **Every vector goes through `dos_hook()`**, and `dos_restore()` puts them all back. It runs at `atexit` and on the
   normal exit. A vector left pointing into a freed program hangs the machine on the next key press.
 - **An interrupt handler** is `__interrupt __far`, calls nothing in the C library, sits inside
@@ -51,6 +50,9 @@
   read-only floppy returns an error to the program instead of "Abort, Retry, Fail".
 - **The screen goes through `video_*`** into the back buffer, then one `video_flush`. Blink is off while running (bit 7 of
   an attribute is a bright background), back on at exit; the cursor is hidden and restored; the screen is cleared on exit.
+  **Draw only what changed:** the synth screen is parts that own whole rows and their frame cells (`SD_*`, `synth_redraw`); `run_synth`
+  drains every queued event, then draws `synth_parts(&drawn, ed)` once, from the Editor as last shown (a pop-up draws it all). No path
+  flags a part: a field the drawing reads goes into `synth_parts`, and `T_REDRW` checks it.
 - **Patch values are the editor's:** SL and OL are stored so bigger is louder; registers come only from the mapping in the
   sound module. A bad or unreadable patch file is left out of the list and logged with its reason, never fixed up.
 - **Paths are untrusted:** `PATCHES=` passes `path_valid` (plain 8.3 components, no `..` or wildcards, 64 chars) or the
@@ -100,8 +102,7 @@
   column and operator 1's left edge sit at the same cells, the bars end one cell before each slot's rule. Never lay 2-OP out apart.
 - **The envelope is integer maths.** `env_levels` in `scr_syn.c` is the mockup's envelope as whole numbers over a common
   denominator (no floating point); the waveform is a table of 20 heights per shape. Keep both matching the mockup.
-- A C literal with a CP437 glyph above 7Fh uses a hex escape in a literal of its own (`"\xFB" "  text"`), or the next
-  hex digit joins the escape.
+- A C literal with a CP437 glyph above 7Fh uses a hex escape in a literal of its own (`"\xFB" "  text"`), or the next hex digit joins it.
 - Output names are 8.3, uppercase. Keep C89: declarations at the top of a block.
 
 ## Pitfalls
@@ -112,7 +113,6 @@
   `E1 1D 45 E1 9D C5`. A key's make repeats while it is held.
 - The BIOS still sees every key, so `main` empties its buffer, or a full one beeps. The editor reads names from scan codes
   (US layout, like the piano), never from that buffer.
-- The BIOS tick count at `0040:006Ch` is 18.2 Hz: `/BENCH` resolution is about 55 ms in total, so judge it over its 200 redraws.
 - The stack is the linker default, 2 KB (`Stack size` in `build/RBSTUDIO.MAP`). Keep big arrays off it: static or far storage.
 
 ## Run / test
@@ -122,7 +122,7 @@ rebeep tool fetch open-watcom
 rebeep build run --deploy
 ```
 
-In DOSBox-X or on a VM: `RBSTUDIO`, `RBSTUDIO /BENCH` (writes `BENCH.TXT` in the current folder).
+In DOSBox-X or on a VM: `RBSTUDIO`, `RBSTUDIO /BENCH` (the synth screen, ms per call over at least 5 s of 18.2 Hz BIOS ticks; writes `BENCH.TXT` in the current folder).
 To watch a flow with typed keys and screenshots (menu, patch list, synth screen, Esc), see the [drive-dos-app skill](../../.claude/skills/drive-dos-app/SKILL.md).
 
 ## Related

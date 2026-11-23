@@ -178,3 +178,22 @@ are indicative, not a real machine's.
 |---|---|---|
 | `mirror-freedos` (86Box, Pentium MMX 233) | 6.9 µs | 0.9 µs |
 | `slow-386sx` (86Box, 386SX/16) | Not measured yet | Not measured yet |
+
+### The studio
+
+`RBSTUDIO /BENCH` times the synth screen on a sample patch with the chip silenced, each figure over at
+least 5 seconds, and writes the milliseconds per call to `BENCH.TXT`. Measured on `slow-386sx` (86Box,
+a 386SX/16) after the dev boot, ReBeep resident. "Before" is the same bench on the studio as it drew
+until then: a call per cell, and every key event a full redraw.
+
+| Figure, per call | Before | After |
+|---|---|---|
+| Full redraw, 4-OP screen | 176 ms | 118 ms |
+| Full redraw, 2-OP screen | 163 ms | 109 ms |
+| A piano key pressed and released | 352 ms | 17 ms |
+| A value changed (voice reprogrammed, undo step) | 361 ms | 111 ms |
+| Help page 1 opened over the screen | 406 ms | 348 ms |
+
+A piano key now redraws the bottom bar alone, and a modifier or a held key's repeat draws nothing. A
+value change still redraws the whole parameter grid and the band. The help's own drawing, about
+230 ms of its figure, was not changed.

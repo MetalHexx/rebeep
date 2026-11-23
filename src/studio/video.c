@@ -135,6 +135,79 @@ void video_init(void)
     video_fill(0, 0, VIDEO_COLS, VIDEO_ROWS, ' ', 0x07);
 }
 
+/* The cells a draw writes. A run is clipped once and then written straight into `back`: a cell becomes
+   (cell & keep) | set, so a kept glyph or colour is only a bit of `keep`. */
+
+/* Clips the rectangle to the screen. Returns 0 when nothing is left. */
+static int clip_rect(int *x, int *y, int *w, int *h)
+{
+    int x1 = *x + *w;
+    int y1 = *y + *h;
+
+    if (*x < 0) *x = 0;
+    if (*y < 0) *y = 0;
+    if (x1 > VIDEO_COLS) x1 = VIDEO_COLS;
+    if (y1 > VIDEO_ROWS) y1 = VIDEO_ROWS;
+    *w = x1 - *x;
+    *h = y1 - *y;
+    return *w > 0 && *h > 0;
+}
+
+/* The bits of a cell a draw keeps and the bits it sets, for the glyph `ch` (kept when negative) and the colours
+   (each kept when negative). */
+static void cell_bits(int ch, int fg, int bg, unsigned *keep, unsigned *set)
+{
+    unsigned k = 0;
+    unsigned s = 0;
+
+    if (ch >= 0) s |= (unsigned char)ch;
+    else k |= 0x00FF;
+    if (fg >= 0) s |= (unsigned)(fg & 15) << 8;
+    else k |= 0x0F00;
+    if (bg >= 0) s |= (unsigned)(bg & 15) << 12;
+    else k |= 0xF000;
+    *keep = k;
+    *set = s;
+}
+
+static void write_rect(int x, int y, int w, int h, int ch, int fg, int bg)
+{
+    unsigned keep;
+    unsigned set;
+
+    if (!clip_rect(&x, &y, &w, &h)) return;
+    cell_bits(ch, fg, bg, &keep, &set);
+    for (; h > 0; h--, y++) {
+        unsigned short *p = back + y * VIDEO_COLS + x;
+        unsigned short *end = p + w;
+
+        if (keep == 0) {
+            for (; p < end; p++) *p = set;
+        } else {
+            for (; p < end; p++) *p = (*p & keep) | set;
+        }
+    }
+}
+
+/* The start of the run of `*len` characters of a row from column `x`, clipped to the row, or NULL when none of it is
+   on the screen. `*skip` is how many leading characters fall off the left edge. */
+static unsigned short *clip_run(int x, int y, int *skip, int *len)
+{
+    int n = *len;
+
+    *skip = 0;
+    if ((unsigned)y >= VIDEO_ROWS) return NULL;
+    if (x < 0) {
+        *skip = -x;
+        n += x;
+        x = 0;
+    }
+    if (x + n > VIDEO_COLS) n = VIDEO_COLS - x;
+    if (n <= 0) return NULL;
+    *len = n;
+    return back + y * VIDEO_COLS + x;
+}
+
 void video_put(int x, int y, unsigned char ch, unsigned char attr)
 {
     if ((unsigned)x >= VIDEO_COLS || (unsigned)y >= VIDEO_ROWS) return;
@@ -143,17 +216,27 @@ void video_put(int x, int y, unsigned char ch, unsigned char attr)
 
 void video_fill(int x, int y, int w, int h, unsigned char ch, unsigned char attr)
 {
-    int col;
-    int row;
+    unsigned short cell = ((unsigned short)attr << 8) | ch;
 
-    for (row = y; row < y + h; row++) {
-        for (col = x; col < x + w; col++) video_put(col, row, ch, attr);
+    if (!clip_rect(&x, &y, &w, &h)) return;
+    for (; h > 0; h--, y++) {
+        unsigned short *p = back + y * VIDEO_COLS + x;
+        unsigned short *end = p + w;
+
+        for (; p < end; p++) *p = cell;
     }
 }
 
 void video_text(int x, int y, const char *s, unsigned char attr)
 {
-    for (; *s != '\0'; s++, x++) video_put(x, y, (unsigned char)*s, attr);
+    int len = (int)strlen(s);
+    int skip;
+    unsigned short *p = clip_run(x, y, &skip, &len);
+    unsigned short *end;
+
+    if (p == NULL) return;
+    s += skip;
+    for (end = p + len; p < end; p++, s++) *p = ((unsigned short)attr << 8) | (unsigned char)*s;
 }
 
 void video_flush(void)
@@ -161,43 +244,29 @@ void video_flush(void)
     _fmemcpy(screen, back, sizeof back);
 }
 
-/* Writes `ch` (or keeps the glyph when negative) and the colours that are not SCR_KEEP. */
-static void put_cell(int x, int y, int ch, int fg, int bg)
-{
-    unsigned cell;
-    unsigned attr;
-
-    if ((unsigned)x >= VIDEO_COLS || (unsigned)y >= VIDEO_ROWS) return;
-    cell = back[y * VIDEO_COLS + x];
-    attr = cell >> 8;
-    if (fg >= 0) attr = (attr & 0xF0) | (fg & 15);
-    if (bg >= 0) attr = (attr & 0x0F) | ((bg & 15) << 4);
-    back[y * VIDEO_COLS + x] = (attr << 8) | (ch >= 0 ? (unsigned)ch : (cell & 0xFF));
-}
-
 void scr_put(int x, int y, const char *cp437, int fg, int bg)
 {
-    for (; *cp437 != '\0'; cp437++, x++) put_cell(x, y, (unsigned char)*cp437, fg, bg);
+    int len = (int)strlen(cp437);
+    int skip;
+    unsigned short *p = clip_run(x, y, &skip, &len);
+    unsigned short *end;
+    unsigned keep;
+    unsigned set;
+
+    if (p == NULL) return;
+    cell_bits(0, fg, bg, &keep, &set);
+    cp437 += skip;
+    for (end = p + len; p < end; p++, cp437++) *p = (*p & keep) | set | (unsigned char)*cp437;
 }
 
 void scr_fill(int x, int y, int w, int h, char ch, int fg, int bg)
 {
-    int col;
-    int row;
-
-    for (row = y; row < y + h; row++) {
-        for (col = x; col < x + w; col++) put_cell(col, row, (unsigned char)ch, fg, bg);
-    }
+    write_rect(x, y, w, h, (unsigned char)ch, fg, bg);
 }
 
 void scr_paint(int x, int y, int w, int h, int fg, int bg)
 {
-    int col;
-    int row;
-
-    for (row = y; row < y + h; row++) {
-        for (col = x; col < x + w; col++) put_cell(col, row, -1, fg, bg);
-    }
+    write_rect(x, y, w, h, -1, fg, bg);
 }
 
 void scr_box(int x, int y, int w, int h, int style, int fg, int bg)
@@ -205,21 +274,16 @@ void scr_box(int x, int y, int w, int h, int style, int fg, int bg)
     static const unsigned char single[6] = {0xDA, 0xC4, 0xBF, 0xB3, 0xC0, 0xD9};
     static const unsigned char dbl[6] = {0xC9, 0xCD, 0xBB, 0xBA, 0xC8, 0xBC};
     const unsigned char *g = style == SCR_DOUBLE ? dbl : single;
-    int i;
 
     if (w < 2 || h < 2) return;
-    put_cell(x, y, g[0], fg, bg);
-    put_cell(x + w - 1, y, g[2], fg, bg);
-    put_cell(x, y + h - 1, g[4], fg, bg);
-    put_cell(x + w - 1, y + h - 1, g[5], fg, bg);
-    for (i = 1; i < w - 1; i++) {
-        put_cell(x + i, y, g[1], fg, bg);
-        put_cell(x + i, y + h - 1, g[1], fg, bg);
-    }
-    for (i = 1; i < h - 1; i++) {
-        put_cell(x, y + i, g[3], fg, bg);
-        put_cell(x + w - 1, y + i, g[3], fg, bg);
-    }
+    write_rect(x, y, 1, 1, g[0], fg, bg);
+    write_rect(x + w - 1, y, 1, 1, g[2], fg, bg);
+    write_rect(x, y + h - 1, 1, 1, g[4], fg, bg);
+    write_rect(x + w - 1, y + h - 1, 1, 1, g[5], fg, bg);
+    write_rect(x + 1, y, w - 2, 1, g[1], fg, bg);
+    write_rect(x + 1, y + h - 1, w - 2, 1, g[1], fg, bg);
+    write_rect(x, y + 1, 1, h - 2, g[3], fg, bg);
+    write_rect(x + w - 1, y + 1, 1, h - 2, g[3], fg, bg);
 }
 
 void scr_ramp(int x, int y, const char *s)
@@ -227,6 +291,7 @@ void scr_ramp(int x, int y, const char *s)
     int n = 0;
     int i = 0;
     const char *p;
+    int on_row = (unsigned)y < VIDEO_ROWS;
 
     for (p = s; *p != '\0'; p++) {
         if (*p != ' ') n++;
@@ -239,7 +304,11 @@ void scr_ramp(int x, int y, const char *s)
             else if (i == 1 || i == n - 2) fg = 7;
             i++;
         }
-        put_cell(x, y, (unsigned char)*s, fg, SCR_KEEP);
+        if (on_row && (unsigned)x < VIDEO_COLS) {
+            unsigned short *cell = back + y * VIDEO_COLS + x;
+
+            *cell = (*cell & 0xF000) | ((unsigned)fg << 8) | (unsigned char)*s;
+        }
     }
 }
 

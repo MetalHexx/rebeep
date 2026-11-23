@@ -12,7 +12,9 @@
 void video_init(void);
 void video_restore(void);
 
-/* Back-buffer drawing. Coordinates are 0-based; anything off the screen is clipped. */
+/* Back-buffer drawing. Coordinates are 0-based; anything off the screen is clipped. Each call (these and the scr_* ones
+   below) clips once and writes its run straight into the buffer: draw a rectangle or a string in one call, not a cell at a
+   time. */
 void video_put(int x, int y, unsigned char ch, unsigned char attr);
 void video_fill(int x, int y, int w, int h, unsigned char ch, unsigned char attr);
 void video_text(int x, int y, const char *s, unsigned char attr);

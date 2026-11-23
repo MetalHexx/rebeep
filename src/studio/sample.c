@@ -51,7 +51,7 @@ void sample_detect(Detect *d)
 
 /* Patch 12 of 40, BRASS with operator 2's Attack Rate edited (so the * shows), operator 2's Attack Rate in focus, an
    OPL3, C4 and G4 held, no message. */
-static void sample_editor(Editor *e, int variant)
+void sample_editor(Editor *e, int variant)
 {
     int k;
 

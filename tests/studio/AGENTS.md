@@ -19,6 +19,7 @@
 | `T_LSCRL.C` | The patch list's scroll window (`list_scroll`), row hit-test (`list_item_at`) and override text for an 8-character name (`list_draw`) over a synthetic library |
 | `T_SAVE.C` | Saving over a tree built at run time: the Ctrl+S rules (factory, pack and user patches, override removal only when equal and never from a pack patch, a name edit as Save As), Save As validation, Reset to factory, the save prompt guarding a leave, a failed write that keeps the old file, the help's keys, and every non-piano binding documented by a help row |
 | `T_EDIT.C` | The editor without drawing: value ranges and wrap, the Waveform limit by chip, the 4-OP variant from FM and AM, undo coalescing, the name, the piano and its releases, key events through the table, a bar's mouse values, PgUp/PgDn across folders |
+| `T_REDRW.C` | The synth screen in parts: `synth_parts` and `synth_redraw` over the old screen against a fresh `synth_draw`, for each field the drawing reads, in both variants and views; the primitives' clipping and `SCR_KEEP` |
 
 ## Rules
 
@@ -47,8 +48,7 @@
 
 ## Pitfalls
 
-- Keep C89 and the studio's medium model; a program has the same 64 KB data group and 2 KB default stack as `RBSTUDIO`.
-- A program that does not print `DONE` last, hits the 60 s DOSBox-X limit or writes no `RESULT.TXT` fails.
+- Keep C89 and the studio's medium model; a program has the same 64 KB data group and 2 KB default stack as `RBSTUDIO`, and fails unless it prints `DONE` last and writes `RESULT.TXT` within DOSBox-X's 60 s.
 
 ## Run / test
 
