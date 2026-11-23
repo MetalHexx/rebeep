@@ -153,14 +153,14 @@ JEMMEX.EXE in CONFIG.SYS. If Jemm is not in C:\JEMM, set RBJEMM first:
 
 4 Options and hotkeys
 ---------------------
-  REBEEP [/F | /P:n] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
+  REBEEP [/F | /P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
 
   /F      faithful square-wave voice (default)
-  /P:n    built-in patch n, 1 to 4: 1 Organ, 2 Flute, 3 Brass, 4 Bell
+  /P:name a patch: FOLDER\NAME, or NAME from USER then FACTORY
   /V:n    volume, 0 to 15 (default 12)
   /L:n    notes below 20 Hz: 0 silent (default), 1 played
   /R:n    sounds it can't translate: 1 speaker (default), 0 muted
-  /K:xy   Ctrl+Alt+x toggles, Ctrl+Alt+y cycles the voice (default BN)
+  /K:xy   Ctrl+Alt+x toggles, Ctrl+Alt+y switches the voice (default BN)
   /ON     trap the speaker again
   /OFF    stop trapping and release the OPL to the game
   /S      status
@@ -182,7 +182,7 @@ as Grand Prix Circuit's percussion.
 Hotkeys, with the defaults:
 
   Ctrl+Alt+B   turn translation on or off
-  Ctrl+Alt+N   cycle the voice
+  Ctrl+Alt+N   switch between the faithful voice and the patch
 
 Exit codes, also in ERRORLEVEL:
 
@@ -262,7 +262,7 @@ Other problems:
   A hotkey that does not fire
       Some games, such as Grand Prix Circuit, take over the keyboard
       interrupt, so Ctrl+Alt keys do nothing in them. They still work at
-      the DOS prompt. Set the voice (REBEEP /F or REBEEP /P:n), or run
+      the DOS prompt. Set the voice (REBEEP /F or REBEEP /P:name), or run
       REBEEP /OFF, before you start the game.
 
   Games that toggle the speaker heavily

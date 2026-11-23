@@ -126,6 +126,7 @@ async function runInterpreter(ctx, repo) {
   const version = readPackageVersion(repo);
   const out = path.join(repo.build, 'tests');
   fs.mkdirSync(out, { recursive: true });
+  stageFactory(repo, out);
 
   const results = [];
   for (const file of programs) {

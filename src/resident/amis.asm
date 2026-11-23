@@ -124,10 +124,20 @@ amis_isr:
 ; In:  AL = 2 or 3, the chip type
 rb_opl_start:
         call    opl_init
-        mov     al, [RB_STATE + RBS_VOICE]
-        call    opl_set_voice
+        call    rb_set_voice
         mov     al, [RB_STATE + RBS_VOLUME]
         jmp     opl_set_volume
+
+; rb_set_voice: hand RB_STATE's voice to the OPL target. The patch voice needs a loaded patch;
+; without one the faithful voice plays. Clobbers AL and SI.
+rb_set_voice:
+        mov     al, [RB_STATE + RBS_VOICE]
+        mov     si, RB_STATE + RBS_PATCH
+        test    byte [RB_STATE + RBS_PFLAGS], RBS_PF_LOADED
+        jnz     .go
+        xor     al, al
+.go:
+        jmp     opl_set_voice
 
 ; rb_apply_low: hand RB_STATE's /L flag to the interpreter. With the traps on,
 ; rb_apply_config then applies it to a held count at once. Clobbers AL.
@@ -137,13 +147,12 @@ rb_apply_low:
         mov     [interp_low], al
         ret
 
-; rb_apply_config: push RB_STATE's voice, volume, /L, /R and translation flags to the
+; rb_apply_config: push RB_STATE's voice and patch, volume, /L, /R and translation flags to the
 ; engine. Only valid while the traps are on, when the OPL is ours. The voice goes first, so
 ; a rest that /L turns into a tone starts in the new voice; translation goes last, as it
 ; starts or ends masking for whatever the others left.
 rb_apply_config:
-        mov     al, [RB_STATE + RBS_VOICE]
-        call    opl_set_voice
+        call    rb_set_voice
         mov     al, [RB_STATE + RBS_VOLUME]
         call    opl_set_volume
         call    capture_voice_changed

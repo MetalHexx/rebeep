@@ -6,17 +6,17 @@ Every option, hotkey and exit code. `REBEEP /?` prints the same list, and the pa
 ## Options
 
 ```
-REBEEP [/F | /P:n] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
+REBEEP [/F | /P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
 ```
 
 | Option | Does |
 |---|---|
 | `/F` | Faithful square-wave voice (default) |
-| `/P:n` | Built-in patch `n`, 1 to 4: 1 Organ, 2 Flute, 3 Brass, 4 Bell |
+| `/P:name` | A patch: `FOLDER\NAME`, or `NAME` from `USER` then `FACTORY` |
 | `/V:n` | Volume, 0 to 15 (default 12) |
 | `/L:n` | Notes below 20 Hz: 0 silent (default), 1 played as a low FM note |
 | `/R:n` | Sounds ReBeep can't translate: 1 on the real speaker (default), 0 muted |
-| `/K:xy` | Ctrl+Alt+`x` toggles, Ctrl+Alt+`y` cycles the voice (default `BN`) |
+| `/K:xy` | Ctrl+Alt+`x` toggles, Ctrl+Alt+`y` switches the voice (default `BN`) |
 | `/ON` | Catch the speaker again |
 | `/OFF` | Stop catching the speaker, and leave the FM chip to the game |
 | `/S` | Status |
@@ -33,7 +33,7 @@ REBEEP [/F | /P:n] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
 | Hotkey (defaults) | Does |
 |---|---|
 | Ctrl+Alt+B | Switch between the sound card and the real speaker |
-| Ctrl+Alt+N | Cycle the voice: faithful, then patches 1 to 4 |
+| Ctrl+Alt+N | Switch between the faithful voice and the patch |
 
 They work at the DOS prompt and in games that leave the keyboard alone, but not yet in games that
 take it over, such as Grand Prix Circuit.

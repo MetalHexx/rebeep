@@ -171,6 +171,12 @@ describe('test run --suite interpreter, with fake NASM and DOSBox-X', () => {
     fs.mkdirSync(path.join(root, 'src', 'include'), { recursive: true });
     fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'x', version: '0.1.0' }));
     fs.writeFileSync(path.join(root, 'tests', 'interpreter', 't_add.asm'), 'org 100h\n');
+    fs.mkdirSync(path.join(root, 'src', 'studio', 'data', 'FACTORY'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'studio', 'data', 'FACTORY', 'ORGAN.RBP'), 'patch');
+    fs.writeFileSync(
+      path.join(root, 'src', 'targets.json'),
+      JSON.stringify({ targets: [], files: [{ source: 'studio/data/FACTORY/ORGAN.RBP', deploy: 'REBEEP/FACTORY' }] }),
+    );
   });
 
   after(() => {
@@ -204,6 +210,12 @@ describe('test run --suite interpreter, with fake NASM and DOSBox-X', () => {
     const out = path.join(root, 'build', 'tests');
     assert.ok(calls[0].includes(`MOUNT C "${out}"`), JSON.stringify(calls[0]));
     assert.ok(calls[0].includes('T_ADD.COM > RESULT.TXT'));
+  });
+
+  test('stages the factory patches as FACTORY beside the programs', () => {
+    const { result } = runInterp('PASS add\nDONE 1\n');
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(fs.readFileSync(path.join(root, 'build', 'tests', 'FACTORY', 'ORGAN.RBP'), 'utf8'), 'patch');
   });
 
   test('a FAIL line fails the run and names an unnamed case', () => {

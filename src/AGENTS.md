@@ -8,11 +8,11 @@
 |---|---|
 | `targets.json` | What `rebeep build run` builds, plus an optional `files` list of data files under `src/` (`source` with an 8.3 upper-case base name, `deploy` one or two 8.3 folders such as `REBEEP/FACTORY`): copied to `build/files/` and put on D:. Each target: name, source, `format` (`bin` = one NASM file, `exe` = a folder of C files built with Open Watcom), optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it), `defines` (extra NASM `-D` names: `REBEEP_TRACE` builds `REBEEPD.COM`, dev-only, never packaged; `REBEEP.COM` is unchanged by it) |
 | `rebeep.asm` | `REBEEP.COM`: the resident part, then `resident_end`, then the startup part |
-| `resident/` | `data.asm`: `RB_STATE`, saved vectors, the private stack. `amis.asm`: the `INT 2Dh` handler and uninstall |
+| `resident/` | `data.asm`: `RB_STATE` (the loaded patch's records too), saved vectors, the private stack. `amis.asm`: the `INT 2Dh` handler and uninstall |
 | `capture/` | `trap.asm`: QPI trap install and remove, the callback, the port semantics (masking, read view, OPL events). `trace.asm`: REBEEPD's log |
 | `engine/` | `interp.asm` the speaker interpreter, `opl.asm` the OPL render target |
 | `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
-| `startup/` | `main.asm`: options, checks, load, change, unload, messages. `dump.asm`: `REBEEPD /D`. Freed when going resident |
+| `startup/` | `main.asm`: options, checks, load, change, unload, messages. `patch.asm`: the `.RBP` parser. `files.asm`: program folder, `RBSTUDIO.CFG`, name rules, patch lookup. `dump.asm`: `REBEEPD /D`. All freed when going resident |
 | `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [exitcode.inc](include/exitcode.inc): the exit codes. `trace.inc`: REBEEPD's record. None is restated elsewhere |
 | `studio/` | `RBSTUDIO.EXE`, the tracker studio, in C. Its rules: [studio/AGENTS.md](studio/AGENTS.md) |
 | `diag/` | `qpichk.asm` → `QPICHK.COM`, reports whether QPIEMU is up (run by `BOOT.BAT`). `fdboot.asm` → `FDBOOT.BIN`, the release floppy's boot sector: hands the boot to C:, asks for a key only when C: has none |
@@ -45,7 +45,7 @@
   Below 20 Hz (above `DIV_MAX`, or 0 = 65536) is `M_REST`, OPL keyed off, or `M_TONE` once `interp_low` is set (`/L:1`).
 - While the traps are off the OPL belongs to the game: no OPL or `61h` write, and uninstall skips
   `opl_shutdown`. The hotkey then only updates `RB_STATE`. `/OFF` first undoes any masking; `/ON` resyncs.
-- A command-line change writes only the fields it names. Defaults apply on a plain load alone.
+- A command-line change writes only the fields it names (`/P:`: the whole patch block at once, interrupts off). Defaults apply on a plain load alone. `/P:` and `PATCH=` share one name rule (`spec_valid`); a patch that can't be used is a message and the faithful voice, never an exit code.
 - NASM rejects an out-of-range short jump under `cpu 8086`; keep branches local. DOS `09h` returns `AL = '$'`.
 
 ## Run / test

@@ -28,11 +28,12 @@
   ignored channels and commands, glide, direct toggling, range edges, rests below 20 Hz and `interp_sync`.
 - `interpreter/t_opl.asm` (`T_OPL.COM`) covers the OPL target: real chip detection, block/F-number
   against the formula, and, through a recording sink, the key bit (none at volume 0), notes alternating over channels 7
-  and 8 (and nothing else written), `C0h`, volume and shutdown, as an OPL2 and as an OPL3. It checks that every
-  routine preserves its registers and uses at most 16 bytes of stack (depths print as an `INFO` line).
-- Listening check: `T_OPL /L` plays each voice for a second at 440 Hz. Run `build/tests/T_OPL.COM /L`
-  in DOSBox-X with sound on, once per `oplmode` (`-set "sblaster oplmode=opl2"`, then `opl3`; the setting is one
-  space-separated argument, DOSBox-X ignores a comma form).
+  and 8 (and nothing else written), `C0h`, volume, shutdown, a patch block's record (`E0h` held to 0-3 on an OPL2) and
+  octave shift, as an OPL2 and as an OPL3. It checks that every routine preserves its registers and uses at most 16 bytes of stack (depths print as an `INFO` line).
+- `interpreter/T_PATCH.ASM` (`T_PATCH.COM`) covers the startup part's `.RBP` parser, name rules, `RBSTUDIO.CFG` reader and
+  patch lookup, on text buffers and on `FACTORY\` (the suite stages the factory files). Its cases are `patch.c`'s: both parsers take and refuse the same files.
+- Listening check: `T_OPL /L` plays the faithful voice, then the four factory records, a second each. Run `build/tests/T_OPL.COM /L`
+  in DOSBox-X with sound on, once per `oplmode` (`-set "sblaster oplmode=opl2"`, then `opl3`; one space-separated argument).
 - `RBTEST.COM` plays speaker cases for listening, runs PASS/FAIL behaviour checks (with `/R`, against
   ReBeep's state through AMIS, last turning its traps off and on), probes free memory and times a trapped write.
   `P_EXER` tests it without ReBeep, `P_CAPT` with it, `P_TRACE` under REBEEPD, `P_BENCH` times it (`docs/architecture/how-it-works.md`); `RBTEST /?`.
@@ -59,5 +60,4 @@ rebeep test run --suite vm      # opens 86Box; not part of --suite all
 
 ## Related
 
-- [src/AGENTS.md](../src/AGENTS.md)
-- [studio/AGENTS.md](studio/AGENTS.md) · [vm/AGENTS.md](vm/AGENTS.md)
+- [src/AGENTS.md](../src/AGENTS.md) · [studio/AGENTS.md](studio/AGENTS.md) · [vm/AGENTS.md](vm/AGENTS.md)

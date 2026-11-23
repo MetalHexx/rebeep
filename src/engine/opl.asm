@@ -1,7 +1,8 @@
 ; OPL render target: detects an OPL2/OPL3 at 388h and plays one voice, either a
-; faithful square wave or one of four built-in patches. Each new note takes the
-; other of channels 7 and 8, so the last note releases undisturbed instead of
-; being retriggered; a pitch change stays on the note's own channel.
+; faithful square wave or a patch (the two-operator record and octave of a patch
+; block, amis.inc). Each new note takes the other of channels 7 and 8, so the last
+; note releases undisturbed instead of being retriggered; a pitch change stays on
+; the note's own channel.
 ; Near calls; DS = this module's segment. Every routine preserves all
 ; registers except its outputs, and flags.
 ; Only channels 7 and 8's registers, the global 01h, (OPL3) 105h and, while
@@ -18,6 +19,7 @@
         cpu     8086
 %include "speaker.inc"
 %include "opl.inc"
+%include "amis.inc"
 
 %if OPL_CH_B != OPL_CH_A + 1
 %error opl_program and opl_put_volume expect OPL_CH_B = OPL_CH_A + 1
@@ -98,6 +100,11 @@ opl_init:
         mov     byte [opl_idx_reads], OPL3_IDX_READS
         mov     byte [opl_data_reads], OPL3_DATA_READS
 .have:
+        mov     byte [opl_wavemask], 03h ; OPL2 has waveforms 0 to 3 only
+        cmp     byte [opl_type], 3
+        jne     .masked
+        mov     byte [opl_wavemask], 07h
+.masked:
         push    ax
         push    bx
         mov     bx, REG_TEST
@@ -119,13 +126,28 @@ opl_init:
         jmp     opl_program
 
 ; opl_set_voice: reprogram both channels' operators; the key state is untouched.
-; In:  AL = 0 faithful, 1..4 patch (anything else is faithful)
+; In:  AL = 0 faithful, 1 patch (anything else is faithful); for a patch SI = the patch
+;      block, whose two-operator record is played from where it is (so a change to the
+;      block shows at the next volume change or voice set) and whose octave is copied
+; A note that is sounding keeps its pitch until the next note on or pitch.
 opl_set_voice:
-        mov     [opl_voice], al
-        cmp     al, 4
-        jbe     .go
+        mov     byte [opl_octave], 4
+        cmp     al, 1
+        je      .patch
         mov     byte [opl_voice], 0
-.go:
+        jmp     opl_program
+.patch:
+        mov     byte [opl_voice], 1
+        push    ax
+        lea     ax, [si + PB_REC2]
+        mov     [opl_prec], ax
+        mov     al, [si + PB_OCTAVE]
+        cmp     al, 7
+        jbe     .octave
+        mov     al, 7
+.octave:
+        mov     [opl_octave], al
+        pop     ax
         jmp     opl_program
 
 ; opl_set_volume: In: AL = 0..15 (0 silent; larger values count as 15). A note
@@ -147,7 +169,8 @@ opl_note_on:
         mov     byte [opl_keyed], 1
 
 ; opl_pitch: retune without touching the key bit, so a sounding note glides
-; instead of retriggering. In: BX = divisor
+; instead of retriggering. In: BX = divisor. A patch's octave shifts the block by
+; octave - 4; past block 7 or 0 the F-number doubles (to 1023 at most) or halves instead.
 opl_pitch:
         push    ax
         push    bx
@@ -183,9 +206,38 @@ opl_pitch:
         xor     ax, ax
         div     bx                      ; DX < BX, so no overflow
         cmp     ax, 1023
-        jbe     .fnum
+        jbe     .octave
         mov     ax, 1023
-.fnum:
+.octave:
+        mov     cl, [opl_octave]
+        sub     cl, 4                   ; CL = the signed shift, DL = the block
+        mov     dl, [opl_block]
+.shift:
+        or      cl, cl
+        jz      .shifted
+        js      .down
+        dec     cl
+        cmp     dl, 7
+        jb      .blkup
+        shl     ax, 1
+        cmp     ax, 1023
+        jbe     .shift
+        mov     ax, 1023
+        jmp     .shift
+.blkup:
+        inc     dl
+        jmp     .shift
+.down:
+        inc     cl
+        or      dl, dl
+        jz      .halve
+        dec     dl
+        jmp     .shift
+.halve:
+        shr     ax, 1
+        jmp     .shift
+.shifted:
+        mov     [opl_block], dl
         mov     [opl_fnum], ax
         pop     dx                      ; free before the write, to keep the stack shallow
         pop     cx
@@ -295,6 +347,14 @@ opl_put_keyblk:
         pop     ax
         ret
 
+; The wave select register keeps OPL3's waveforms 4 to 7 off an OPL2.
+%macro WAVE_MASK 0
+        cmp     byte [di], REG_WAVE
+        jne     %%done
+        and     al, [opl_wavemask]
+%%done:
+%endmacro
+
 ; opl_program: write the current voice's operators and C0h on both channels, then
 ; the volume. The carriers' 40h is left to opl_put_volume so it is written once,
 ; scaled; an additive voice's modulators get their scaled 40h there too.
@@ -303,20 +363,15 @@ opl_program:
         push    bx
         push    si
         push    di
-        mov     al, [opl_voice]
-        or      al, al
-        jnz     .patch
+        cmp     byte [opl_voice], 0
+        jne     .patch
         mov     si, voice_faithful2
         cmp     byte [opl_type], 3
         jne     .have
         mov     si, voice_faithful3
         jmp     .have
 .patch:
-        dec     al
-        mov     bl, 11
-        mul     bl
-        add     ax, patch_table
-        mov     si, ax
+        mov     si, [opl_prec]
 .have:
         mov     [opl_rec], si
         mov     ah, OPL_CH_A            ; AH = the channel; opl_write keeps it
@@ -330,12 +385,14 @@ opl_program:
         add     bl, OP_MOD_OFS
         mov     al, [si]
         inc     si
+        WAVE_MASK
         call    opl_write
         add     bl, OP_CAR_OFS
         mov     al, [si]
         inc     si
         cmp     byte [di], REG_KSLTL
         je      .skip
+        WAVE_MASK
         call    opl_write
 .skip:
         inc     di
@@ -435,20 +492,13 @@ voice_faithful2:
         db      00h, 00h
         db      00h                     ; FM connection, feedback 0
 
-; Patches 1..4; every release rate (low nibble of 80h) is at least 10.
-patch_table:
-        db      22h, 21h, 18h, 08h, 0F0h, 0F0h, 0Ch, 0Ch, 00h, 00h, 01h  ; 1 Organ
-        db      21h, 21h, 28h, 00h, 0B0h, 0C0h, 0Ah, 0Ah, 00h, 00h, 00h  ; 2 Flute
-        db      21h, 21h, 10h, 00h, 0E0h, 0F0h, 0Bh, 0Bh, 00h, 00h, 0Ah  ; 3 Brass
-        db      23h, 21h, 20h, 00h, 0F0h, 0F4h, 2Ah, 2Ah, 00h, 00h, 00h  ; 4 Bell
-
-; For the help and summary text.
-opl_patch_names db      "1 Organ, 2 Flute, 3 Brass, 4 Bell", '$'
-
 opl_bases       db      REG_AVEKSR, REG_KSLTL, REG_ARDR, REG_SLRR, REG_WAVE
 
 opl_type        db      0               ; 0 = not initialised, 2 or 3
-opl_voice       db      0               ; 0 faithful, 1..4 patch
+opl_voice       db      0               ; 0 faithful, 1 patch
+opl_octave      db      4               ; the patch's octave, 4 for the faithful voice
+opl_wavemask    db      03h             ; E0h's usable bits: 03h on an OPL2, 07h on an OPL3
+opl_prec        dw      voice_faithful2 ; the patch's two-operator record
 opl_vol         db      15
 opl_att         db      0               ; (15 - opl_vol) * 4, opl_put_volume's scratch
 opl_keyed       db      0

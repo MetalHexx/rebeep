@@ -1,6 +1,7 @@
 ; T_OPL - detects the real OPL at 388h, then checks the register writes the OPL
 ; target makes through a recording sink (once as an OPL2, once as an OPL3).
-; T_OPL /L is the listening mode: it plays each voice through the real ports.
+; T_OPL /L is the listening mode: it plays the faithful voice, then the four factory
+; patches' records, through the real ports.
 ; SPDX-License-Identifier: MIT
 
         cpu     8086
@@ -13,13 +14,56 @@
 SINK_MAX        equ 256         ; entries of 4 bytes: register word, value byte, pad
                                 ; a case that reads the log clears it first
 A4              equ 2711        ; 1,193,182 / 440 Hz
-ORGAN_MOD_TL    equ 18h         ; patch 1's 40h bytes in opl.asm's patch_table
+ORGAN_MOD_TL    equ 18h         ; the Organ record's 40h bytes (blk_organ)
 ORGAN_CAR_TL    equ 08h
 
         jmp     start
 
 %include "engine/opl.asm"
 %include "testlib.inc"
+
+; A patch block as RB_STATE holds one from RBS_PATCH on: the name (18 bytes), the octave, the
+; flags, the two-operator record and the four-operator record (here all zero).
+%macro BLOCK 3+
+%%name: db      %1, 0
+        times 18 - ($ - %%name) db 0
+        db      %2, RBS_PF_LOADED
+        db      %3
+        times 22 db 0
+%endmacro
+
+; The four factory patches' records, as the patch files give them.
+blk_organ       BLOCK   "ORGAN", 4, 22h, 21h, 18h, 08h, 0F0h, 0F0h, 0Ch, 0Ch, 00h, 00h, 01h
+blk_flute       BLOCK   "FLUTE", 4, 21h, 21h, 28h, 00h, 0B0h, 0C0h, 0Ah, 0Ah, 00h, 00h, 00h
+blk_brass       BLOCK   "BRASS", 4, 21h, 21h, 10h, 00h, 0E0h, 0F0h, 0Bh, 0Bh, 00h, 00h, 0Ah
+blk_bell        BLOCK   "BELL", 4, 23h, 21h, 20h, 00h, 0F0h, 0F4h, 2Ah, 2Ah, 00h, 00h, 00h
+; Waveforms 7 and 5: an OPL2 keeps only the low two bits of E0h.
+blk_wave        BLOCK   "WAVE", 4, 21h, 21h, 20h, 00h, 0F0h, 0F0h, 0Ch, 0Ch, 07h, 05h, 00h
+; The octave under test is written into this one.
+blk_oct         BLOCK   "OCTAVE", 4, 21h, 21h, 28h, 00h, 0B0h, 0C0h, 0Ah, 0Ah, 00h, 00h, 00h
+; Entry 0 is unused: voice 0 is the faithful voice.
+blocks          dw      blk_organ, blk_organ, blk_flute, blk_brass, blk_bell
+
+; voice_n: AL = 0 the faithful voice, 1 to 4 the factory patch of that number. Out: SI = the
+; block, as opl_set_voice keeps it.
+voice_n:
+        push    bx
+        xor     ah, ah
+        mov     bx, ax
+        shl     bx, 1
+        mov     si, [blocks + bx]
+        or      al, al
+        jz      .go
+        mov     al, 1
+.go:
+        pop     bx
+        jmp     opl_set_voice
+
+; PATCH_AT block: AL = 1 and SI = the block, opl_set_voice's inputs for a patch.
+%macro PATCH_AT 1
+        mov     al, 1
+        mov     si, %1
+%endmacro
 
 ; sink: stands in for the ports. Records (BX, AL) while sink_on is set and
 ; otherwise forwards to the hardware (listening mode).
@@ -186,6 +230,95 @@ expect_pitch:
         pop     dx
         ret
 
+; oct_expect: BX = divisor, DL = a patch's octave. Out: CL = block, AX = F-number: expect_pitch's,
+; the block moved by octave - 4 and held to 0..7, the F-number doubled (to 1023 at most) or
+; halved for what the block could not take.
+oct_expect:
+        push    dx
+        call    expect_pitch
+        sub     dl, 4
+        mov     ch, cl
+        add     ch, dl                  ; CH = block + shift, -4 to 10
+        cmp     ch, 0
+        jl      .below
+        cmp     ch, 7
+        jg      .above
+        mov     cl, ch
+        jmp     .done
+.above:
+        sub     ch, 7
+        mov     cl, ch
+        shl     ax, cl
+        cmp     ax, 1023
+        jbe     .top
+        mov     ax, 1023
+.top:
+        mov     cl, 7
+        jmp     .done
+.below:
+        neg     ch
+        mov     cl, ch
+        shr     ax, cl
+        xor     cl, cl
+.done:
+        pop     dx
+        ret
+
+; rec_check: SI = an 11-byte voice record, DL = the mask E0h's values are held to, DH = the
+; bits C0h gains. Out: AX = 0 when the last values written to both channels' operators and
+; C0h are the record's, else the first register that differs.
+rec_check:
+        push    bx
+        push    cx
+        push    di
+        xor     di, di
+.byte:
+        mov     bx, si
+        add     bx, di
+        mov     al, [bx]
+        cmp     di, 8
+        jb      .plain
+        and     al, dl
+.plain:
+        mov     cl, al
+        xor     ch, ch
+        mov     bl, [rc_regs + di]
+        xor     bh, bh
+        call    sink_last
+        cmp     ax, cx
+        jne     .bad
+        inc     bx
+        call    sink_last
+        cmp     ax, cx
+        jne     .bad
+        inc     di
+        cmp     di, 10
+        jb      .byte
+        mov     al, [si + 10]
+        or      al, dh
+        mov     cl, al
+        xor     ch, ch
+        mov     bx, 0C7h
+        call    sink_last
+        cmp     ax, cx
+        jne     .bad
+        inc     bx
+        call    sink_last
+        cmp     ax, cx
+        jne     .bad
+        xor     ax, ax
+        jmp     .out
+.bad:
+        mov     ax, bx
+.out:
+        pop     di
+        pop     cx
+        pop     bx
+        ret
+
+; Channel 7's register for each byte of a voice record; channel 8's is one more.
+rc_regs         db      31h, 34h, 51h, 54h, 71h, 74h, 91h, 94h, 0F1h, 0F4h
+
 ; wait_ticks: AX = BIOS timer ticks (18.2 per second) to wait.
 wait_ticks:
         push    bx
@@ -236,7 +369,7 @@ wait_ticks:
 
 STACK_MAX       equ 16          ; bytes, return address included
 STK_AREA        equ 64
-PROBES          equ 10
+PROBES          equ 12
 
 ; STK_FILL: sentinel-fill the STK_AREA bytes below SP. Clobbers AX, CX, DI.
 %macro STK_FILL 0
@@ -284,12 +417,12 @@ stk_note:
 
 ; PRES ax, bx, routine, check_al: load sentinels, call, and require every
 ; register (AL only when check_al) to come back unchanged.
-%macro PRES 4
+%macro PRES 4-5 3333h
         mov     ax, %1
         mov     bx, %2
         mov     cx, 1111h
         mov     dx, 2222h
-        mov     si, 3333h
+        mov     si, %5
         mov     di, 4444h
         mov     bp, 5555h
         call    %3
@@ -305,7 +438,7 @@ stk_note:
         jne     %%bad
         cmp     dx, 2222h
         jne     %%bad
-        cmp     si, 3333h
+        cmp     si, %5
         jne     %%bad
         cmp     di, 4444h
         jne     %%bad
@@ -349,7 +482,7 @@ stk_note:
         mov     byte [tv], 0
 %%ovoice:
         mov     al, [tv]
-        call    opl_set_voice
+        call    voice_n
 %if %1 == 3
         mov     cx, 30h
 %else
@@ -494,7 +627,7 @@ stk_note:
         mov     byte [tv], 0
 %%svoice:
         mov     al, [tv]
-        call    opl_set_voice
+        call    voice_n
         inc     byte [tv]
         cmp     byte [tv], 5
         jb      %%svoice
@@ -590,14 +723,14 @@ stk_note:
         call    opl_note_off
         ENDCASE
 
-; Volume scales an additive voice's modulators with its carriers (patch 1, Organ: C0h
-; bit 0 set), and leaves an FM voice's modulators alone (patch 2, Flute).
+; Volume scales an additive voice's modulators with its carriers (Organ: C0h bit 0 set),
+; and leaves an FM voice's modulators alone (Flute).
 %strcat cname "additive_volume_", %2
         CASE    cname
         mov     al, %1
         call    opl_init
         mov     al, 1
-        call    opl_set_voice
+        call    voice_n
         SINK_CLEAR
         mov     al, 7
         call    opl_set_volume
@@ -608,7 +741,7 @@ stk_note:
         call    opl_set_volume
         LASTW   40h + 12h, ORGAN_MOD_TL
         mov     al, 2
-        call    opl_set_voice
+        call    voice_n
         SINK_CLEAR
         mov     al, 7
         call    opl_set_volume
@@ -642,6 +775,128 @@ stk_note:
         call    opl_note_off
         ENDCASE
 
+; A patch's record reaches both channels' operators and C0h as it is, whatever the chip
+; allows: an OPL2 keeps waveforms 0 to 3.
+%strcat cname "patch_records_", %2
+        CASE    cname
+        mov     al, %1
+        call    opl_init
+        mov     al, 15
+        call    opl_set_volume
+        mov     byte [tv], 1
+%%prec:
+        SINK_CLEAR
+        mov     al, [tv]
+        call    voice_n
+        add     si, PB_REC2
+        mov     dl, 0FFh
+        xor     dh, dh
+%if %1 == 3
+        mov     dh, 30h                 ; OPL3's output enables join C0h
+%endif
+        call    rec_check
+        xor     cx, cx
+        call    t_check
+        inc     byte [tv]
+        cmp     byte [tv], 5
+        jb      %%prec
+        SINK_CLEAR
+        mov     si, blk_wave
+        mov     al, 1
+        call    opl_set_voice
+        mov     si, blk_wave + PB_REC2
+%if %1 == 3
+        mov     dx, 3000h + 0FFh
+%else
+        mov     dx, 03h
+%endif
+        call    rec_check
+        xor     cx, cx
+        call    t_check
+        xor     al, al
+        call    opl_set_voice
+        ENDCASE
+
+; A patch's octave moves the block by octave - 4, and at block 7 or 0 scales the F-number.
+%strcat cname "octave_shift_", %2
+        CASE    cname
+        mov     al, %1
+        call    opl_init
+        mov     al, 15
+        call    opl_set_volume
+        mov     word [tw], od_divs
+%%div:
+        mov     byte [tv], 0
+%%oct:
+        mov     al, [tv]
+        mov     [blk_oct + PB_OCTAVE], al
+        mov     al, 1
+        mov     si, blk_oct
+        call    opl_set_voice
+        SINK_CLEAR
+        mov     bx, [tw]
+        mov     bx, [bx]
+        call    opl_note_on
+        mov     bx, [tw]
+        mov     bx, [bx]
+        mov     dl, [tv]
+        call    oct_expect              ; CL = block, AX = F-number
+        mov     di, ax
+        shl     cl, 1
+        shl     cl, 1
+        mov     al, ah
+        or      al, cl
+        or      al, 20h
+        mov     [tv2], al               ; the B0h value expected
+        mov     bx, 0A0h
+        add     bl, [opl_ch]
+        call    sink_last
+        mov     cx, di
+        xor     ch, ch
+        call    t_check
+        mov     bx, 0B0h
+        add     bl, [opl_ch]
+        call    sink_last
+        mov     cl, [tv2]
+        xor     ch, ch
+        call    t_check
+        call    opl_note_off
+        inc     byte [tv]
+        cmp     byte [tv], 8
+        jb      %%oct
+        add     word [tw], 2
+        cmp     word [tw], od_end
+        jb      %%div
+        ENDCASE
+
+; The faithful voice plays at the game's pitch again after a patch with another octave.
+%strcat cname "faithful_octave_", %2
+        CASE    cname
+        mov     al, %1
+        call    opl_init
+        mov     byte [blk_oct + PB_OCTAVE], 7
+        mov     al, 1
+        mov     si, blk_oct
+        call    opl_set_voice
+        xor     al, al
+        call    opl_set_voice
+        SINK_CLEAR
+        mov     bx, A4
+        call    opl_note_on
+        mov     bx, A4
+        mov     dl, 4
+        call    oct_expect
+        mov     di, ax
+        mov     bx, 0A0h
+        add     bl, [opl_ch]
+        call    sink_last
+        mov     cx, di
+        xor     ch, ch
+        call    t_check
+        call    opl_note_off
+        mov     byte [blk_oct + PB_OCTAVE], 4
+        ENDCASE
+
 ; Both channels carry the same voice and volume, and shutdown silences both.
 %strcat cname "both_channels_", %2
         CASE    cname
@@ -651,7 +906,7 @@ stk_note:
 %%bvoice:
         SINK_CLEAR
         mov     al, [tv]
-        call    opl_set_voice
+        call    voice_n
         call    twin_diff
         xor     cx, cx
         call    t_check
@@ -798,6 +1053,7 @@ start:
         PRES    0AB03h, 1234h, opl_init, 1
         PRES    0AB03h, 1234h, opl_set_voice, 1
         PRES    0ABF7h, 1234h, opl_set_voice, 1
+        PRES    0AB01h, 1234h, opl_set_voice, 1, blk_flute
         PRES    0AB07h, 1234h, opl_set_volume, 1
         PRES    0ABF0h, 1234h, opl_set_volume, 1
         PRES    0AB66h, 1193, opl_note_on, 1
@@ -815,11 +1071,13 @@ start:
         PROBE   {nop}, opl_detect
         PROBE   {mov al, 3}, opl_init
         PROBE   {mov al, 2}, opl_init
-        PROBE   {mov al, 1}, opl_set_voice
+        PROBE   {PATCH_AT blk_organ}, opl_set_voice
         PROBE   {xor al, al}, opl_set_voice
         PROBE   {mov al, 7}, opl_set_volume
         PROBE   {mov bx, 1193}, opl_note_on
         PROBE   {mov bx, A4}, opl_pitch
+        PROBE   {PATCH_AT blk_oct}, opl_set_voice
+        PROBE   {mov bx, 193}, opl_pitch
         PROBE   {nop}, opl_note_off
         PROBE   {nop}, opl_shutdown
         sti
@@ -848,7 +1106,8 @@ start:
 
         jmp     t_done
 
-; Listening mode: the faithful voice, then each patch, a second each at 440 Hz.
+; Listening mode: the faithful voice, then the four factory patches' records, a second each
+; at 440 Hz.
 listen:
         call    opl_detect
         or      al, al
@@ -861,10 +1120,6 @@ listen:
         push    ax
         mov     dx, s_listen
         call    t_print
-        mov     dx, opl_patch_names
-        call    t_print
-        mov     dx, s_crlf
-        call    t_print
         pop     ax
         call    opl_init
         mov     al, 15
@@ -873,13 +1128,27 @@ listen:
 .voice:
         mov     dx, s_voice
         call    t_print
-        mov     dl, [tv]
-        add     dl, '0'
+        mov     al, [tv]
+        call    voice_n                 ; SI = the voice's block
+        cmp     byte [tv], 0
+        jne     .named
+        mov     dx, s_faithful
+        call    t_print
+        jmp     .play
+.named:
+        push    si
+.name:
+        lodsb
+        or      al, al
+        jz      .named_end
+        mov     dl, al
         call    t_putc
+        jmp     .name
+.named_end:
+        pop     si
         mov     dx, s_crlf
         call    t_print
-        mov     al, [tv]
-        call    opl_set_voice
+.play:
         mov     bx, A4
         call    opl_note_on
         mov     ax, 18
@@ -897,15 +1166,22 @@ listen:
 pf_divs         dw      193, 385, 1193, 1536, 1537, 24576, 24577, 59659, 59660, 65535
 pf_end:
 
+; Divisors for the octave shifts: block 7 (the top), the middle, blocks 1 and 0.
+od_divs         dw      193, 2711, 24577, 59660, 65535
+od_end:
+
 s_opl2          db      "INFO OPL2 detected", 13, 10, '$'
 s_opl3          db      "INFO OPL3 detected", 13, 10, '$'
 s_none          db      "No OPL detected", 13, 10, '$'
-s_listen        db      "Voices: 0 faithful, $"
-s_voice         db      "voice $"
+s_listen        db      "Voices: the faithful voice, then the factory patches", 13, 10, '$'
+s_voice         db      "voice: $"
+s_faithful      db      "faithful", 13, 10, '$'
 s_stack         db      "INFO stack bytes per probe: $"
 
 chip            db      0
 tv              db      0
+tv2             db      0
+tw              dw      0
 deep            dw      0
 deep_n          dw      0
 deeps           times PROBES dw 0

@@ -5,9 +5,10 @@
 
 %include "amis.inc"
 
-; RB_STATE as a fresh load leaves it. A plain load overrides the config fields (voice,
-; volume, keys, the /L and /R flags) from the command line; a change of a loaded copy writes
-; only the named ones.
+; RB_STATE as a fresh load leaves it. A plain load overrides the config fields (voice and
+; patch, volume, keys, the /L and /R flags) from the command line; a change of a loaded copy
+; writes only the named ones. The patch's records live here, so the resident cost is the same
+; whatever the number of patch files.
 RB_STATE:
         db      RBS_LAYOUT
         db      RBS_F_TRANSLATE         ; RBS_FLAGS: translation on, traps off until installed
@@ -23,7 +24,12 @@ RB_STATE:
         dw      0                       ; RBS_TRAPPED
         dw      0                       ; RBS_PSP
         dd      0                       ; RBS_PREV_QPI
-%if $ - RB_STATE != RBS_PREV_QPI + 4
+        times 18 db 0                   ; RBS_PATCH: no patch loaded
+        db      4                       ; RBS_OCTAVE
+        db      0                       ; RBS_PFLAGS
+        times 11 db 0                   ; RBS_REC2
+        times 22 db 0                   ; RBS_REC4
+%if $ - RB_STATE != RBS_REC4 + 22
 %error RB_STATE does not match the offsets in amis.inc
 %endif
 
