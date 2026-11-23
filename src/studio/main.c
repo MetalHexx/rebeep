@@ -25,12 +25,19 @@
 #define BENCH_FILE "BENCH.TXT"
 #define TICKS_PER_DAY 0x1800B0UL
 #define DETECT_PAUSE_TICKS 18UL   /* about a second at 18.2 Hz */
+#define DOUBLE_CLICK_TICKS 8UL    /* two clicks on one row this close are a double click, about 0.4 s */
 
 #define EXIT_OK 0
 #define EXIT_USAGE 1
 #define EXIT_IO 2
 #define EXIT_SCREEN 2   /* /DUMP of a screen this program does not know */
 #define EXIT_DUMP 3
+
+static Settings settings;     /* RBSTUDIO.CFG, read once by the detection log */
+static Library patch_lib;     /* the patch list, scanned each time the Patch Editor opens */
+static Editor editor;
+static char last_patch[20];   /* FOLDER\NAME of the patch opened last: the list opens on it */
+static char list_msg[80];     /* why the last patch would not open, shown under the list */
 
 static void usage(void)
 {
@@ -193,7 +200,6 @@ static void folder_without_slash(char *out, unsigned len)
 /* The checks, each drawn and logged as it completes. */
 static void run_detection(Detect *d)
 {
-    static Settings settings;
     static Library library;
     char path[100];
 
@@ -264,15 +270,151 @@ static void run_soon(int item)
     }
 }
 
+/* Reads entry `i` of the library into the editor, on the 4-OP variant when the chip is an OPL3 and the patch has one.
+   Returns 0, or -1 with the reason in `err`. */
+static int editor_load(Editor *ed, const Library *lib, int i, char *err, unsigned errlen)
+{
+    static char path[LIB_DIR_LEN + 32];
+
+    memset(ed, 0, sizeof *ed);
+    if (lib_path(lib, i, path, sizeof path) != 0) {
+        snprintf(err, errlen, "No file for patch %d", i + 1);
+        return -1;
+    }
+    if (patch_read(path, &ed->p, err, errlen) != 0) return -1;
+    ed->chip = opl_chip();
+    ed->n = ed->chip == 3 && ed->p.has4 ? 4 : 2;
+    ed->fk = P_AR;
+    ed->lastP = P_AR;
+    ed->pos = i + 1;
+    ed->total = lib_count(lib);
+    ed->kbOct = KB_LOW;
+    ed->msgRole = R_TEXT;
+    return 0;
+}
+
+/* The synth screen of the patch in `ed`; Esc goes back. */
+static void run_synth(const Editor *ed)
+{
+    int back = 0;
+
+    key_pressed();
+    synth_draw(ed);
+    scr_flush();
+    while (!back) {
+        unsigned event;
+
+        while (kbd_next(&event)) {
+            if (key_lookup(K_SYNTH, event, key_mods()) == KID_ESC) back = 1;
+        }
+        while (kbhit()) getch();
+    }
+}
+
+/* The Patch Editor: the list of patches, then the synth screen of the one chosen. Esc steps back a level. */
+static void run_patch_editor(void)
+{
+    int sel = 0;
+    int top = 0;
+    int back = 0;
+    int redraw = 1;
+    int was_down;
+    int last_hit = -1;
+    unsigned long last_click = 0;
+    int mx;
+    int my;
+    int found;
+
+    if (lib_scan(&patch_lib, dos_program_dir(), cfg_get(&settings, "PATCHES")) != 0) {
+        log_line("Patch Editor: out of memory reading the patch list");
+        return;
+    }
+    found = last_patch[0] != '\0' ? lib_find(&patch_lib, last_patch) : -1;
+    if (found >= 0) sel = found;
+    list_msg[0] = '\0';
+    key_pressed();
+    was_down = mouse_read(&mx, &my) & 1;
+
+    while (!back) {
+        unsigned event;
+        int open = 0;
+        int down;
+
+        while (kbd_next(&event) && !open && !back) {
+            switch (key_lookup(K_MENU, event, key_mods())) {
+            case KID_UP:
+                if (sel > 0) {
+                    sel--;
+                    redraw = 1;
+                }
+                break;
+            case KID_DOWN:
+                if (sel + 1 < lib_count(&patch_lib)) {
+                    sel++;
+                    redraw = 1;
+                }
+                break;
+            case KID_ENTER:
+                open = 1;
+                break;
+            case KID_ESC:
+                back = 1;
+                break;
+            default:
+                break;
+            }
+        }
+        while (kbhit()) getch();
+
+        down = mouse_read(&mx, &my) & 1;
+        if (down && !was_down && !open && !back) {
+            int hit = list_item_at(&patch_lib, top, mx, my);
+
+            if (hit >= 0) {
+                unsigned long now = bios_ticks();
+
+                open = hit == last_hit && now - last_click <= DOUBLE_CLICK_TICKS;
+                last_hit = open ? -1 : hit;
+                last_click = now;
+                if (hit != sel) {
+                    sel = hit;
+                    redraw = 1;
+                }
+            }
+        }
+        was_down = down;
+
+        if (open && lib_count(&patch_lib) > 0) {
+            Entry en = *lib_entry(&patch_lib, sel);
+
+            if (editor_load(&editor, &patch_lib, sel, list_msg, sizeof list_msg) == 0) {
+                sprintf(last_patch, "%s\\%s", en.folder, en.name);
+                list_msg[0] = '\0';
+                run_synth(&editor);
+                was_down = mouse_read(&mx, &my) & 1;
+            } else {
+                log_line("Cannot open %s\\%s: %s", en.folder, en.name, list_msg);
+            }
+            redraw = 1;
+        }
+        if (redraw && !back) {
+            top = list_scroll(&patch_lib, sel, top);
+            list_draw(&patch_lib, sel, top, list_msg);
+            scr_flush();
+            redraw = 0;
+        }
+    }
+    lib_free(&patch_lib);
+}
+
 /* Acts on the chosen item. Returns 1 when the program should end. */
 static int menu_choose(int sel)
 {
     if (sel == MENU_EXIT) return 1;
-    if (sel == MENU_PROFILES || sel == MENU_SETTINGS) {
-        run_soon(sel);
-        menu_draw(sel);
-        scr_flush();
-    }
+    if (sel == MENU_PATCHES) run_patch_editor();
+    else run_soon(sel);
+    menu_draw(sel);
+    scr_flush();
     return 0;
 }
 

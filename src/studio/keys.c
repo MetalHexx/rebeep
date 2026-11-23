@@ -17,6 +17,7 @@ const KeyBinding key_table[] = {
     {KID_DOWN, K_MENU, SCAN_DOWN, 0},
     {KID_ENTER, K_MENU, SCAN_ENTER, 0},
     {KID_ESC, K_MENU, SCAN_ESC, 0},
+    {KID_ESC, K_SYNTH, SCAN_ESC, 0},
     {KID_HELP, K_GLOBAL, SCAN_F1, 0}
 };
 

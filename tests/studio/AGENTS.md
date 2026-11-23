@@ -16,6 +16,7 @@
 | `T_VOICE.C` | The OPL driver through `opl_sink`: the factory records, the 4-OP slots and bits, KSL and OL edges, octave shift, slot stealing, shutdown, tracing; detection on the real chip |
 | `T_AMIS.C` | `rebeep.c` against a fake resident ReBeep on `INT 2Dh`: the signature, traps off and on, refused, already off, another program, no state block |
 | `T_OPLKND.C` | Proves the OPL2 rerun: the OPL status port reads OPL3 on the default run and OPL2 on `/OPL2` |
+| `T_EDIT.C` | The patch list's scroll window (`list_scroll`) and row hit-test (`list_item_at`) over a synthetic library |
 
 ## Rules
 

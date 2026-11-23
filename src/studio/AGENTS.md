@@ -6,7 +6,7 @@
 
 | Path | Role |
 |---|---|
-| `main.c` | The entry point, argument handling and the top-level flow (`/?`, `/BENCH`, `/DUMP:`, the detection log, splash and menu loop, giving the chip, mouse and ReBeep back at exit) |
+| `main.c` | The entry point, argument handling and the top-level flow (`/?`, `/BENCH`, `/DUMP:`, the detection log, splash and menu loop, the Patch Editor flow menu → patch list → synth screen with Esc stepping back, giving the chip, mouse and ReBeep back at exit) |
 | `dos.c` · `dos.h` | Program folder from `argv[0]`; Ctrl+Break, Ctrl+C and critical-error handlers; `dos_hook` and `dos_restore`; file helpers (`dos_read_file`, `dos_make_dir`, `dos_each`, the safe save `dos_save_file`) |
 | `patch.c` · `patch.h` | The patch model (`Patch`, `Voice`, `Op`: the editor's values, never registers) and the RBP text file: `patch_parse`, `patch_format`, `patch_read`, `patch_write`. P05's NASM parser follows the same rules |
 | `library.c` · `library.h` | The patch list: `FACTORY\` beside the program, `USER\` and packs in the patches folder; lookup, overrides, `name_valid`, `path_valid` for `PATCHES=` |
@@ -23,7 +23,9 @@
 | `mouse.c` · `mouse.h` | INT 33h, used only when a driver answers; cells are pixels / 8 |
 | `keys.c` · `keys.h` | The one table of key bindings (`id, ctx, scan, mods`) and `key_lookup` |
 | `scr_log.c` · `scr_spl.c` · `scr_menu.c` · `screens.h` | The detection log, the splash, the menu and its "coming soon" page |
-| `sample.c` | The fixed sample data (version 0.1.0, the sample detection) and the screen names `/DUMP:` can draw |
+| `scr_list.c` | The patch list: `list_draw` from the library, `list_scroll` (the window that keeps the selection and its folder heading in view), `list_item_at` (a click's row to an entry) |
+| `scr_syn.c` · `editor.h` | The synth screen, a port of the mockup's `synth()` for both variants (`synth_draw`); `Editor`, the state it draws and the editing keys will change |
+| `sample.c` | The fixed sample data (version 0.1.0, the sample detection, the sample patch list, patch 12 of 40 BRASS) and the screen names `/DUMP:` can draw |
 | `data/SPLASH.ANS` · `data/MENU.ANS` | The art; `targets.json` `files` ships them to `REBEEP\` |
 | `kbd.c` · `kbd.h` | The `INT 09h` handler: make and break codes, a key-state table, an event queue |
 
@@ -69,7 +71,12 @@
   33/36, 41/44 and 43/46, every other byte (the SAUCE record too) unchanged. The converted file opens correctly in an
   ANSI editor and renders to the indexes the references hold.
 - **Dump mode** (`/DUMP:<screen> [/VIEW:MONO] /O:<file>`) touches only the art and the output, plays nothing, shows no
-  mouse and uses `sample.c`'s data. An unknown screen exits 2 and writes nothing.
+  mouse and uses `sample.c`'s data. An unknown screen exits 2 and writes nothing. Drawable now: `detectlog`, `splash`, `menu`,
+  `patchlist`, `synth-4op`, `synth-2op`.
+- **One grid for both variants.** The 2-OP synth screen is the 4-OP one with wider slots (`cell()`'s `z`): the parameter-name
+  column and operator 1's left edge sit at the same cells, the bars end one cell before each slot's rule. Never lay 2-OP out apart.
+- **The envelope is integer maths.** `env_levels` in `scr_syn.c` is the mockup's envelope as whole numbers over a common
+  denominator (no floating point); the waveform is a table of 20 heights per shape. Keep both matching the mockup.
 - A C literal with a CP437 glyph above 7Fh uses a hex escape in a literal of its own (`"\xFB" "  text"`), or the next
   hex digit joins the escape.
 - Output names are 8.3, uppercase. Keep C89: declarations at the top of a block.
@@ -92,6 +99,7 @@ rebeep build run --deploy
 ```
 
 In DOSBox-X or on a VM: `RBSTUDIO`, `RBSTUDIO /BENCH` (writes `BENCH.TXT` in the current folder).
+To watch a flow with typed keys and screenshots (menu, patch list, synth screen, Esc), see the [drive-dos-app skill](../../.claude/skills/drive-dos-app/SKILL.md).
 
 ## Related
 

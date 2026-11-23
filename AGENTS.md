@@ -24,7 +24,7 @@ everything to vanilla.
 | `tools/` | The `rebeep` CLI, its libraries and its unit tests | [tools/AGENTS.md](tools/AGENTS.md) |
 | `site/` | The product page for the GitHub Pages site: plain HTML, CSS and JS | [site/AGENTS.md](site/AGENTS.md) |
 | `docs/` | Human docs in three levels: `guide/` for players, `architecture/` for how it works, `lab/` for contributors | [docs/AGENTS.md](docs/AGENTS.md) |
-| `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI), `update-docs` (doc health) and `release` (cutting a release, the changelog rules) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) · [release](.claude/skills/release/SKILL.md) |
+| `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI), `update-docs` (doc health), `release` (cutting a release, the changelog rules) and `drive-dos-app` (a DOS program in a DOSBox-X window, typed keys and screenshots) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) · [release](.claude/skills/release/SKILL.md) · [drive-dos-app](.claude/skills/drive-dos-app/SKILL.md) |
 | `.github/` | CI, release and Pages workflows, and the PR template | — |
 | `build/` | Build output (ignored) | — |
 

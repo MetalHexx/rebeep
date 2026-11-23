@@ -1,8 +1,12 @@
-/* ReBeep Studio: the screens. Each draws into the back buffer (the caller flushes). The detection log, splash and menu
-   come from .ans art and use the standard view's colour indexes: in the mono view they pass through scr_remap_mono()
-   (the role table's mono column is for the mockup screens). SPDX-License-Identifier: MIT */
+/* ReBeep Studio: the screens. Each draws into the back buffer (the caller flushes). The detection log, splash, menu and
+   patch list come from .ans art and use the standard view's colour indexes: in the mono view they pass through
+   scr_remap_mono() (the role table's mono column is for the mockup screens, the synth screen among them).
+   SPDX-License-Identifier: MIT */
 #ifndef RBSTUDIO_SCREENS_H
 #define RBSTUDIO_SCREENS_H
+
+#include "editor.h"
+#include "library.h"
 
 /* What the detection log reports. */
 typedef struct {
@@ -42,9 +46,22 @@ int menu_item_at(int x, int y);
 /* The plain "coming soon" page of a menu item. */
 void soon_draw(int item);
 
+/* The patch list: the library grouped by folder, in the standard view's indexes (mono: through the shared remap).
+   Its body shows LIST_ROWS lines (heading rules and entries) from line `top`. list_draw draws the list with entry `sel`
+   selected and, under the frame's last row, the note of a selected override or `msg` (NULL or "" for none).
+   list_scroll gives the `top` that keeps `sel` in view (its folder heading too, when it is the folder's first);
+   list_item_at gives the entry whose row holds cell (x, y), or -1. */
+#define LIST_ROWS 12
+void list_draw(const Library *lib, int sel, int top, const char *msg);
+int list_scroll(const Library *lib, int sel, int top);
+int list_item_at(const Library *lib, int top, int x, int y);
+
+/* The synth screen for the variant `e->n` of the patch in the editor, in the role table's colours. */
+void synth_draw(const Editor *e);
+
 /* Sample state for the reference screens: the fixed data (version 0.1.0, the sample detection, a log path of
-   C:\REBEEP\RBSTUDIO.LOG) that makes a dump comparable. sample_known says whether `screen` is one of the reference
-   names this program can draw; sample_draw draws it into the back buffer. */
+   C:\REBEEP\RBSTUDIO.LOG, the sample patch list, patch 12 of 40 BRASS) that makes a dump comparable. sample_known says
+   whether `screen` is one of the reference names this program can draw; sample_draw draws it into the back buffer. */
 const char *sample_version(void);
 void sample_detect(Detect *d);
 int sample_known(const char *screen);

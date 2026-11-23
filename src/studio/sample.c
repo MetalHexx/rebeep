@@ -1,9 +1,32 @@
 /* SPDX-License-Identifier: MIT */
 #include <string.h>
 
+#include "roles.h"
 #include "screens.h"
 
 #define SAMPLE_VERSION "0.1.0"
+
+/* The patch list sample: three folders, USER\BELL selected. */
+static const struct {
+    const char *folder;
+    const char *name;
+    unsigned char has4, octave, overrides;
+} list_rows[] = {
+    {"FACTORY", "BELL", 0, 4, 0}, {"FACTORY", "BRASS", 0, 4, 0}, {"FACTORY", "FLUTE", 0, 4, 0},
+    {"FACTORY", "ORGAN", 0, 4, 0}, {"USER", "BELL", 1, 5, 1}, {"USER", "MYLEAD", 1, 3, 0},
+    {"USER", "SLAPBASS", 0, 4, 0}, {"HEXX", "ELEC_GTR", 0, 4, 0}, {"HEXX", "ORGAN", 0, 4, 0}
+};
+#define LIST_SAMPLE_ROWS ((int)(sizeof list_rows / sizeof list_rows[0]))
+#define LIST_SAMPLE_SELECTED 4
+
+/* BRASS as the mockup's first sample patch: 4-OP then 2-OP operators in the P_* order. */
+static const unsigned char brass4[4][P_COUNT] = {
+    {10, 4, 11, 6, 38, 1, 1, 0, 0, 1, 1, 0}, {11, 3, 13, 7, 60, 0, 1, 0, 0, 1, 1, 0},
+    {9, 5, 10, 7, 30, 2, 2, 2, 0, 1, 1, 1}, {12, 2, 14, 7, 56, 1, 1, 0, 0, 1, 1, 0}
+};
+static const unsigned char brass2[2][P_COUNT] = {
+    {10, 4, 11, 6, 40, 1, 1, 1, 0, 1, 1, 0}, {12, 3, 13, 7, 61, 0, 1, 0, 0, 1, 1, 0}
+};
 
 const char *sample_version(void)
 {
@@ -26,9 +49,60 @@ void sample_detect(Detect *d)
     strcpy(d->log_path, "C:\\REBEEP\\RBSTUDIO.LOG");
 }
 
+/* Patch 12 of 40, BRASS with operator 2's Attack Rate edited (so the * shows), operator 2's Attack Rate in focus, an
+   OPL3, C4 and G4 held, no message. */
+static void sample_editor(Editor *e, int variant)
+{
+    int k;
+
+    memset(e, 0, sizeof *e);
+    strcpy(e->p.name, "BRASS");
+    e->p.octave = 4;
+    e->p.has4 = 1;
+    e->p.v4.conn = 2;
+    e->p.v4.fb = 5;
+    e->p.v2.conn = 0;
+    e->p.v2.fb = 5;
+    for (k = 0; k < 4; k++) memcpy(e->p.v4.op[k].v, brass4[k], P_COUNT);
+    for (k = 0; k < 2; k++) memcpy(e->p.v2.op[k].v, brass2[k], P_COUNT);
+    e->p.v4.op[1].v[P_AR] = 12;
+    e->n = variant;
+    e->chip = 3;
+    e->fk = P_AR;
+    e->cur = 1;
+    e->lastP = P_AR;
+    e->dirty = 1;
+    e->pos = 12;
+    e->total = 40;
+    e->held[0] = 12;
+    e->held[1] = 19;
+    e->nheld = 2;
+    e->kbOct = KB_LOW;
+    e->msgRole = R_TEXT;
+}
+
+static void sample_list(void)
+{
+    static Library lib;
+    static Entry rows[LIST_SAMPLE_ROWS];
+    int i;
+
+    for (i = 0; i < LIST_SAMPLE_ROWS; i++) {
+        strcpy(rows[i].folder, list_rows[i].folder);
+        strcpy(rows[i].name, list_rows[i].name);
+        rows[i].has4 = list_rows[i].has4;
+        rows[i].octave = list_rows[i].octave;
+        rows[i].overrides = list_rows[i].overrides;
+    }
+    lib.entries = rows;
+    lib.count = LIST_SAMPLE_ROWS;
+    list_draw(&lib, LIST_SAMPLE_SELECTED, 0, NULL);
+}
+
 int sample_known(const char *screen)
 {
-    return stricmp(screen, "detectlog") == 0 || stricmp(screen, "splash") == 0 || stricmp(screen, "menu") == 0;
+    return stricmp(screen, "detectlog") == 0 || stricmp(screen, "splash") == 0 || stricmp(screen, "menu") == 0 ||
+           stricmp(screen, "patchlist") == 0 || stricmp(screen, "synth-4op") == 0 || stricmp(screen, "synth-2op") == 0;
 }
 
 void sample_draw(const char *screen)
@@ -44,5 +118,12 @@ void sample_draw(const char *screen)
         splash_draw(SAMPLE_VERSION);
     } else if (stricmp(screen, "menu") == 0) {
         menu_draw(MENU_PATCHES);
+    } else if (stricmp(screen, "patchlist") == 0) {
+        sample_list();
+    } else if (stricmp(screen, "synth-4op") == 0 || stricmp(screen, "synth-2op") == 0) {
+        Editor e;
+
+        sample_editor(&e, stricmp(screen, "synth-4op") == 0 ? 4 : 2);
+        synth_draw(&e);
     }
 }
