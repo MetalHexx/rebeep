@@ -2,9 +2,11 @@
 #include <conio.h>
 #include <dos.h>
 #include <i86.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "mouse.h"
 #include "video.h"
 
 #define TEXT_SEG 0xB800
@@ -157,4 +159,126 @@ void video_text(int x, int y, const char *s, unsigned char attr)
 void video_flush(void)
 {
     _fmemcpy(screen, back, sizeof back);
+}
+
+/* Writes `ch` (or keeps the glyph when negative) and the colours that are not SCR_KEEP. */
+static void put_cell(int x, int y, int ch, int fg, int bg)
+{
+    unsigned cell;
+    unsigned attr;
+
+    if ((unsigned)x >= VIDEO_COLS || (unsigned)y >= VIDEO_ROWS) return;
+    cell = back[y * VIDEO_COLS + x];
+    attr = cell >> 8;
+    if (fg >= 0) attr = (attr & 0xF0) | (fg & 15);
+    if (bg >= 0) attr = (attr & 0x0F) | ((bg & 15) << 4);
+    back[y * VIDEO_COLS + x] = (attr << 8) | (ch >= 0 ? (unsigned)ch : (cell & 0xFF));
+}
+
+void scr_put(int x, int y, const char *cp437, int fg, int bg)
+{
+    for (; *cp437 != '\0'; cp437++, x++) put_cell(x, y, (unsigned char)*cp437, fg, bg);
+}
+
+void scr_fill(int x, int y, int w, int h, char ch, int fg, int bg)
+{
+    int col;
+    int row;
+
+    for (row = y; row < y + h; row++) {
+        for (col = x; col < x + w; col++) put_cell(col, row, (unsigned char)ch, fg, bg);
+    }
+}
+
+void scr_paint(int x, int y, int w, int h, int fg, int bg)
+{
+    int col;
+    int row;
+
+    for (row = y; row < y + h; row++) {
+        for (col = x; col < x + w; col++) put_cell(col, row, -1, fg, bg);
+    }
+}
+
+void scr_box(int x, int y, int w, int h, int style, int fg, int bg)
+{
+    static const unsigned char single[6] = {0xDA, 0xC4, 0xBF, 0xB3, 0xC0, 0xD9};
+    static const unsigned char dbl[6] = {0xC9, 0xCD, 0xBB, 0xBA, 0xC8, 0xBC};
+    const unsigned char *g = style == SCR_DOUBLE ? dbl : single;
+    int i;
+
+    if (w < 2 || h < 2) return;
+    put_cell(x, y, g[0], fg, bg);
+    put_cell(x + w - 1, y, g[2], fg, bg);
+    put_cell(x, y + h - 1, g[4], fg, bg);
+    put_cell(x + w - 1, y + h - 1, g[5], fg, bg);
+    for (i = 1; i < w - 1; i++) {
+        put_cell(x + i, y, g[1], fg, bg);
+        put_cell(x + i, y + h - 1, g[1], fg, bg);
+    }
+    for (i = 1; i < h - 1; i++) {
+        put_cell(x, y + i, g[3], fg, bg);
+        put_cell(x + w - 1, y + i, g[3], fg, bg);
+    }
+}
+
+void scr_ramp(int x, int y, const char *s)
+{
+    int n = 0;
+    int i = 0;
+    const char *p;
+
+    for (p = s; *p != '\0'; p++) {
+        if (*p != ' ') n++;
+    }
+    for (; *s != '\0'; s++, x++) {
+        int fg = 15;
+
+        if (*s != ' ') {
+            if (i == 0 || i == n - 1) fg = 8;
+            else if (i == 1 || i == n - 2) fg = 7;
+            i++;
+        }
+        put_cell(x, y, (unsigned char)*s, fg, SCR_KEEP);
+    }
+}
+
+unsigned scr_cell(int x, int y)
+{
+    if ((unsigned)x >= VIDEO_COLS || (unsigned)y >= VIDEO_ROWS) return 0;
+    return back[y * VIDEO_COLS + x];
+}
+
+void scr_flush(void)
+{
+    int shown = mouse_visible();
+
+    if (shown) mouse_hide();
+    video_flush();
+    if (shown) mouse_show();
+}
+
+int scr_dump(const char *path)
+{
+    unsigned char row[VIDEO_COLS * 2];
+    int shown = mouse_visible();
+    FILE *out;
+    int y;
+    int ok = 1;
+
+    out = fopen(path, "wb");
+    if (out == NULL) return -1;
+    if (shown) mouse_hide();
+    for (y = 0; y < VIDEO_ROWS && ok; y++) {
+        _fmemcpy(row, screen + y * VIDEO_COLS, sizeof row);
+        ok = fwrite(row, 1, sizeof row, out) == sizeof row;
+    }
+    if (shown) mouse_show();
+    if (fclose(out) != 0) ok = 0;
+    return ok ? 0 : -1;
+}
+
+int scr_bw80(void)
+{
+    return saved_mode == 2;
 }

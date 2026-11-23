@@ -14,6 +14,7 @@
 | `lib/profiles` · `vmcfg` · `proc` | VM profiles, 86Box cfg rendering, launch and running-VM detection |
 | `lib/delivery` · `freedos` · `nasm` · `watcom` · `guard` | D: contents (targets and `targets.json` `files`) · scripted FreeDOS C: · assembling · compiling C with Open Watcom (`format: "exe"` targets; the `studio` suite uses it too) · payload guard |
 | `lib/suites` · `commands/vmtest` | RESULT.TXT judging and discovery for the `interpreter`, `studio` and `vm` suites · the `vm` suite: probe header, probe D:, boot-and-wait loop |
+| `lib/screens` | The studio suite's screen check: `parseScr` (a `tests/screens/*.scr` file), `dumpToCells` (a 4000-byte text-screen dump), `compareScreens` (glyph, bg, and fg unless a space) |
 | `lib/site` · `siteserve` · `sitedev` · `sitecheck` | The product page: build and release stamp · `/rebeep/` preview server · its live-reload script · `site check` |
 | `test/` | `*.test.mjs`; shared fixtures in `helpers.mjs`, `fake86box.mjs` (a stand-in for 86Box) and `serve.mjs` (a local HTTP server for downloads) |
 
@@ -24,13 +25,11 @@
   clean bump`. Need a new verb? Add it here first, in the same change.
 - Every noun and verb is a **spec object** (name, summary, args, options, run). Help is rendered
   from it at every level (`rebeep`, `rebeep <noun>`, `rebeep <noun> <verb> --help`), never by hand.
-- Global options (`--json`, `--home <path>`, `--verbose`, `-h/--help`, `--version`) go anywhere;
-  a verb's own options go **after the verb**.
-- `--json` prints exactly one `{ ok, data, error }` on stdout. Exit codes: `0` ok, `1` failure,
-  `2` bad usage.
-- Verbs that can destroy user state (`env reset`, `env clean`, `media remove`, `vm create
-  --force`, `vm snapshot`, `vm reset`, `version bump`) are `destructive`: `--preview` changes nothing, and
-  replacing anything needs `--yes` or a confirm. `env clean` deletes only the layout it owns.
+- Global options (`--json`, `--home <path>`, `--verbose`, `-h/--help`, `--version`) go anywhere; a verb's own options go
+  **after the verb**. `--json` prints exactly one `{ ok, data, error }` on stdout. Exit codes: `0` ok, `1` failure, `2` bad usage.
+- Verbs that can destroy user state (`env reset`, `env clean`, `media remove`, `vm create --force`, `vm snapshot`,
+  `vm reset`, `version bump`) are `destructive`: `--preview` changes nothing, and replacing anything needs `--yes` or a
+  confirm. `env clean` deletes only the layout it owns.
 - Node ≥ 22 built-ins only. **No npm dependencies**, ever. Paths via `path.join`; no shell.
 - **Adding a command:** add the verb's spec to its noun file and a test that checks its help and
   behaviour; update the skill's `cli.md` if the activity is new.

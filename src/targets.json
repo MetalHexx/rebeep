@@ -43,6 +43,14 @@
   ],
   "files": [
     {
+      "source": "studio/data/SPLASH.ANS",
+      "deploy": "REBEEP"
+    },
+    {
+      "source": "studio/data/MENU.ANS",
+      "deploy": "REBEEP"
+    },
+    {
       "source": "studio/data/FACTORY/ORGAN.RBP",
       "deploy": "REBEEP/FACTORY"
     },

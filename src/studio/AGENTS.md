@@ -6,7 +6,7 @@
 
 | Path | Role |
 |---|---|
-| `main.c` | The entry point, argument handling and the top-level flow (`/?`, `/BENCH`, the test screen and Esc loop, the redraw benchmark) |
+| `main.c` | The entry point, argument handling and the top-level flow (`/?`, `/BENCH`, `/DUMP:`, the detection log, splash and menu loop, giving the chip, mouse and ReBeep back at exit) |
 | `dos.c` · `dos.h` | Program folder from `argv[0]`; Ctrl+Break, Ctrl+C and critical-error handlers; `dos_hook` and `dos_restore`; file helpers (`dos_read_file`, `dos_make_dir`, `dos_each`, the safe save `dos_save_file`) |
 | `patch.c` · `patch.h` | The patch model (`Patch`, `Voice`, `Op`: the editor's values, never registers) and the RBP text file: `patch_parse`, `patch_format`, `patch_read`, `patch_write`. P05's NASM parser follows the same rules |
 | `library.c` · `library.h` | The patch list: `FACTORY\` beside the program, `USER\` and packs in the patches folder; lookup, overrides, `name_valid`, `path_valid` for `PATCHES=` |
@@ -17,7 +17,14 @@
 | `opl.c` · `opl.h` | The OPL driver: detection, `opl_regs2`/`opl_regs4` (the one parameter-to-register mapping), live notes on every channel, `opl_sink` for tests, `/TRACE` write logging |
 | `jingle.c` · `jingle.h` | The splash jingle on `FACTORY\BELL`, advanced by `jingle_poll` from the BIOS tick count |
 | `rebeep.c` · `rebeep.h` | The resident ReBeep through AMIS (INT 2Dh): traps off (13h) at start, on (12h) at exit |
-| `video.c` · `video.h` | The 80x25 back buffer, the flush to `B800:0000`, blink and cursor handling |
+| `video.c` · `video.h` | The 80x25 back buffer, the flush to `B800:0000`, blink and cursor handling; the `scr_*` screen layer (CP437 text, `SCR_KEEP` colours, boxes, the splash ramp, `scr_dump`) |
+| `roles.c` · `roles.h` | The one role table (a colour and a mono index per role) and the colour or mono view |
+| `ansi.c` · `ansi.h` | `ansi_draw` for the `.ans` art, and `scr_remap_mono` (the shared mono remap) |
+| `mouse.c` · `mouse.h` | INT 33h, used only when a driver answers; cells are pixels / 8 |
+| `keys.c` · `keys.h` | The one table of key bindings (`id, ctx, scan, mods`) and `key_lookup` |
+| `scr_log.c` · `scr_spl.c` · `scr_menu.c` · `screens.h` | The detection log, the splash, the menu and its "coming soon" page |
+| `sample.c` | The fixed sample data (version 0.1.0, the sample detection) and the screen names `/DUMP:` can draw |
+| `data/SPLASH.ANS` · `data/MENU.ANS` | The art; `targets.json` `files` ships them to `REBEEP\` |
 | `kbd.c` · `kbd.h` | The `INT 09h` handler: make and break codes, a key-state table, an event queue |
 
 ## Rules
@@ -51,6 +58,20 @@
   `log_trace` under `/TRACE`) with the status-read delays per chip that `opl.asm` uses. Switching between two- and
   four-operator voices keys every channel off before `104h` changes. A four-operator voice does not play on an OPL2.
   `opl_shutdown` leaves `104h` and `105h` at 0; call `rebeep_resume` after it so a resident ReBeep re-initialises.
+- **The reference screens are the screen spec.** `tests/screens/<screen>.<view>.scr` (format in
+  [tests/studio/AGENTS.md](../../tests/studio/AGENTS.md)) is what a screen must draw. A screen change edits its `.scr`
+  first, in the same change as the code; the exporters that made the files stay outside the repo.
+- **Two mono rules.** Screens that came from the HTML mockup (synth, help, save prompt) take the role table's mono column.
+  Screens that came from an `.ans` (splash, menu, detection log, patch list) draw standard-view indexes, and in mono every
+  cell passes through `scr_remap_mono()` last, cells drawn on top of the art included (it moves only index 2, to 12).
+- **Art colour order.** `ansi_draw` reads standard ANSI SGR (31 red, 34 blue, 33 yellow, 36 cyan). The project's art was
+  packed in PC order (`30 + index`), so a new `.ans` drop is converted on the way in: inside `ESC[...m` only, swap 31/34,
+  33/36, 41/44 and 43/46, every other byte (the SAUCE record too) unchanged. The converted file opens correctly in an
+  ANSI editor and renders to the indexes the references hold.
+- **Dump mode** (`/DUMP:<screen> [/VIEW:MONO] /O:<file>`) touches only the art and the output, plays nothing, shows no
+  mouse and uses `sample.c`'s data. An unknown screen exits 2 and writes nothing.
+- A C literal with a CP437 glyph above 7Fh uses a hex escape in a literal of its own (`"\xFB" "  text"`), or the next
+  hex digit joins the escape.
 - Output names are 8.3, uppercase. Keep C89: declarations at the top of a block.
 
 ## Pitfalls

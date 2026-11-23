@@ -31,7 +31,16 @@
   `-set "sblaster oplmode=opl2"` as one argument; `T_OPLKND.C` fails if that stops taking effect.
 - The shipped `REBEEP/FACTORY` data files are staged as `FACTORY\` beside the program, so a test reads the real patches.
 - Every module but `main.c` is linked into every program: no module may use a symbol defined in `main.c`.
-- Reference screens (from P03) are kept here too.
+- **Reference screens** are `tests/screens/<screen>.<view>.scr`, view `vga` or `mono`: one per screen, state and view. The
+  format (UTF-8, LF): line 1 `# ReBeep reference screen: <screen>, <view>`, line 2 `# <sample state>`, `glyphs` and 25 rows
+  of 80 characters (a CP437 byte as the character the VGA font draws, byte 0 a space), `fg` and 25 rows of 80 upper-case hex
+  digits, `bg` and 25 more (8-F are the iCE bright backgrounds). Two cells match when the glyph and background are the same,
+  and the foreground too unless the glyph is a space. The files are byte-for-byte copies of the project's exports; the
+  exporters stay outside the repo, so a screen change edits its `.scr` first (see [src/studio/AGENTS.md](../../src/studio/AGENTS.md)).
+- **The screen check** is the last step of the studio suite: it compiles `RBSTUDIO.EXE` into `build/studio-tests/`, stages the
+  data files deployed under `REBEEP` beside it, runs one `DUMPS.BAT` (`RBSTUDIO /DUMP:<screen> [/VIEW:MONO] /O:Dnn.DMP` per
+  reference) in one DOSBox-X start, and compares each 4000-byte dump (`tools/lib/screens.mjs`) with its `.scr`, failing with
+  the first differing cells. A screen RBSTUDIO cannot draw yet exits 2 and is reported **pending**, a warning and not a pass (until P04-T02, which makes a pending reference a failure).
 
 ## Pitfalls
 

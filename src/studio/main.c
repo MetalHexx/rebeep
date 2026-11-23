@@ -8,24 +8,38 @@
 
 #include "version.h"
 #include "dos.h"
+#include "jingle.h"
 #include "kbd.h"
+#include "keys.h"
+#include "library.h"
+#include "log.h"
+#include "mouse.h"
+#include "opl.h"
+#include "rebeep.h"
+#include "roles.h"
+#include "screens.h"
+#include "settings.h"
 #include "video.h"
 
 #define BENCH_FRAMES 200
 #define BENCH_FILE "BENCH.TXT"
 #define TICKS_PER_DAY 0x1800B0UL
-#define SCAN_ESC 0x01
+#define DETECT_PAUSE_TICKS 18UL   /* about a second at 18.2 Hz */
 
 #define EXIT_OK 0
 #define EXIT_USAGE 1
 #define EXIT_IO 2
+#define EXIT_SCREEN 2   /* /DUMP of a screen this program does not know */
+#define EXIT_DUMP 3
 
 static void usage(void)
 {
     printf("ReBeep Studio %s\n", REBEEP_VERSION);
-    printf("Usage: RBSTUDIO [/BENCH]\n");
-    printf("  /BENCH  redraw the whole screen %d times, print the time and write %s\n", BENCH_FRAMES, BENCH_FILE);
-    printf("  /?      show this help\n");
+    printf("Usage: RBSTUDIO [/VIEW:MONO] [/BENCH] [/DUMP:<screen> /O:<file>]\n");
+    printf("  /VIEW:MONO  draw for a monochrome display\n");
+    printf("  /BENCH      redraw the whole screen %d times, print the time and write %s\n", BENCH_FRAMES, BENCH_FILE);
+    printf("  /DUMP:name  draw a reference screen with its sample data; /O:file is the text screen written\n");
+    printf("  /?          show this help\n");
 }
 
 static void draw_box(int x, int y, int w, int h, unsigned char attr)
@@ -130,43 +144,259 @@ static int run_bench(void)
     return EXIT_OK;
 }
 
-static int run_studio(void)
+/* The hardware the studio took: the chip, the mouse cursor and a resident ReBeep's traps. Runs once, at exit. */
+static void release_hardware(void)
 {
-    char last_key[VIDEO_COLS + 1];
+    static int released;
+
+    if (released) return;
+    released = 1;
+    jingle_stop();
+    if (opl_chip() != 0) opl_shutdown();
+    mouse_done();
+    rebeep_resume();
+}
+
+/* Does the studio have a key press (a make) waiting? Empties the key queue and the BIOS buffer either way. */
+static int key_pressed(void)
+{
     unsigned event;
-    int quit = 0;
+    int any = 0;
 
-    video_init();
-    kbd_init();
-    strcpy(last_key, "Last key: none yet");
-    draw_screen(0, last_key);
-    video_flush();
+    while (kbd_next(&event)) {
+        if (!(event & KBD_BREAK)) any = 1;
+    }
+    while (kbhit()) getch();
+    return any;
+}
 
-    while (!quit) {
-        int changed = 0;
+static void wait_ticks(unsigned long ticks)
+{
+    unsigned long start = bios_ticks();
+
+    while (bios_ticks() - start < ticks) {
+    }
+}
+
+static void folder_without_slash(char *out, unsigned len)
+{
+    const char *dir = dos_program_dir();
+    unsigned n = (unsigned)strlen(dir);
+
+    if (n >= len) n = len - 1;
+    memcpy(out, dir, n);
+    out[n] = '\0';
+    if (n > 3 && out[n - 1] == '\\') out[n - 1] = '\0';
+    if (out[0] == '\0') strcpy(out, ".");
+}
+
+/* The checks, each drawn and logged as it completes. */
+static void run_detection(Detect *d)
+{
+    static Settings settings;
+    static Library library;
+    char path[100];
+
+    memset(d, 0, sizeof *d);
+    sprintf(d->log_path, "%.80sRBSTUDIO.LOG", dos_program_dir());
+    d->log_ok = log_open(d->log_path) == 0;
+    detlog_begin(REBEEP_VERSION);
+    scr_flush();
+
+    d->chip = opl_detect();
+    if (d->chip != 0) opl_card(d->card, sizeof d->card);
+    detlog_line(d, 0);
+    scr_flush();
+
+    d->mouse = mouse_init();
+    detlog_line(d, 1);
+    scr_flush();
+
+    folder_without_slash(d->folder, sizeof d->folder);
+    detlog_line(d, 2);
+    scr_flush();
+
+    sprintf(path, "%.80sRBSTUDIO.CFG", dos_program_dir());
+    d->cfg_state = cfg_load(&settings, path) < 0 ? -1 : settings.present;
+    detlog_line(d, 3);
+    scr_flush();
+
+    d->patches_ok = lib_scan(&library, dos_program_dir(), cfg_get(&settings, "PATCHES")) == 0;
+    d->factory = library.factory;
+    d->user = library.user;
+    d->packs = library.packs;
+    lib_free(&library);
+    detlog_line(d, 4);
+    scr_flush();
+
+    detlog_line(d, 5);
+    scr_flush();
+}
+
+/* Runs the splash: the art, the jingle, and any key to leave. */
+static void run_splash(int chip)
+{
+    splash_draw(REBEEP_VERSION);
+    scr_flush();
+    if (chip != 0) {
+        opl_init(chip);
+        jingle_start();
+    }
+    key_pressed();
+    while (!key_pressed()) jingle_poll();
+    jingle_stop();
+}
+
+/* The page of a menu item that is not built yet; Esc goes back. */
+static void run_soon(int item)
+{
+    int back = 0;
+
+    soon_draw(item);
+    scr_flush();
+    while (!back) {
+        unsigned event;
 
         while (kbd_next(&event)) {
-            sprintf(last_key, "Last key: %-5s %s%02Xh", (event & KBD_BREAK) ? "break" : "make",
-                    (event & KBD_EXT) ? "E0 " : "", event & KBD_CODE);
-            changed = 1;
-            if (event == SCAN_ESC) quit = 1;
+            if (key_lookup(K_MENU, event, key_mods()) == KID_ESC) back = 1;
         }
-        /* The BIOS still gets every key; empty its buffer so a full one never beeps. */
         while (kbhit()) getch();
-        if (changed) {
-            draw_screen(0, last_key);
-            video_flush();
+    }
+}
+
+/* Acts on the chosen item. Returns 1 when the program should end. */
+static int menu_choose(int sel)
+{
+    if (sel == MENU_EXIT) return 1;
+    if (sel == MENU_PROFILES || sel == MENU_SETTINGS) {
+        run_soon(sel);
+        menu_draw(sel);
+        scr_flush();
+    }
+    return 0;
+}
+
+static void run_menu(void)
+{
+    int sel = 0;
+    int quit = 0;
+    int was_down = 0;
+
+    menu_draw(sel);
+    scr_flush();
+    mouse_show();
+    while (!quit) {
+        unsigned event;
+        int moved = 0;
+        int mx;
+        int my;
+        int down;
+
+        while (kbd_next(&event) && !quit) {
+            switch (key_lookup(K_MENU, event, key_mods())) {
+            case KID_UP:
+                sel = (sel + MENU_ITEMS - 1) % MENU_ITEMS;
+                moved = 1;
+                break;
+            case KID_DOWN:
+                sel = (sel + 1) % MENU_ITEMS;
+                moved = 1;
+                break;
+            case KID_ENTER:
+                quit = menu_choose(sel);
+                break;
+            case KID_ESC:
+                quit = 1;
+                break;
+            default:
+                break;
+            }
+        }
+        while (kbhit()) getch();
+
+        down = mouse_read(&mx, &my) & 1;
+        if (down && !was_down && !quit) {
+            int hit = menu_item_at(mx, my);
+
+            if (hit >= 0) {
+                sel = hit;
+                menu_select(sel);
+                scr_flush();
+                quit = menu_choose(sel);
+            }
+        }
+        was_down = down;
+
+        if (moved && !quit) {
+            menu_select(sel);
+            scr_flush();
         }
     }
+}
 
+static int run_studio(int mono)
+{
+    Detect detect;
+
+    atexit(release_hardware);
+    rebeep_suspend();
+    video_init();
+    kbd_init();
+    role_set_mono(mono || scr_bw80());
+
+    run_detection(&detect);
+    wait_ticks(DETECT_PAUSE_TICKS);
+    run_splash(detect.chip);
+    run_menu();
+
+    release_hardware();
     dos_restore();
     video_restore();
     return EXIT_OK;
 }
 
+/* Draws one reference screen with its sample data and writes the 4000-byte text screen to `out`. */
+static int run_dump(const char *screen, const char *out, int mono)
+{
+    int rc;
+
+    if (!sample_known(screen)) {
+        printf("Unknown screen: %s\n", screen);
+        return EXIT_SCREEN;
+    }
+    if (out == NULL) {
+        printf("/DUMP needs /O:<file>\n");
+        usage();
+        return EXIT_USAGE;
+    }
+    video_init();
+    role_set_mono(mono || scr_bw80());
+    sample_draw(screen);
+    scr_flush();
+    rc = scr_dump(out);
+    video_restore();
+    if (rc != 0) {
+        printf("Cannot write %s\n", out);
+        return EXIT_DUMP;
+    }
+    return EXIT_OK;
+}
+
+/* The text after `prefix` (case-insensitive) when `arg` starts with it, else NULL. */
+static const char *option_value(const char *arg, const char *prefix)
+{
+    size_t n = strlen(prefix);
+
+    return strnicmp(arg, prefix, n) == 0 ? arg + n : NULL;
+}
+
 int main(int argc, char **argv)
 {
+    const char *dump = NULL;
+    const char *out = NULL;
+    const char *value;
     int bench = 0;
+    int mono = 0;
     int i;
 
     for (i = 1; i < argc; i++) {
@@ -175,6 +405,12 @@ int main(int argc, char **argv)
             return EXIT_OK;
         } else if (stricmp(argv[i], "/BENCH") == 0) {
             bench = 1;
+        } else if ((value = option_value(argv[i], "/DUMP:")) != NULL && *value != '\0') {
+            dump = value;
+        } else if ((value = option_value(argv[i], "/O:")) != NULL && *value != '\0') {
+            out = value;
+        } else if (stricmp(argv[i], "/VIEW:MONO") == 0) {
+            mono = 1;
         } else {
             printf("Unknown option: %s\n", argv[i]);
             usage();
@@ -183,5 +419,6 @@ int main(int argc, char **argv)
     }
 
     dos_init(argv[0]);
-    return bench ? run_bench() : run_studio();
+    if (dump != NULL) return run_dump(dump, out, mono);
+    return bench ? run_bench() : run_studio(mono);
 }

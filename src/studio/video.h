@@ -20,4 +20,39 @@ void video_text(int x, int y, const char *s, unsigned char attr);
 /* Copies the whole back buffer to the screen. */
 void video_flush(void);
 
+/* The screen layer the program draws through. Text is CP437 bytes, so a C literal writes a glyph above 7Fh as a hex
+   escape in a literal of its own ("\xFB" "  text"). A colour of SCR_KEEP leaves that part of the cell as it is. */
+#define SCR_KEEP (-1)
+#define SCR_SINGLE 0
+#define SCR_DOUBLE 1
+
+/* Writes the bytes of `cp437` along row `y` from `x`; clipped to the screen. */
+void scr_put(int x, int y, const char *cp437, int fg, int bg);
+
+/* Fills a rectangle with the glyph `ch`. */
+void scr_fill(int x, int y, int w, int h, char ch, int fg, int bg);
+
+/* Sets colours only, glyphs untouched. */
+void scr_paint(int x, int y, int w, int h, int fg, int bg);
+
+/* The outline of a rectangle (the corners included), single or double line; the inside is untouched. */
+void scr_box(int x, int y, int w, int h, int style, int fg, int bg);
+
+/* Writes `s` with the splash gradient: over the non-space characters the first and last are 8, the second and
+   second-to-last 7, the rest 15. The background stays as it is. */
+void scr_ramp(int x, int y, const char *s);
+
+/* The back buffer's cell as attribute << 8 | character, or 0 off the screen. */
+unsigned scr_cell(int x, int y);
+
+/* video_flush with the mouse cursor hidden for the copy, so the driver's cursor never lands in the back buffer's view. */
+void scr_flush(void);
+
+/* Writes the 4000 bytes of B800:0000 (character, attribute for each cell, row by row) to `path`, with the mouse
+   cursor hidden. Call after scr_flush. Returns 0, or -1 when the file cannot be written. */
+int scr_dump(const char *path);
+
+/* 1 when the BIOS mode at start was 2 (BW80), a monochrome display. Valid after video_init. */
+int scr_bw80(void);
+
 #endif
