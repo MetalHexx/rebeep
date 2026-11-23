@@ -57,4 +57,5 @@ node tools/rebeep.mjs test run --suite tools
 
 ## Related
 
-- [env/AGENTS.md](../env/AGENTS.md): what the CLI builds · [cli.md](../.claude/skills/rebeep-dev/references/cli.md)
+- [env/AGENTS.md](../env/AGENTS.md): what the CLI builds
+- [.claude/skills/rebeep-dev/references/cli.md](../.claude/skills/rebeep-dev/references/cli.md)

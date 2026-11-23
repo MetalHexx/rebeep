@@ -45,7 +45,8 @@
   Below 20 Hz (above `DIV_MAX`, or 0 = 65536) is `M_REST`, OPL keyed off, or `M_TONE` once `interp_low` is set (`/L:1`).
 - While the traps are off the OPL belongs to the game: no OPL or `61h` write, and uninstall skips
   `opl_shutdown`. The hotkey then only updates `RB_STATE`. `/OFF` first undoes any masking; `/ON` resyncs.
-- A command-line change writes only the fields it names; defaults apply on a plain load alone. NASM rejects an out-of-range short jump under `cpu 8086`: keep branches local. DOS `09h` returns `AL = '$'`.
+- A command-line change writes only the fields it names. Defaults apply on a plain load alone.
+- NASM rejects an out-of-range short jump under `cpu 8086`; keep branches local. DOS `09h` returns `AL = '$'`.
 
 ## Run / test
 

@@ -13,7 +13,7 @@ import path from 'node:path';
 export const RESULT_FILE = 'RESULT.TXT';
 const INTERPRETER_PROGRAM = /^t_.+\.asm$/i;
 const STUDIO_PROGRAM = /^t_.+\.c$/i;
-const VM_PROBE =/^p_.+\.bat$/i;
+const VM_PROBE = /^p_.+\.bat$/i;
 
 /**
  * Parses RESULT.TXT. `done` is the count when `DONE <n>` is the last line, `'bare'` when the last

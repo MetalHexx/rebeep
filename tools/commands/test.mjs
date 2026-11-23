@@ -67,9 +67,11 @@ async function runDosProgram(ctx, dosbox, dir, name, command, { opl2 = false } =
   const resultFile = path.join(dir, RESULT_FILE);
   fs.rmSync(resultFile, { force: true });
   const run = await runTool(dosbox, [
+    // Each setting is one argument, section and key separated by a space: DOSBox-X ignores the
+    // comma form and a section and key passed as two arguments.
     '-set',
-    'mixer,nosound=true', // unlike -silent, keeps the Sound Blaster and its OPL emulated
-    ...(opl2 ? ['-set', 'sblaster,oplmode=opl2'] : []),
+    'mixer nosound=true', // unlike -silent, keeps the Sound Blaster and its OPL emulated
+    ...(opl2 ? ['-set', 'sblaster oplmode=opl2'] : []),
     '-exit',
     '-nogui',
     '-nomenu',
@@ -289,7 +291,7 @@ export default {
         const suites = ctx.opts.suite === 'all' ? ['tools', 'interpreter', 'studio'] : [ctx.opts.suite];
         if (ctx.env.NODE_TEST_CONTEXT && suites.includes('tools')) {
           throw new CliError('the tools suite cannot run inside a node test (recursion guard)', {
-            hint: 'Run `rebeep test run --suite interpreter` or `--suite studio` from here,or the tools suite from a shell.',
+            hint: 'Run `rebeep test run --suite interpreter` or `--suite studio` from here, or the tools suite from a shell.',
           });
         }
         const results = [];

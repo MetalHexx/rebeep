@@ -26,10 +26,13 @@
   step number), and `t_done` prints `DONE <n>` last and exits.
 - `interpreter/t_interp.asm` (`T_INTERP.COM`) covers the speaker interpreter: port-write sequencing,
   ignored channels and commands, glide, direct toggling, range edges, rests below 20 Hz and `interp_sync`.
-- `interpreter/t_opl.asm` (`T_OPL.COM`) covers the OPL target: chip detection, block/F-number against the formula, and,
-  through a recording sink, the key bit (none at volume 0), notes alternating over channels 7 and 8, `C0h`, volume and
-  shutdown, as an OPL2 and an OPL3. Every routine preserves its registers and uses at most 16 bytes of stack (`INFO` line).
-- Listening check: run `build/tests/T_OPL.COM /L` (a second of 440 Hz per voice) in DOSBox-X with sound on, per `oplmode` (`-set sblaster,oplmode=opl2`, then `opl3`).
+- `interpreter/t_opl.asm` (`T_OPL.COM`) covers the OPL target: real chip detection, block/F-number
+  against the formula, and, through a recording sink, the key bit (none at volume 0), notes alternating over channels 7
+  and 8 (and nothing else written), `C0h`, volume and shutdown, as an OPL2 and as an OPL3. It checks that every
+  routine preserves its registers and uses at most 16 bytes of stack (depths print as an `INFO` line).
+- Listening check: `T_OPL /L` plays each voice for a second at 440 Hz. Run `build/tests/T_OPL.COM /L`
+  in DOSBox-X with sound on, once per `oplmode` (`-set "sblaster oplmode=opl2"`, then `opl3`; the setting is one
+  space-separated argument, DOSBox-X ignores a comma form).
 - `RBTEST.COM` plays speaker cases for listening, runs PASS/FAIL behaviour checks (with `/R`, against
   ReBeep's state through AMIS, last turning its traps off and on), probes free memory and times a trapped write.
   `P_EXER` tests it without ReBeep, `P_CAPT` with it, `P_TRACE` under REBEEPD, `P_BENCH` times it (`docs/architecture/how-it-works.md`); `RBTEST /?`.
@@ -41,7 +44,7 @@
   cases. The three include paths come from the suite (`tests/interpreter`, `src`, `src/include`).
 - RBTEST's own `OUT 61h` is trapped when ReBeep is loaded (that is the test). It shrinks its memory
   block first, or `AH=48h` would report about 0 free.
-- The suite runs DOSBox-X with `-set mixer,nosound=true`, not `-silent`: `-silent` removes the Sound
+- The suite runs DOSBox-X with `-set "mixer nosound=true"`, not `-silent`: `-silent` removes the Sound
   Blaster, so no OPL is found at `388h`.
 - CI runs the interpreter and studio suites on `windows-latest` only, with `SDL_VIDEODRIVER` and
   `SDL_AUDIODRIVER` set to `dummy`. Locally they open a DOSBox-X window briefly.

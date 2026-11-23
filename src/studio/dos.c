@@ -16,6 +16,9 @@ static int hook_count;
 static isr_t old_break, old_ctrlc, old_critical;
 static char program_dir[80];
 
+/* The handlers run on the interrupted program's stack (INT 24h on DOS's own), which the stack
+   checker's limit does not describe: so no stack check. */
+#pragma off (check_stack)
 /* INT 1Bh (Ctrl+Break) and INT 23h (Ctrl+C): return to the caller and carry on. */
 static void __interrupt __far ignore_break(void)
 {
@@ -27,6 +30,7 @@ static void __interrupt __far fail_critical(union INTPACK r)
 {
     r.h.al = 3;
 }
+#pragma on (check_stack)
 
 void dos_hook(unsigned intno, isr_t handler, isr_t *old)
 {

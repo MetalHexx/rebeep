@@ -319,11 +319,11 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
     const [alphaDefault, alphaOpl2, beta] = dosbox;
     assert.ok(alphaDefault.includes(`MOUNT C "${out}"`));
     assert.ok(alphaDefault.includes('T_ALPHA.EXE > RESULT.TXT'));
-    assert.ok(!alphaDefault.includes('sblaster,oplmode=opl2'));
-    assert.ok(alphaOpl2.includes('sblaster,oplmode=opl2'));
+    assert.ok(!alphaDefault.includes('sblaster oplmode=opl2'));
+    assert.ok(alphaOpl2.includes('sblaster oplmode=opl2'), 'one argument: DOSBox-X ignores the comma form');
     assert.ok(alphaOpl2.includes('T_ALPHA.EXE /OPL2 > RESULT.TXT'));
     assert.ok(beta.includes('T_BETA.EXE > RESULT.TXT'));
-    assert.ok(beta.includes('mixer,nosound=true') && beta.includes('-exit'));
+    assert.ok(beta.includes('mixer nosound=true') && beta.includes('-exit'));
   });
 
   test('a FAIL line fails the suite and names the program and case; the OPL2 run is judged on its own', () => {
