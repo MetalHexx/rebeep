@@ -20,9 +20,8 @@
 
 ## Rules
 
-- **Grammar:** `rebeep <noun> <verb> [args] [options]`. Nouns are singular things. Verbs come only
-  from: `list show status check setup create add remove fetch verify run snapshot reset deploy
-  clean bump`. Need a new verb? Add it here first, in the same change.
+- **Grammar:** `rebeep <noun> <verb> [args] [options]`. Nouns are singular things. Verbs come only from: `list show status
+  check setup create add remove fetch verify run snapshot reset deploy clean bump`. A new verb is added here first, in the same change.
 - Every noun and verb is a **spec object** (name, summary, args, options, run). Help is rendered
   from it at every level (`rebeep`, `rebeep <noun>`, `rebeep <noun> <verb> --help`), never by hand.
 - Global options (`--json`, `--home <path>`, `--verbose`, `-h/--help`, `--version`) go anywhere;
@@ -45,9 +44,8 @@
 - 86Box holds its disk images open; check the VM isn't running (`lib/proc`) before writing one.
 - Windows Node can't spawn a `.cmd` without a shell. Tests fake tools with `process.execPath` and
   the `*_PREFIX_ARGS` overrides. Never call `test run --suite tools` from a test.
-- **Overrides:** `REBEEP_HOME`, `REBEEP_MANIFEST`, `REBEEP_REPO_ROOT`, `REBEEP_NASM`, `REBEEP_WATCOM`,
-  `REBEEP_DOSBOX`, `REBEEP_86BOX` (absolute paths; each with a `*_PREFIX_ARGS` JSON array),
-  `REBEEP_FREEDOS_BUILDER`, `REBEEP_GITHUB_API` (the release lookup's base URL).
+- **Overrides:** `REBEEP_HOME`, `REBEEP_MANIFEST`, `REBEEP_REPO_ROOT`, `REBEEP_NASM`, `REBEEP_WATCOM`, `REBEEP_DOSBOX`, `REBEEP_86BOX`
+  (absolute paths; each with a `*_PREFIX_ARGS` JSON array), `REBEEP_FREEDOS_BUILDER`, `REBEEP_GITHUB_API` (the release lookup's base URL).
 
 ## Run / test
 

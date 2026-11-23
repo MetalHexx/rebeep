@@ -15,6 +15,7 @@
 | `guide/studio.md` | Guide | ReBeep Studio for players: the screens, keys, patch folders and packs, saving, the settings file |
 | `guide/reference.md` | Guide | Options, hotkeys, exit codes, RBSTUDIO, RBTEST. `release/README.TXT` and `REBEEP /?` mirror it |
 | `architecture/how-it-works.md` | Architecture | The design, and the `P_BENCH` numbers |
+| `architecture/studio.md` | Architecture | ReBeep Studio's modules and design; `src/studio/AGENTS.md` links it |
 | `architecture/gpc-case-study.md` | Architecture | How GPC drives the speaker, ReBeep's handling, what still differs |
 | `lab/setup.md` | Lab | Clone to first VM boot, Free and Full paths, the Verified-on table |
 | `lab/86box-lab.md` | Lab | The lab's VMs, disks, boot flow, snapshot and reset |
@@ -33,8 +34,7 @@
 - **Lab:** contributors. Commands, the `rebeep` CLI, the VMs.
 - **The voice:** concise and high signal. Steps first; tables and code blocks over prose; no filler;
   link, never repeat. Never paper over what a newcomer can't know: show the real command, not "turn
-  that feature off". Complete but lean: a cold reader needs nothing else, and reads nothing extra.
-- **The goal:** deliberate, good-looking docs, each page at one level.
+  that feature off". Complete but lean: a cold reader needs nothing else, and reads nothing extra. Each page at one level.
 
 **Guide pages:**
 - Explain each term on first use, in a few words: TSR, FM chip, Jemm, QPIEMU, upper memory, boot menu.

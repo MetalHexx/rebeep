@@ -102,8 +102,8 @@ void help_detected(char *out, unsigned len, int chip, const char *card);
 void save_draw(const Editor *e);
 int save_hit(int x, int y);
 
-/* Sample state for the reference screens: the fixed data (version 0.1.0, the sample detection, a log path of
-   C:\REBEEP\RBSTUDIO.LOG, the sample patch list, patch 12 of 40 BRASS) that makes a dump comparable. sample_known says
+/* Sample state for the reference screens: the fixed sample version, the sample detection, a log path of
+   C:\REBEEP\RBSTUDIO.LOG, the sample patch list, patch 12 of 40 BRASS: the data that makes a dump comparable. sample_known says
    whether `screen` is one of the reference names this program can draw; sample_draw draws it into the back buffer. */
 const char *sample_version(void);
 void sample_detect(Detect *d);

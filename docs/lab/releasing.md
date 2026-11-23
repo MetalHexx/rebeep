@@ -38,8 +38,15 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
 - [ ] At the DOS prompt, with `RBTEST /C:1`, Ctrl+Alt+B toggles between the OPL and the speaker and
   Ctrl+Alt+N switches between the faithful voice and the loaded patch (load one with `REBEEP /P:FLUTE`).
   GPC takes over the keyboard, so the hotkeys do nothing inside it.
+- [ ] The studio: run `RBSTUDIO` from the menu to the patch list to the synth screen. Play a 2-OP patch and
+  a 4-OP one (make a 4-OP variant of a factory patch and Save As a `USER` name). Help pages 1 and 2 and the
+  save prompt look right in colour and with `RBSTUDIO /VIEW:MONO`. After Esc out, `REBEEP /S` shows the
+  traps on and RBTEST plays.
+- [ ] A four-operator patch: `REBEEP /P:<that USER patch>`, `REBEEP /S` says `(4-OP)`, and RBTEST case 1
+  plays the fuller voice.
 - [ ] Last, attach `build/release/rebeep-<v>-floppy.img` as A: from 86Box's Media menu, run
-  `INSTALL` from A: and press `I`, then run it again and press `U`: it updates the copy. Copy the
+  `INSTALL` from A: and press `I`: the installed folder holds `RBSTUDIO.EXE`, `FACTORY\` and the art, and
+  `RBSTUDIO` starts from it. Run `INSTALL` again and press `U`: it updates the copy. Copy the
   MS-DOS samples over C:'s configs and reboot: ReBeep loads from the sample config. Then quit 86Box
   and run `rebeep vm reset mirror-msdos --yes` to put the VM back on its dev configs.
 
@@ -56,18 +63,23 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
 - [ ] `T_OPL /L` with `oplmode=opl2`, then with `oplmode=opl3`: the OPL2 faithful voice sounds
   square-like. If you skip this, the `CHANGELOG.md` Known issues must say the OPL2 voice hasn't been
   checked by ear.
+- [ ] The splash jingle, by ear. Under `machine=cga` and then `machine=ega`, the synth screen, the help and the
+  save prompt show bright backgrounds, not blinking text (a screen dump cannot show that blink is off).
 
 **`slow-386sx`:**
 
 - [ ] `RBTEST /B` with ReBeep loaded, then after `REBEEP /OFF`. Record the numbers in
   [how-it-works.md](../architecture/how-it-works.md).
+- [ ] `RBSTUDIO /BENCH`, recorded in [how-it-works.md](../architecture/how-it-works.md#the-studio), and notes
+  played on the synth screen keep up with the keys.
 
 **The real machine**, last. The VMs stand in for it, so it decides the release:
 
 - [ ] Install the release candidate, `build/release/rebeep-<v>.zip` or `rebeep-<v>-floppy.img`, by
   following its `README.TXT`, Jemm included. Repeat the `mirror-msdos` GPC checks: they pass the
   same way.
-- [ ] Race GPC to the end of a full race. Some faults only show after minutes of racing.
+- [ ] Race GPC to the end of a full race, with ReBeep loaded. Some faults only show after minutes of racing.
+- [ ] Play a four-operator patch on its OPL3 by ear, and check the studio's look on its display.
 
 ## 4. Merge and publish
 
@@ -89,7 +101,7 @@ and confirm it shows the new version and its download links.
 
 ## Working with an AI agent
 
-The repo ships three skills for AI coding assistants, such as Claude Code, which picks them up from
+The repo ships skills for AI coding assistants, such as Claude Code, which picks them up from
 `.claude/skills/`. Agents start at [AGENTS.md](../../AGENTS.md).
 
 | Skill | What it does |
@@ -97,6 +109,7 @@ The repo ships three skills for AI coding assistants, such as Claude Code, which
 | [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build |
 | [`update-docs`](../../.claude/skills/update-docs/SKILL.md) | Keeps the docs and `AGENTS.md` files true before each commit |
 | [`release`](../../.claude/skills/release/SKILL.md) | Cuts a release: the changelog from the branch's commits, your review of the notes, the checks, the merge and the publish |
+| [`drive-dos-app`](../../.claude/skills/drive-dos-app/SKILL.md) | Drives a DOS program in a real DOSBox-X window with typed keys and screenshots, for flows the headless checks cannot reach |
 
 For this page, ask the agent to use the `release` skill. It follows the steps above, and asks you to
 review the release notes before anything merges.

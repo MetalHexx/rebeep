@@ -177,6 +177,48 @@ describe('checkVersions on a fixture repo', () => {
   });
 });
 
+describe('the fixed sample version', () => {
+  let root;
+  const flagged = () => checkVersions({ root }).map((p) => p.split(': ')[0]).sort();
+  const write = (rel, text) => {
+    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+    fs.writeFileSync(path.join(root, rel), text);
+  };
+
+  beforeEach(() => {
+    root = makeTempDir('rebeep-version-sample-');
+    write('package.json', `${JSON.stringify({ name: 'x', version: '1.2.0' }, null, 2)}\n`);
+    write('CHANGELOG.md', WITH_RELEASE);
+  });
+  afterEach(() => removeDir(root));
+
+  const track = () => {
+    spawnSync('git', ['init', '-q'], { cwd: root });
+    spawnSync('git', ['add', '-A'], { cwd: root });
+  };
+
+  test('a reference screen and the SAMPLE_VERSION line pass', () => {
+    write('tests/screens/splash.vga.scr', 'ReBeep 1.2.0\n');
+    write('src/studio/sample.c', '#define SAMPLE_VERSION "1.2.0"\n');
+    track();
+    assert.deepEqual(flagged(), []);
+  });
+
+  test('the same literal elsewhere in sample.c fails', () => {
+    write('src/studio/sample.c', '#define SAMPLE_VERSION "1.2.0"\nstatic const char *v = "1.2.0";\n');
+    track();
+    assert.deepEqual(flagged(), ['src/studio/sample.c:2']);
+  });
+
+  test('a .scr outside tests/screens, a non-.scr under it, and a doc still fail', () => {
+    write('tests/other/splash.scr', 'ReBeep 1.2.0\n');
+    write('tests/screens/notes.txt', 'ReBeep 1.2.0\n');
+    write('docs/page.md', 'Version 1.2.0 ships.\n');
+    track();
+    assert.deepEqual(flagged(), ['docs/page.md:1', 'tests/other/splash.scr:1', 'tests/screens/notes.txt:1']);
+  });
+});
+
 describe('rebeep version', () => {
   let root;
   const run = (args) => runRebeep(args, { env: { REBEEP_REPO_ROOT: root } });

@@ -14,14 +14,13 @@
 | `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
 | `startup/` | `main.asm`: options, checks, load, change, unload, messages. `patch.asm`: the `.RBP` parser. `files.asm`: program folder, `RBSTUDIO.CFG`, name rules, patch lookup, an INT 24h fail handler (`crit_on`/`crit_off`) around the file reads. `dump.asm`: `REBEEPD /D`. All freed when going resident |
 | `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [exitcode.inc](include/exitcode.inc): the exit codes. `trace.inc`: REBEEPD's record. None is restated elsewhere |
-| `studio/` | `RBSTUDIO.EXE`, the tracker studio, in C. Its rules: [studio/AGENTS.md](studio/AGENTS.md) |
+| `studio/` | `RBSTUDIO.EXE`, ReBeep Studio (the configuration program), in C. Its rules: [studio/AGENTS.md](studio/AGENTS.md) |
 | `diag/` | `qpichk.asm` → `QPICHK.COM`, reports whether QPIEMU is up (run by `BOOT.BAT`). `fdboot.asm` → `FDBOOT.BIN`, the release floppy's boot sector: hands the boot to C:, asks for a key only when C: has none |
 
 ## Rules
 
-- **Resident below `resident_end`.** The engine's state, `RB_STATE`, the hook variables and the private stack
-  all live in the resident part. Startup code and its data are freed.
-- **Nothing resident calls DOS.** Uninstall reads the IVT directly; the command-line copy frees the memory.
+- **Resident below `resident_end`:** the engine's state, `RB_STATE`, the hook variables and the private stack; startup code and its data are freed.
+  **Nothing resident calls DOS:** uninstall reads the IVT directly; the command-line copy frees the memory.
 - **QPI-only I/O.** On 42h, 43h and 61h the resident part uses QPI `1A00h`/`1A01h`/`1A04h`, never `IN`/`OUT`
   (a direct access traps again). The hotkey never executes `STI`; its one `61h` access is the speaker handoff.
 - **Masking.** In `M_TONE` or `M_REST` (translation on) the real `61h` holds bit 1 clear, or the gate if the speaker rests

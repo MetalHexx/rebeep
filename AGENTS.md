@@ -139,7 +139,7 @@ doc has one job. When two docs need the same fact, one owns it and the others li
 |---|---|
 | `README.md` | The front door, for players: why, highlights, how in brief, what you need, install in brief, tested on, and the docs index. Build details live in `docs/` |
 | `docs/guide/` | The player guide, for a DOS user with no dev tools: getting started, a real PC, 86Box, playing, ReBeep Studio, troubleshooting, compatibility, the reference. `reference.md` owns the option, hotkey and exit-code tables that `release/README.TXT` mirrors |
-| `docs/architecture/` | How it works, for the curious: the design, the measured cost (`P_BENCH` numbers), the GPC case study |
+| `docs/architecture/` | How it works, for the curious: the design, the measured cost (`P_BENCH` numbers), the studio's modules, the GPC case study |
 | `docs/roadmap.md` | Where ReBeep is headed: now, ideas, and how to help |
 | `docs/lab/` | For contributors: lab setup and the Verified-on table, the 86Box lab (owns lab troubleshooting), contributing (the studio suite and its reference screens), releasing |
 | `CHANGELOG.md` | Player-facing changes |

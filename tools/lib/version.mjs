@@ -100,6 +100,15 @@ function trackedFiles(root) {
   return run.stdout.split('\0').filter(Boolean);
 }
 
+const REFERENCE_SCREEN = /^tests\/screens\/[^/]+\.scr$/;
+const SAMPLE_FILE = 'src/studio/sample.c';
+const SAMPLE_VERSION_LINE = /^#define\s+SAMPLE_VERSION\s+"\d+\.\d+\.\d+"\s*$/;
+
+/**
+ * Problems from the package version written out where only `package.json` may hold it, or from a
+ * `%define REBEEP_VERSION`. The reference screens and the one `SAMPLE_VERSION` line of `sample.c` hold
+ * a fixed sample version, so a bump never changes them; they are the only exemptions.
+ */
 function hardCodedVersions(root, version) {
   const escaped = version.replace(/\./g, '\\.');
   const literal = new RegExp(`(?<![\\d.])${escaped}(?!\\d|\\.\\d)`);
@@ -114,10 +123,12 @@ function hardCodedVersions(root, version) {
   for (const file of files) {
     const full = path.join(root, file);
     if (!fs.existsSync(full)) continue;
+    const sample = REFERENCE_SCREEN.test(file);
     fs.readFileSync(full, 'latin1')
       .split(/\r?\n/)
       .forEach((line, i) => {
         if (define.test(line)) problems.push(`${file}:${i + 1}: defines REBEEP_VERSION; the build defines it from package.json`);
+        if (sample || (file === SAMPLE_FILE && SAMPLE_VERSION_LINE.test(line))) return;
         if (literal.test(line)) problems.push(`${file}:${i + 1}: hard-codes the version ${version}; package.json is the only place`);
       });
   }

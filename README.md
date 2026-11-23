@@ -94,6 +94,7 @@ emulated Pentium MMX and a 386SX/16, backed by automated checks that run in DOS 
 | Doc | What it covers |
 |---|---|
 | [How it works](docs/architecture/how-it-works.md) | The design, and the measured cost |
+| [ReBeep Studio, built](docs/architecture/studio.md) | The studio's modules and the design behind them |
 | [Grand Prix Circuit](docs/architecture/gpc-case-study.md) | A case study: how the game drives the speaker, and what ReBeep makes of it |
 
 **The lab and contributing**

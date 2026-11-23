@@ -27,22 +27,19 @@
 - `interpreter/t_interp.asm` (`T_INTERP.COM`) covers the speaker interpreter: port-write sequencing,
   ignored channels and commands, glide, direct toggling, range edges, rests below 20 Hz and `interp_sync`.
 - `interpreter/t_opl.asm` (`T_OPL.COM`) covers the OPL target: real chip detection, block/F-number
-  against the formula, and, through a recording sink, the key bit (none at volume 0), notes alternating over channels 7
-  and 8 (and nothing else written), `C0h`, volume, shutdown, a patch block's record (`E0h` held to 0-3 on an OPL2) and
-  octave shift, and (OPL3) 4-OP voices: pairs A and B, `104h`, carriers per connection, the mode latch; as an OPL2 and as an OPL3. It checks that every routine preserves its registers and uses at most 16 bytes of stack (depths print as an `INFO` line).
+  against the formula, and, through a recording sink, the key bit, notes alternating over channels 7 and 8, `C0h`, volume,
+  shutdown, a patch block's record (`E0h` held to 0-3 on an OPL2), octave shift and (OPL3) 4-OP voices; as an OPL2 and as an OPL3. Every routine must preserve its registers and use at most 16 bytes of stack (depths print as an `INFO` line).
 - `interpreter/T_PATCH.ASM` (`T_PATCH.COM`) covers the startup part's `.RBP` parser, name rules, `RBSTUDIO.CFG` reader,
   patch lookup and INT 24h handler, on text buffers and on `FACTORY\` (the suite stages the factory files). Its cases are `patch.c`'s: both parsers take and refuse the same files.
 - Listening check: `T_OPL /L` plays the faithful voice, then the four factory records and, on an OPL3, a 4-OP patch, a second each. Run `build/tests/T_OPL.COM /L`
   in DOSBox-X with sound on, once per `oplmode` (`-set "sblaster oplmode=opl2"`, then `opl3`; one space-separated argument).
-- `RBTEST.COM` plays speaker cases for listening, runs PASS/FAIL behaviour checks (with `/R`, against
-  ReBeep's state through AMIS, last turning its traps off and on), probes free memory and times a trapped write.
-  `P_EXER` tests it without ReBeep, `P_CAPT` with it, `P_TRACE` under REBEEPD, `P_BENCH` times it (`docs/architecture/how-it-works.md`); `RBTEST /?`.
+- `RBTEST.COM` plays speaker cases for listening, runs PASS/FAIL checks (with `/R`, against ReBeep's state through AMIS), probes free
+  memory and times a trapped write. `P_EXER` tests it without ReBeep, `P_CAPT` with it, `P_TRACE` under REBEEPD, `P_BENCH` times it (`docs/architecture/how-it-works.md`); `RBTEST /?`.
 - The CLI's own unit tests live in `tools/test/`, not here.
 
 ## Pitfalls
 
-- A test program is a `.COM`: `org 100h`, `jmp` past the included module and library, then the
-  cases. The three include paths come from the suite (`tests/interpreter`, `src`, `src/include`).
+- A test program is a `.COM`: `org 100h`, `jmp` past the included module and library, then the cases. The suite sets the include paths (`tests/interpreter`, `src`, `src/include`).
 - RBTEST's own `OUT 61h` is trapped when ReBeep is loaded (that is the test). It shrinks its memory
   block first, or `AH=48h` would report about 0 free.
 - The suite runs DOSBox-X with `-set "mixer nosound=true"`, not `-silent`: `-silent` removes the Sound
