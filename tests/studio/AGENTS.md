@@ -16,7 +16,7 @@
 | `T_VOICE.C` | The OPL driver through `opl_sink`: the factory records, the 4-OP slots and bits, KSL and OL edges, octave shift, slot stealing, shutdown, tracing; detection on the real chip |
 | `T_AMIS.C` | `rebeep.c` against a fake resident ReBeep on `INT 2Dh`: the signature, traps off and on, refused, already off, another program, no state block |
 | `T_OPLKND.C` | Proves the OPL2 rerun: the OPL status port reads OPL3 on the default run and OPL2 on `/OPL2` |
-| `T_EDIT.C` | The patch list's scroll window (`list_scroll`) and row hit-test (`list_item_at`) over a synthetic library |
+| `T_EDIT.C` | The patch list's scroll window (`list_scroll`), row hit-test (`list_item_at`) and override text for an 8-character name (`list_draw`) over a synthetic library |
 
 ## Rules
 
@@ -41,7 +41,7 @@
 - **The screen check** is the last step of the studio suite: it compiles `RBSTUDIO.EXE` into `build/studio-tests/`, stages the
   data files deployed under `REBEEP` beside it, runs one `DUMPS.BAT` (`RBSTUDIO /DUMP:<screen> [/VIEW:MONO] /O:Dnn.DMP` per
   reference) in one DOSBox-X start, and compares each 4000-byte dump (`tools/lib/screens.mjs`) with its `.scr`, failing with
-  the first differing cells. A screen RBSTUDIO cannot draw yet exits 2 and is reported **pending**, a warning and not a pass (until P04-T02, which makes a pending reference a failure).
+  the first differing cells. A screen RBSTUDIO cannot draw yet exits 4 and is reported **pending**, a warning and not a pass, except the six it draws now (`detectlog`, `splash`, `menu`, `patchlist`, `synth-4op`, `synth-2op`), where pending fails; P04-T02 makes every pending reference a failure.
 
 ## Pitfalls
 

@@ -25,11 +25,13 @@
   clean bump`. Need a new verb? Add it here first, in the same change.
 - Every noun and verb is a **spec object** (name, summary, args, options, run). Help is rendered
   from it at every level (`rebeep`, `rebeep <noun>`, `rebeep <noun> <verb> --help`), never by hand.
-- Global options (`--json`, `--home <path>`, `--verbose`, `-h/--help`, `--version`) go anywhere; a verb's own options go
-  **after the verb**. `--json` prints exactly one `{ ok, data, error }` on stdout. Exit codes: `0` ok, `1` failure, `2` bad usage.
-- Verbs that can destroy user state (`env reset`, `env clean`, `media remove`, `vm create --force`, `vm snapshot`,
-  `vm reset`, `version bump`) are `destructive`: `--preview` changes nothing, and replacing anything needs `--yes` or a
-  confirm. `env clean` deletes only the layout it owns.
+- Global options (`--json`, `--home <path>`, `--verbose`, `-h/--help`, `--version`) go anywhere;
+  a verb's own options go **after the verb**.
+- `--json` prints exactly one `{ ok, data, error }` on stdout. Exit codes: `0` ok, `1` failure,
+  `2` bad usage.
+- Verbs that can destroy user state (`env reset`, `env clean`, `media remove`, `vm create
+  --force`, `vm snapshot`, `vm reset`, `version bump`) are `destructive`: `--preview` changes nothing, and
+  replacing anything needs `--yes` or a confirm. `env clean` deletes only the layout it owns.
 - Node ≥ 22 built-ins only. **No npm dependencies**, ever. Paths via `path.join`; no shell.
 - **Adding a command:** add the verb's spec to its noun file and a test that checks its help and
   behaviour; update the skill's `cli.md` if the activity is new.

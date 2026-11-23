@@ -26,11 +26,6 @@ int mouse_init(void)
     return present;
 }
 
-int mouse_present(void)
-{
-    return present;
-}
-
 void mouse_show(void)
 {
     union REGS r;

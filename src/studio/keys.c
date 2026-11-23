@@ -8,7 +8,6 @@
 #define SCAN_LSHIFT 0x2A
 #define SCAN_RSHIFT 0x36
 #define SCAN_ALT 0x38
-#define SCAN_F1 0x3B
 #define SCAN_UP 0x48
 #define SCAN_DOWN 0x50
 
@@ -17,8 +16,7 @@ const KeyBinding key_table[] = {
     {KID_DOWN, K_MENU, SCAN_DOWN, 0},
     {KID_ENTER, K_MENU, SCAN_ENTER, 0},
     {KID_ESC, K_MENU, SCAN_ESC, 0},
-    {KID_ESC, K_SYNTH, SCAN_ESC, 0},
-    {KID_HELP, K_GLOBAL, SCAN_F1, 0}
+    {KID_ESC, K_SYNTH, SCAN_ESC, 0}
 };
 
 const int key_count = sizeof key_table / sizeof key_table[0];

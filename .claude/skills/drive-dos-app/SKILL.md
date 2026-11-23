@@ -36,9 +36,10 @@ It needs no new dependency: Node built-ins, PowerShell, and the DOSBox-X that `r
 
 ## Timing
 
-- `--wait` counts from DOSBox-X's launch, and its start-up takes about 3 s of it. The program's own start (RBSTUDIO's
+- `--wait` starts when `AUTOTYPE` runs, about 3 to 4 s after DOSBox-X's launch. The program's own start (RBSTUDIO's
   detection pause, a splash waiting for a key) comes on top. Work out when a screen should be up and shoot a few seconds later.
-- Key `n` (from 0) is typed at `wait + n * pace`. A faster `--pace` (0.3 to 0.5) suits long runs of one key, such as 18 `down`.
+- Key `n` (from 0) is typed at about `3.5 + wait + n * pace` s after launch.
+- Each shot costs about a second (PowerShell and the capture), so shots requested less than a second apart are taken late. A faster `--pace` (0.3 to 0.5) suits long runs of one key, such as 18 `down`.
 - Key names are AUTOTYPE's (`space enter esc up down left right tab`, letters and digits; `AUTOTYPE -list` in DOSBox-X lists them).
 - Two screenshots of different times with the same picture mean the keys had not all been typed yet, or all had.
 
@@ -51,9 +52,13 @@ It needs no new dependency: Node built-ins, PowerShell, and the DOSBox-X that `r
 ## Pitfalls
 
 - The host mouse pointer over the window shows as a grey block on the text screen.
+- A shot is the screen's pixels at that moment, so the window must stay uncovered. The shot raises the window and fails
+  with a message when another window still covers it, instead of saving that window's contents.
+- `drive.mjs` finds DOSBox-X itself (`REBEEP_DOSBOX`, else the newest folder under `~/.rebeep/tools/dosbox-x`), a deliberate
+  standalone copy of the CLI's lookup. Set `REBEEP_DOSBOX` to an absolute path if it picks the wrong version.
 - End DOSBox-X by its process id only (the script does). Never by name or pattern: that would end the user's own DOSBox-X.
 - `-set "mixer nosound=true"` keeps the Sound Blaster and its OPL emulated but silent, as the test suites do.
-- Screenshots go to `--out` (default: the system temp folder). Keep them out of the repo.
+- Screenshots go to `--out` (default: `rebeep-drive` in the system temp folder). Keep them out of the repo.
 
 ## Related
 

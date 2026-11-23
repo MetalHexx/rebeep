@@ -7,8 +7,6 @@
    The cursor starts hidden. Every other call here does nothing without a driver. */
 int mouse_init(void);
 
-int mouse_present(void);
-
 /* Shows or hides the cursor. Calls do not nest: it is either shown or hidden. */
 void mouse_show(void);
 void mouse_hide(void);

@@ -103,10 +103,21 @@ static void heading_row(int y, const char *folder)
     scr_put(5 + len, y, " ", C_FRAME, 0);
 }
 
+/* Writes `a`, `b` and `c` end to end from `x` in colour `fg` (background kept); returns the column after the last. The
+   pieces are drawn one by one so a name of any valid length needs no buffer. */
+static int put_parts(int x, int y, const char *a, const char *b, const char *c, int fg)
+{
+    scr_put(x, y, a, fg, SCR_KEEP);
+    x += (int)strlen(a);
+    scr_put(x, y, b, fg, SCR_KEEP);
+    x += (int)strlen(b);
+    scr_put(x, y, c, fg, SCR_KEEP);
+    return x + (int)strlen(c);
+}
+
 static void entry_row(int y, const Entry *en, int selected)
 {
     char shift[8];
-    char over[24];
 
     scr_fill(LEFT, y, INNER_W, 1, ' ', selected ? 0 : C_TEXT, selected ? C_BAR : 0);
     scr_put(NAME_X, y, en->name, selected ? 0 : C_NAME, SCR_KEEP);
@@ -114,8 +125,7 @@ static void entry_row(int y, const Entry *en, int selected)
     shift_text(en->octave, shift);
     scr_put(OCT_X + 2 - (int)strlen(shift), y, shift, selected ? 0 : C_TEXT, SCR_KEEP);
     if (en->overrides) {
-        sprintf(over, "overrides FACTORY\\%s", en->name);
-        scr_put(OVER_X, y, over, selected ? 0 : C_DIM, SCR_KEEP);
+        put_parts(OVER_X, y, "overrides FACTORY\\", en->name, "", selected ? 0 : C_DIM);
     }
 }
 
@@ -186,13 +196,9 @@ void list_draw(const Library *lib, int sel, int top, const char *msg)
         Entry en = *lib_entry(lib, sel);
 
         if (en.overrides) {
-            char who[24];
-            char text[64];
-            int len = sprintf(who, "%s\\%s", en.folder, en.name);
+            int next = put_parts(3, NOTE_Y, en.folder, "\\", en.name, C_HEAD);
 
-            sprintf(text, "overrides the factory %s. Reset to factory brings it back.", en.name);
-            scr_put(3, NOTE_Y, who, C_HEAD, 0);
-            scr_put(3 + len + 1, NOTE_Y, text, C_TEXT, 0);
+            put_parts(next + 1, NOTE_Y, "overrides the factory ", en.name, ". Reset to factory brings it back.", C_TEXT);
         }
     }
     if (role_mono()) scr_remap_mono();

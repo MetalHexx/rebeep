@@ -71,7 +71,7 @@
   33/36, 41/44 and 43/46, every other byte (the SAUCE record too) unchanged. The converted file opens correctly in an
   ANSI editor and renders to the indexes the references hold.
 - **Dump mode** (`/DUMP:<screen> [/VIEW:MONO] /O:<file>`) touches only the art and the output, plays nothing, shows no
-  mouse and uses `sample.c`'s data. An unknown screen exits 2 and writes nothing. Drawable now: `detectlog`, `splash`, `menu`,
+  mouse and uses `sample.c`'s data. An unknown screen exits 4 and writes nothing. Drawable now: `detectlog`, `splash`, `menu`,
   `patchlist`, `synth-4op`, `synth-2op`.
 - **One grid for both variants.** The 2-OP synth screen is the 4-OP one with wider slots (`cell()`'s `z`): the parameter-name
   column and operator 1's left edge sit at the same cells, the bars end one cell before each slot's rule. Never lay 2-OP out apart.

@@ -21,7 +21,6 @@ typedef struct {
     unsigned char held[29]; int nheld;   /* piano keys lit, ascending */
     int kbOct;                    /* keyboard octave, KB_LOW = 3 */
     char msg[27]; int msgRole;    /* message area; msgRole is a Role */
-    int help, gate, gateBtn, gateWhere;  /* P04-T02 */
 } Editor;
 
 #endif

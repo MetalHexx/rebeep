@@ -30,8 +30,8 @@
 #define EXIT_OK 0
 #define EXIT_USAGE 1
 #define EXIT_IO 2
-#define EXIT_SCREEN 2   /* /DUMP of a screen this program does not know */
 #define EXIT_DUMP 3
+#define EXIT_SCREEN 4   /* /DUMP of a screen this program does not know; the screen check relies on it */
 
 static Settings settings;     /* RBSTUDIO.CFG, read once by the detection log */
 static Library patch_lib;     /* the patch list, scanned each time the Patch Editor opens */

@@ -7,16 +7,12 @@
 #define K_GLOBAL 0
 #define K_MENU 1     /* the menu and the patch list */
 #define K_SYNTH 2
-#define K_HELP 3
-#define K_PROMPT 4
-#define K_NAME 5     /* name entry */
 
 /* Binding ids. */
 #define KID_UP 1
 #define KID_DOWN 2
 #define KID_ENTER 3
 #define KID_ESC 4
-#define KID_HELP 5
 
 #define MOD_SHIFT 1
 #define MOD_CTRL 2

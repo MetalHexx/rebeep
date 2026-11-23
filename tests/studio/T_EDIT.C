@@ -1,9 +1,11 @@
 /* The patch list's scroll window and its row hit-test, over a synthetic library: heading rules count as lines, the
-   selection stays in view, and a folder's first entry brings its heading with it. */
+   selection stays in view, and a folder's first entry brings its heading with it. Also the override text for the
+   longest name the library allows. */
 #include <string.h>
 
 #include "testlib.h"
 #include "../../src/studio/screens.h"
+#include "../../src/studio/video.h"
 
 #define FIRST_ROW 4
 
@@ -24,6 +26,20 @@ static void build(int factory, int user, int pack)
     for (k = 0; k < i; k++) rows[k].name[0] = (char)('A' + k % 26);
     lib.entries = rows;
     lib.count = i;
+}
+
+static char cell_char(int x, int y)
+{
+    return (char)(scr_cell(x, y) & 0xFF);
+}
+
+/* Does the text drawn along row `y` from `x` equal `want`? */
+static int row_is(int x, int y, const char *want)
+{
+    for (; *want != '\0'; want++, x++) {
+        if (cell_char(x, y) != *want) return 0;
+    }
+    return 1;
 }
 
 int main(void)
@@ -72,6 +88,19 @@ int main(void)
     t_checkl(list_item_at(&lib, 0, 78, FIRST_ROW + 1), -1, "the frame's right edge");
     t_checkl(list_item_at(&lib, 0, 2, FIRST_ROW + 1), 0, "the first column inside the frame");
     t_checkl(list_item_at(&lib, 0, 77, FIRST_ROW + 1), 0, "the last column inside the frame");
+
+    t_case("an 8-character override name is drawn whole");
+    memset(rows, 0, sizeof rows);
+    strcpy(rows[0].folder, "FACTORY");
+    strcpy(rows[0].name, "BRASSLNG");
+    strcpy(rows[1].folder, "USER");
+    strcpy(rows[1].name, "BRASSLNG");
+    rows[1].overrides = 1;
+    lib.entries = rows;
+    lib.count = 2;
+    list_draw(&lib, 1, 0, NULL);
+    t_check(row_is(37, FIRST_ROW + 3, "overrides FACTORY\\BRASSLNG"), "the row's override text");
+    t_check(row_is(3, 17, "USER\\BRASSLNG overrides the factory BRASSLNG. Reset to factory brings it"), "the note under the list (the screen clips its last cells)");
 
     return t_done();
 }

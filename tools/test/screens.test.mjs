@@ -151,7 +151,7 @@ fs.writeFileSync(args.find((a) => a.startsWith('-fe=')).slice(4), 'MZ fake exe')
 
 /**
  * A fake DOSBox-X that plays RBSTUDIO for DUMPS.BAT: for each /DUMP line it writes the /O: file as a screen of 'A' on
- * attribute 1F (or one 'B' cell different), or records the screen as unknown (exit code 2, no file) in PENDING.TXT.
+ * attribute 1F (or one 'B' cell different), or records the screen as unknown (exit code 4, no file) in PENDING.TXT.
  */
 const FAKE_DOSBOX = `import fs from 'node:fs';
 import path from 'node:path';
@@ -180,7 +180,7 @@ for (const line of batch.filter((l) => l.startsWith('RBSTUDIO'))) {
 `;
 
 describe('test run --suite studio: the screen check, with fake Open Watcom and DOSBox-X', () => {
-  const run = (behaviour) => {
+  const run = (behaviour, { required = false } = {}) => {
     const fakes = makeTempDir('rebeep-screens-fakes-');
     const root = makeTempDir('rebeep-screens-');
     try {
@@ -200,6 +200,7 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
       put('tests/screens/demo.vga.scr', scrText({ glyph: 'A', fg: 'F', bg: '1' }));
       put('tests/screens/demo.mono.scr', scrText({ glyph: 'A', fg: 'F', bg: '1' }));
       put('tests/screens/later.vga.scr', scrText());
+      if (required) put('tests/screens/menu.vga.scr', scrText());
       const result = runRebeep(['test', 'run', '--suite', 'studio', '--json'], {
         env: {
           REBEEP_REPO_ROOT: root,
@@ -235,6 +236,13 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
     const { result } = run({ demo: 'differ', later: 'pending' });
     assert.equal(result.code, 1);
     assert.match(result.stderr, /screen demo\.vga: 1 cells differ: row 1 col 3 glyph: want 'A' fg F bg 1, got 'B' fg F bg 1/);
+  });
+
+  test('a pending reference for a screen the program already draws fails the run', () => {
+    const { result } = run({ demo: 'match', later: 'pending', menu: 'pending' }, { required: true });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /screen menu\.vga: RBSTUDIO does not draw this screen/);
+    assert.deepEqual(screensOf(result).pending, ['later.vga']);
   });
 
   test('a screen that wrote no dump and was not pending fails', () => {

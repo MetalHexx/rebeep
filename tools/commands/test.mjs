@@ -19,8 +19,10 @@ const FACTORY_DEPLOY = 'REBEEP/FACTORY';
 /** The data-file folder whose files sit beside RBSTUDIO.EXE, as they do beside the installed program. */
 const PROGRAM_DEPLOY = 'REBEEP';
 const SCREEN_FILE = /^([a-z0-9-]+)\.(vga|mono)\.scr$/;
-/** RBSTUDIO's exit code for a /DUMP of a screen it cannot draw yet. */
-const UNKNOWN_SCREEN_CODE = 2;
+/** RBSTUDIO's exit code for a /DUMP of a screen it cannot draw yet (no other /DUMP path exits with it). */
+const UNKNOWN_SCREEN_CODE = 4;
+/** Screens RBSTUDIO draws already: a reference for one of these that comes back pending fails the run. */
+const REQUIRED_SCREENS = new Set(['detectlog', 'splash', 'menu', 'patchlist', 'synth-4op', 'synth-2op']);
 const SHOWN_DIFFERENCES = 5;
 
 /** Pulls the `tests`, `pass` and `fail` totals from Node's test summary. */
@@ -171,7 +173,8 @@ const describeCell = (cell) => `'${cell.ch}' fg ${cell.fg.toString(16).toUpperCa
 /**
  * Compiles RBSTUDIO.EXE as `build run` does, writes one batch file that dumps every reference screen in one DOSBox-X
  * start (`/DUMP:<screen>`, with `/VIEW:MONO` for the mono views), and compares each dump with its `.scr` file. A screen
- * the program does not know yet exits with code 2 and writes nothing: that reference is pending, a warning and not a pass.
+ * the program does not know yet exits with `UNKNOWN_SCREEN_CODE` and writes nothing: that reference is pending, a warning
+ * and not a pass, unless the screen is in `REQUIRED_SCREENS`, where it fails.
  */
 async function runScreens(ctx, repo, { watcom, dosbox, version, out }) {
   const references = referenceScreens(repo);
@@ -220,7 +223,8 @@ async function runScreens(ctx, repo, { watcom, dosbox, version, out }) {
     const name = `${d.screen}.${d.view}`;
     const dumpPath = path.join(out, `${d.dump}.DMP`);
     if (pending.has(d.dump)) {
-      result.pending.push(name);
+      if (REQUIRED_SCREENS.has(d.screen)) result.failed.push({ name, detail: 'RBSTUDIO does not draw this screen' });
+      else result.pending.push(name);
       continue;
     }
     if (!fs.existsSync(dumpPath)) {

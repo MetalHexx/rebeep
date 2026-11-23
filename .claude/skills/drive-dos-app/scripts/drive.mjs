@@ -6,8 +6,9 @@
 //
 // --dir      the folder mounted as C: (the program and the data files it reads)
 // --keys     AUTOTYPE button names, space separated (`AUTOTYPE -list` in DOSBox-X lists them)
-// --shots    seconds after launch, comma separated; one PNG each, named shot-<seconds>.png in --out
-// --wait     seconds before the first key (counted from DOSBox-X's launch: its own start-up takes about 3 s of it)
+// --shots    seconds after launch, comma separated; one PNG each, named shot-<seconds>.png in --out. Each shot takes about
+//            1 s, so shots closer than that are taken late
+// --wait     seconds before the first key, counted from when AUTOTYPE runs (3 to 4 s after launch)
 // --pace     seconds between keys
 // --limit    DOSBox-X's own time limit in seconds, so a stuck run still ends
 import { spawn, spawnSync } from 'node:child_process';
@@ -30,7 +31,8 @@ function parseArgs(argv) {
   return opts;
 }
 
-/** REBEEP_DOSBOX, else the newest dosbox-x.exe under the environment's tools folder. */
+/** REBEEP_DOSBOX, else the newest dosbox-x.exe under the environment's tools folder. A standalone copy of the CLI's
+ *  lookup (this script does not load the CLI); set REBEEP_DOSBOX when a re-pinned version leaves an older folder behind. */
 function findDosbox() {
   if (process.env.REBEEP_DOSBOX) return process.env.REBEEP_DOSBOX;
   const home = process.env.REBEEP_HOME || path.join(os.homedir(), '.rebeep');
@@ -59,6 +61,10 @@ async function main() {
   const args = ['-set', 'mixer nosound=true', '-nomenu', '-time-limit', opts.limit, ...commands.flatMap((c) => ['-c', c])];
 
   const child = spawn(findDosbox(), args, { stdio: 'ignore' });
+  child.on('error', (err) => {
+    console.error(err.message);
+    process.exit(1);
+  });
   const start = Date.now();
   try {
     for (const seconds of shots) {
