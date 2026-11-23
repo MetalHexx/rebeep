@@ -14,6 +14,9 @@
 | `log.c` · `log.h` | `RBSTUDIO.LOG`, replaced each run, each line committed at once (DOS `68h`) |
 | `undo.c` · `undo.h` | Whole-`Patch` snapshots in far memory, 100 steps, redo, key-coalesced edits |
 | `data/FACTORY/*.RBP` | The four factory patches; `targets.json` `files` ships them to `REBEEP\FACTORY\` |
+| `opl.c` · `opl.h` | The OPL driver: detection, `opl_regs2`/`opl_regs4` (the one parameter-to-register mapping), live notes on every channel, `opl_sink` for tests, `/TRACE` write logging |
+| `jingle.c` · `jingle.h` | The splash jingle on `FACTORY\BELL`, advanced by `jingle_poll` from the BIOS tick count |
+| `rebeep.c` · `rebeep.h` | The resident ReBeep through AMIS (INT 2Dh): traps off (13h) at start, on (12h) at exit |
 | `video.c` · `video.h` | The 80x25 back buffer, the flush to `B800:0000`, blink and cursor handling |
 | `kbd.c` · `kbd.h` | The `INT 09h` handler: make and break codes, a key-state table, an event queue |
 
@@ -44,6 +47,10 @@
   `library.c` and `patch.c` are static, because the stack is 2 KB.
 - **Saves go through `dos_save_file`** (`NAME.$$$`, rename old to `.BAK`, rename new, delete `.BAK`): a full or read-only
   disk fails with the old file untouched.
+- **The studio owns the OPL while it runs.** Every register write goes through `opl_write` (the ports, or `opl_sink`, and
+  `log_trace` under `/TRACE`) with the status-read delays per chip that `opl.asm` uses. Switching between two- and
+  four-operator voices keys every channel off before `104h` changes. A four-operator voice does not play on an OPL2.
+  `opl_shutdown` leaves `104h` and `105h` at 0; call `rebeep_resume` after it so a resident ReBeep re-initialises.
 - Output names are 8.3, uppercase. Keep C89: declarations at the top of a block.
 
 ## Pitfalls

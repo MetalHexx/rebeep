@@ -13,6 +13,7 @@
 | `T_PLIST.C` | The library: a tree built on C: at run time; order, counts, lookup, overrides, 4-OP marks, name and path rules |
 | `T_CFG.C` | `RBSTUDIO.CFG` reading, `PATCHES=` resolution, the log, and a safe save that fails on a read-only scratch file |
 | `T_UNDO.C` | Undo and redo: coalescing, the 100-step cap, redo cleared by a new edit |
+| `T_VOICE.C` | The OPL driver through `opl_sink`: the factory records, the 4-OP slots and bits, KSL and OL edges, octave shift, slot stealing, shutdown, tracing; detection on the real chip |
 | `T_OPLKND.C` | Proves the OPL2 rerun: the OPL status port reads OPL3 on the default run and OPL2 on `/OPL2` |
 
 ## Rules
