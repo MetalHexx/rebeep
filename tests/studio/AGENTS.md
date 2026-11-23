@@ -9,6 +9,10 @@
 | `T_*.C` | One test program each (8.3 name). Compiled with `testlib.c` and every `src/studio/*.c` except `main.c` |
 | `testlib.h` · `testlib.c` | The C mirror of `interpreter/testlib.inc`: `t_case`, `t_check`, `t_checkl`, `t_done` |
 | `T_SMOKE.C` | Checks the generated version macros, a far-pointer round trip and a studio module (`video_put` clipping, `video_flush` to `B800`) |
+| `T_PFILE.C` | The patch file: the staged factory files, round trips and every accepted or refused shape (the case list P05's `T_PATCH` shares) |
+| `T_PLIST.C` | The library: a tree built on C: at run time; order, counts, lookup, overrides, 4-OP marks, name and path rules |
+| `T_CFG.C` | `RBSTUDIO.CFG` reading, `PATCHES=` resolution, the log, and a safe save that fails on a read-only scratch file |
+| `T_UNDO.C` | Undo and redo: coalescing, the 100-step cap, redo cleared by a new edit |
 | `T_OPLKND.C` | Proves the OPL2 rerun: the OPL status port reads OPL3 on the default run and OPL2 on `/OPL2` |
 
 ## Rules
