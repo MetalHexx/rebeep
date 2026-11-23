@@ -73,7 +73,8 @@ note instead. A change of `/L` on a loaded copy applies to a count the game is h
 
 ## The OPL voice
 
-ReBeep plays one voice on OPL channels 7 and 8 and touches nothing else. Each new note takes the
+ReBeep plays one voice on OPL channels 7 and 8 and touches nothing else (a four-operator patch
+uses two channel pairs instead, see [Patches](#patches)). Each new note takes the
 other channel, so the note before it fades out on its own. Starting a note again on the channel
 that is still sounding would restart its wave mid-cycle, which clicks.
 
@@ -90,10 +91,40 @@ in an additive voice such as Organ the modulators too, so the voice keeps its ba
 volume. Volume 0 keys no note at all. Divisor 0 plays as 65535, block 0. The faithful voice is a
 square wave on an OPL3. An OPL2 has no square wave, so it gets a two-operator FM approximation.
 The faithful voice fades in over about a millisecond and out over about ten, so a beep never starts
-or stops on a step. A patch is a plain FM setting: ReBeep reads its `.RBP` file once, at load (from
-`/P:` or `PATCH=` in `RBSTUDIO.CFG`), and keeps only its two-operator record and octave resident,
-53 bytes however many patches there are. On an OPL3 the chip stays in OPL3 mode, with both channels
-routed to both outputs, while ReBeep is trapping.
+or stops on a step. On an OPL3 the chip stays in OPL3 mode, with both channels routed to both
+outputs, while ReBeep is trapping.
+
+## Patches
+
+A patch is a plain FM setting in an `.RBP` text file: a `[PATCH]` section (`FORMAT=1`, an `OCTAVE`
+from 0 to 7 where 4 is the game's pitch), a required `[2OP]` section and an optional `[4OP]` one.
+Each voice has a `CONNECTION`, a `FEEDBACK` and one line of 12 numbers per operator. A file is at
+most 2048 bytes. [ReBeep Studio](../guide/studio.md) writes the same format that ReBeep's startup
+reads, and both refuse a file that breaks its rules, with the reason.
+
+**The startup loader.** ReBeep reads a patch once, at load, so nothing resident touches a file.
+The name comes from `/P:`, or from `PATCH=` in `RBSTUDIO.CFG` when there is neither `/F` nor `/P:`.
+A bare `NAME` is looked up as `USER\NAME`, then `FACTORY\NAME`, and the first file that exists
+decides. `FOLDER\NAME` is that file alone. `FACTORY` sits beside the program; `USER` and the packs
+sit in the patches folder, `PATCHES=` in the settings file or else `PATCHES` beside the program.
+The loader parses the file into a record, then the startup part is freed. A patch it can't use is
+a message and the faithful voice, never an exit code.
+
+**`RB_STATE`, layout 2.** The state block the command line reads over AMIS holds the patch as 53
+bytes however many patches exist: its `FOLDER\NAME`, octave, a flags byte (a patch is loaded, it
+has a four-operator variant), the 11-byte two-operator record and the 22-byte four-operator record,
+both already in register order. The voice byte says which voice plays: 0 the faithful one, 1 the
+patch. It once numbered four built-in voices, which is why the layout number, in the first byte,
+went from 1 to 2: a loaded copy with a different layout is refused, because its bytes would be
+misread.
+
+**Four-operator voices.** On an OPL3, a patch with a `[4OP]` section plays on two channel pairs of
+the second register bank, 0+3 and 1+4 (OPL3 channels 9+12 and 10+13), which register `104h` joins
+into four-operator voices. Each note takes the other pair, as the two-operator voice takes the
+other channel, and keys it through the pair's first channel. The connection is one of FM-FM, AM-FM,
+FM-AM and AM-AM: the first operator pair and the second each choose FM or AM. On an OPL2, or for a
+patch without `[4OP]`, the two-operator record plays instead. Changing voice keys the old channels
+off before `104h` changes, so a note never sounds half joined.
 
 ## The fallback
 
@@ -121,7 +152,8 @@ because removing ReBeep would break that chain.
 
 The hotkey hooks `INT 09h`. It tracks Ctrl and Alt from the raw scan codes, so it still works when a
 game replaces the BIOS keyboard handler, but not when a game takes over the interrupt entirely, as
-Grand Prix Circuit does.
+Grand Prix Circuit does. Ctrl+Alt+N flips the voice byte between the faithful voice and the loaded
+patch, and does nothing when no patch is loaded.
 
 ## Performance
 

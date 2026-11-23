@@ -124,8 +124,10 @@ describe('checkPackageText', () => {
     assert.match(checkPackageText('readme.txt', crlf('x\n')).join('\n'), /not upper case/);
   });
 
-  test('checks only the name of a program', () => {
-    assert.deepEqual(checkPackageText('REBEEP.COM', Buffer.from([0xff, 0x0a, 0x00])), []);
+  test('checks only the name of a program or an ANSI screen', () => {
+    for (const name of ['REBEEP.COM', 'RBSTUDIO.EXE', 'SPLASH.ANS']) {
+      assert.deepEqual(checkPackageText(name, Buffer.from([0xff, 0x0a, 0x00])), [], name);
+    }
   });
 });
 
@@ -141,6 +143,9 @@ describe('release create', () => {
   const programFor = (version) => Buffer.from(`fake rebeep program, ReBeep ${version}`);
   const REBEEP = programFor('1.1.0');
   const RBTEST = Buffer.from('fake rbtest program');
+  const RBSTUDIO = Buffer.from([0x4d, 0x5a, 0xff, 0x00, 0x90]);
+  const SPLASH = Buffer.from([0x1b, 0x5b, 0x30, 0x6d, 0xdb, 0xb0]);
+  const ORGAN = Buffer.from('; patch\r\nNAME=ORGAN\r\n');
 
   const put = (rel, bytes) => {
     const file = path.join(root, ...rel.split('/'));
@@ -159,14 +164,25 @@ describe('release create', () => {
     put('release/AGENTS.md', 'not packaged\n');
     put('release/SAMPLES/MSDOS/CONFIG.SYS', text('DEVICE=C:\\DOS\\HIMEM.SYS\n'));
     put('release/SAMPLES/FREEDOS/FDAUTO.BAT', text('@echo off\n'));
+    put('release/SAMPLES/RBSTUDIO.CFG', text('; settings\nPATCHES=\n'));
     put('build/REBEEP.COM', REBEEP);
     put('build/RBTEST.COM', RBTEST);
     put('build/FDBOOT.BIN', FDBOOT);
+    put('build/RBSTUDIO.EXE', RBSTUDIO);
+    put('build/files/REBEEP/SPLASH.ANS', SPLASH);
+    put('build/files/REBEEP/FACTORY/ORGAN.RBP', ORGAN);
+    put('build/files/ENV/OTHER.DAT', 'not packaged');
     put('build/build.json', JSON.stringify({
       targets: [
         { name: 'REBEEP.COM', sha256: sha256(REBEEP) },
         { name: 'RBTEST.COM', sha256: sha256(RBTEST) },
         { name: 'FDBOOT.BIN', sha256: sha256(FDBOOT) },
+        { name: 'RBSTUDIO.EXE', sha256: sha256(RBSTUDIO) },
+      ],
+      files: [
+        { name: 'SPLASH.ANS', deploy: 'REBEEP', sha256: sha256(SPLASH) },
+        { name: 'ORGAN.RBP', deploy: 'REBEEP/FACTORY', sha256: sha256(ORGAN) },
+        { name: 'OTHER.DAT', deploy: 'ENV', sha256: sha256('not packaged') },
       ],
     }));
   });
@@ -194,8 +210,9 @@ describe('release create', () => {
     );
     assert.deepEqual(
       data.files.map((f) => f.path),
-      ['CHANGES.TXT', 'INSTALL.BAT', 'RBPLAY.BAT', 'RBTEST.COM', 'README.TXT', 'REBEEP.COM',
-        'SAMPLES/FREEDOS/FDAUTO.BAT', 'SAMPLES/MSDOS/CONFIG.SYS'],
+      ['CHANGES.TXT', 'FACTORY/ORGAN.RBP', 'INSTALL.BAT', 'RBPLAY.BAT', 'RBSTUDIO.EXE', 'RBTEST.COM',
+        'README.TXT', 'REBEEP.COM', 'SAMPLES/FREEDOS/FDAUTO.BAT', 'SAMPLES/MSDOS/CONFIG.SYS',
+        'SAMPLES/RBSTUDIO.CFG', 'SPLASH.ANS'],
     );
 
     const zip = readZip(out('rebeep-1.1.0.zip'));
@@ -207,6 +224,9 @@ describe('release create', () => {
       assert.deepEqual(disk.readFile(entry.name), entry.read(), entry.name);
     }
     assert.equal(disk.readFile('SAMPLES\\MSDOS\\CONFIG.SYS').toString(), 'DEVICE=C:\\DOS\\HIMEM.SYS\r\n');
+    assert.deepEqual(disk.readFile('RBSTUDIO.EXE'), RBSTUDIO);
+    assert.deepEqual(disk.readFile('SPLASH.ANS'), SPLASH);
+    assert.deepEqual(disk.readFile('FACTORY\\ORGAN.RBP'), ORGAN);
     assert.match(zip.entries.find((e) => e.name === 'README.TXT').read().toString(), /^ReBeep 1\.1\.0\r\n/);
     assert.match(zip.entries.find((e) => e.name === 'INSTALL.BAT').read().toString(), /echo ReBeep 1\.1\.0 setup\r\n/);
     assert.ok(!zip.entries.some((e) => e.name.includes('AGENTS')));
@@ -225,6 +245,7 @@ describe('release create', () => {
       targets: [
         { name: 'REBEEP.COM', sha256: sha256(REBEEP) },
         { name: 'RBTEST.COM', sha256: sha256(RBTEST) },
+        { name: 'RBSTUDIO.EXE', sha256: sha256(RBSTUDIO) },
       ],
     });
 
@@ -246,7 +267,7 @@ describe('release create', () => {
     assert.ok(!data.files.some((f) => f.path === 'REBEEPD.COM'));
     assert.ok(!readZip(out('rebeep-1.1.0.zip')).entries.some((e) => e.name === 'REBEEPD.COM'));
     assert.equal(readImage(out('rebeep-1.1.0-floppy.img')).exists('REBEEPD.COM'), false);
-    assert.deepEqual(JSON.parse(out('release.json')).targets.map((t) => t.name), ['REBEEP.COM', 'RBTEST.COM']);
+    assert.deepEqual(JSON.parse(out('release.json')).targets.map((t) => t.name), ['REBEEP.COM', 'RBTEST.COM', 'RBSTUDIO.EXE']);
   });
 
   test('is reproducible and replaces what was in build/release', () => {
@@ -310,6 +331,13 @@ describe('release create', () => {
     const result = create();
     assert.equal(result.code, 1);
     assert.match(result.stdout, /does not fit on the 1\.44 MB floppy/);
+  });
+
+  test('fails when a data file no longer matches build.json', () => {
+    put('build/files/REBEEP/FACTORY/ORGAN.RBP', 'changed');
+    const result = create();
+    assert.equal(result.code, 1);
+    assert.match(result.stdout, /ORGAN\.RBP does not match build\/build\.json/);
   });
 
   test('fails when a program no longer matches build.json', () => {

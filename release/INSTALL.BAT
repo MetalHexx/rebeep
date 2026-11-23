@@ -1,6 +1,7 @@
 @ECHO OFF
 REM Installs or updates ReBeep in a folder, over any copy already there. It
-REM never edits CONFIG.SYS, AUTOEXEC.BAT, FDCONFIG.SYS or FDAUTO.BAT.
+REM never edits CONFIG.SYS, AUTOEXEC.BAT, FDCONFIG.SYS or FDAUTO.BAT, and it
+REM never touches the PATCHES folder or an RBSTUDIO.CFG already there.
 REM Usage: INSTALL [/I or /U] [folder]. The default folder is C:\REBEEP.
 REM With no /I or /U it shows a menu, which needs CHOICE: MS-DOS 6 or later,
 REM Windows 95 or 98, or FreeDOS.
@@ -46,6 +47,12 @@ ECHO.
 ECHO Copying ReBeep to %RBDIR%
 COPY REBEEP.COM %RBDIR%
 COPY RBTEST.COM %RBDIR%
+COPY RBSTUDIO.EXE %RBDIR%
+COPY SPLASH.ANS %RBDIR%
+COPY MENU.ANS %RBDIR%
+IF NOT EXIST %RBDIR%\FACTORY\NUL MD %RBDIR%\FACTORY
+IF EXIST %RBDIR%\FACTORY\*.RBP DEL %RBDIR%\FACTORY\*.RBP
+COPY FACTORY\*.RBP %RBDIR%\FACTORY
 COPY RBPLAY.BAT %RBDIR%
 COPY README.TXT %RBDIR%
 COPY CHANGES.TXT %RBDIR%

@@ -12,12 +12,13 @@
 | `guide/playing.md` | Guide | Everyday use: RBPLAY, voices, muting, hotkeys, `/OFF`, unload |
 | `guide/troubleshooting.md` | Guide | By symptom, then every message |
 | `guide/compatibility.md` | Guide | Tested games (with game notes) and machines, conflicts with the command to run |
-| `guide/reference.md` | Guide | Options, hotkeys, exit codes, RBTEST. `release/README.TXT` and `REBEEP /?` mirror it |
+| `guide/studio.md` | Guide | ReBeep Studio for players: the screens, keys, patch folders and packs, saving, the settings file |
+| `guide/reference.md` | Guide | Options, hotkeys, exit codes, RBSTUDIO, RBTEST. `release/README.TXT` and `REBEEP /?` mirror it |
 | `architecture/how-it-works.md` | Architecture | The design, and the `P_BENCH` numbers |
 | `architecture/gpc-case-study.md` | Architecture | How GPC drives the speaker, ReBeep's handling, what still differs |
 | `lab/setup.md` | Lab | Clone to first VM boot, Free and Full paths, the Verified-on table |
 | `lab/86box-lab.md` | Lab | The lab's VMs, disks, boot flow, snapshot and reset |
-| `lab/contributing.md` | Lab | Workflow and checks, commits, PR and payload rules |
+| `lab/contributing.md` | Lab | Workflow and checks, the studio suite and its screens, commits, PR and payload rules |
 | `lab/releasing.md` | Lab | The release procedure and the checks by a person |
 | `roadmap.md` | — | Where ReBeep is headed, and how to help. The only page with plans |
 | `images/` | — | Pictures. `rebeep-logo.png` is the README's logo, on a transparent background |
@@ -33,7 +34,6 @@
 - **The voice:** concise and high signal. Steps first; tables and code blocks over prose; no filler;
   link, never repeat. Never paper over what a newcomer can't know: show the real command, not "turn
   that feature off". Complete but lean: a cold reader needs nothing else, and reads nothing extra.
-- **The goal:** deliberate, good-looking docs, each page at one level.
 
 **Guide pages:**
 - Explain each term on first use, in a few words: TSR, FM chip, Jemm, QPIEMU, upper memory, boot menu.

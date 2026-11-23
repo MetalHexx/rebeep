@@ -25,11 +25,14 @@ plays them on the card's FM chip instead.
   chip of a Sound Blaster or a clone, and the PC speaker stays quiet.
 - **Nothing goes missing.** Sounds the FM chip can't play, such as noise or very high pitches, still
   go to the real speaker. `/R:0` mutes them instead.
-- **Five voices.** A faithful square wave close to the original, or one of four FM patches: Organ,
-  Flute, Brass and Bell.
+- **Five voices, and your own.** A faithful square wave close to the original, or one of four FM
+  patches chosen by name: `/P:ORGAN`, `/P:FLUTE`, `/P:BRASS` or `/P:BELL`. OPL3 cards play
+  four-operator voices.
+- **ReBeep Studio.** A full-screen editor for your own patches: play them on the keyboard while you
+  shape them, save them, then hear them in a game ([studio](docs/guide/studio.md)).
 - **Change it while you play.** Ctrl+Alt+B swaps between the sound card and the speaker, and
-  Ctrl+Alt+N cycles the voice. The keys can be changed. They don't work yet in games that take over
-  the keyboard; set those up at the DOS prompt first.
+  Ctrl+Alt+N switches between the faithful voice and your patch. The keys can be changed. They
+  don't work yet in games that take over the keyboard; set those up at the DOS prompt first.
 - **Small and tidy.** One `.COM` file under 7 KB that loads high and unloads cleanly. The game is
   never patched.
 
@@ -81,9 +84,10 @@ emulated Pentium MMX and a 386SX/16, backed by automated checks that run in DOS 
 | [Set up on a real PC](docs/guide/real-pc.md) | Jemm, installing, a boot menu entry, checking it, undoing it |
 | [Set up in 86Box](docs/guide/86box.md) | The VM's settings, getting the files in, then the same steps |
 | [Playing](docs/guide/playing.md) | Voices, volume, muting, hotkeys, turning it off |
+| [ReBeep Studio](docs/guide/studio.md) | Make and save your own patches, folders and packs, the settings file |
 | [Troubleshooting](docs/guide/troubleshooting.md) | By symptom, then every message |
 | [Compatibility](docs/guide/compatibility.md) | Tested games and machines, settings per game, known conflicts |
-| [Reference](docs/guide/reference.md) | Every option, hotkey, exit code and RBTEST command |
+| [Reference](docs/guide/reference.md) | Every option, hotkey, exit code, and the RBSTUDIO and RBTEST commands |
 
 **How it works**
 

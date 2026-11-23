@@ -7,7 +7,8 @@
 
 ReBeep is a small DOS TSR, written in NASM, that catches what PC-speaker-only games send to the
 speaker and plays it on a Sound Blaster's OPL2/OPL3 FM chip instead. It traps ports `42h`, `43h`
-and `61h` through JEMM's QPIEMU module, so it needs a 386+ running JEMM.
+and `61h` through JEMM's QPIEMU module, so it needs a 386+ running JEMM. Players shape their own
+FM patches in ReBeep Studio (`RBSTUDIO.EXE`), a C program built with Open Watcom.
 
 The repo is also a starter kit. A cross-platform Node CLI, `rebeep`, fetches pinned tools, builds
 86Box VMs (MS-DOS 6.22, FreeDOS, a slow 386SX), deploys builds to a delivery disk, and resets
@@ -48,7 +49,7 @@ The environment lives **outside the repo**, in `~/.rebeep` (override with `REBEE
 | Bring your own MS-DOS / game | `rebeep media add msdos622 <folder>` · `rebeep media add game <zip> --name GPC` |
 | Install MS-DOS into a VM | `rebeep vm run mirror-msdos --install` |
 | Run a VM | `rebeep vm run <vm>` |
-| Build | `rebeep build run` (`npm run build`) |
+| Build (the studio needs `rebeep tool fetch open-watcom` first, and a `tar` that reads xz) | `rebeep build run` (`npm run build`) |
 | Build and put it on every D: | `rebeep build run --deploy` (`npm run deploy`) |
 | Release package (zip, floppy, sums, notes in `build/release/`) | `rebeep release create` |
 | Version and release (show, check, date `[Unreleased]` and set `package.json`) | `rebeep version show` · `check` · `bump <major\|minor\|patch\|X.Y.Z>` |
@@ -78,13 +79,13 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM (the dev e
 
 ## 6. Hard rules
 
-- **CPU boundary.** `src/engine/` assembles under `CPU 8086`. Only `src/capture/` and
-  `src/startup/` may use 386 instructions.
-- **NASM versions.** The source must assemble on the pinned NASM 3.02 and on NASM ≥ 2.16.
-- **No game-specific code.** ReBeep works the same for every game: nothing in `src/` detects a game
-  or behaves differently for one. A bug found in one game gets a fix that holds for any game, and a
-  setting one game needs becomes a general option. Per-game advice lives in
-  `docs/guide/compatibility.md`.
+- **CPU boundary.** `src/engine/` assembles under `CPU 8086`, and the studio compiles for the 8086
+  (`wcl -0`, medium model). Only `src/capture/` and `src/startup/` may use 386 instructions.
+- **Pinned compilers.** The source assembles on the pinned NASM 3.02 and on NASM ≥ 2.16; the studio
+  builds with the pinned Open Watcom snapshot.
+- **No game-specific code.** Nothing in `src/` detects a game or behaves differently for one. A bug
+  found in one game gets a fix that holds for any game, and a setting one game needs becomes a
+  general option. Per-game advice lives in `docs/guide/compatibility.md`.
 - **No payloads.** Never commit DOS images, ROMs, emulator binaries, game files, disk images or
   archives. `rebeep repo check` enforces this, and CI runs it.
 - **The game is untrusted.** It runs only inside 86Box or on real hardware, never on the host. The
@@ -93,9 +94,9 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM (the dev e
 - **DOS text files are CRLF.** `.BAT`, `.SYS` and `.TXT` under `env/86box/dos/` and `release/` (see
   `.gitattributes`).
 - **Zero npm dependencies.** Tooling is Node ≥ 22 built-ins only.
-- **Ask before adding a dependency.** Never install or add a library, tool, download or other
-  external dependency without asking the operator first. Each one that's agreed carries its reason
-  in the PR ([contributing](docs/lab/contributing.md)).
+- **Ask before adding a dependency.** Never add a library, tool, download or other external
+  dependency without asking the operator first. An agreed one carries its reason in the PR
+  ([contributing](docs/lab/contributing.md)).
 - **Cross-platform.** Windows, Linux and macOS. Use `path.join`; never hard-code separators or
   shell-specific commands.
 - **Pin every download** in `env/86box/manifest.json` with its SHA-256.
@@ -104,21 +105,21 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM (the dev e
 
 - `rebeep test run --suite tools` runs the CLI's `node --test` suites in `tools/test/`.
 - `rebeep test run --suite interpreter` runs the DOS interpreter tests headless in DOSBox-X.
+- `rebeep test run --suite studio` compiles and runs the studio's C tests in DOSBox-X, then checks each
+  screen against its reference (`tests/screens/*.scr`, the screen spec: edit it first).
 - `rebeep test run --suite vm` boots `mirror-freedos` for each `tests/vm/P_*.BAT` probe, unattended
   (see [tests/vm/AGENTS.md](tests/vm/AGENTS.md)). It opens 86Box and is not part of `--suite all`.
-- Tests build their own fixtures (small zips and images) in a temp folder. No binary fixtures are
-  committed.
-- In the VMs: `CHKDSK D:` must be clean after a deploy.
+- Tests build their own fixtures in a temp folder; no binary fixtures are committed. In the VMs,
+  `CHKDSK D:` must be clean after a deploy.
 
 ## 8. Commits & PRs
 
 - Conventional Commits: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`, scoped by area
   (`tools`, `env`, `src`, `tests`, `docs`, `site`), for example `feat(tools): add disk list`.
-- **Never** write `Co-Authored-By` or any other agent-harness attribution trailer on a commit or PR
-  description.
+- **Never** write `Co-Authored-By` or any other agent attribution trailer on a commit or PR.
 - PRs target `main` and open as drafts. Fill in the PR template.
-- Update the affected `AGENTS.md`, skill reference and docs in the same PR as the code.
-- Doc rules and the pre-commit `update-docs` run: [section 10](#10-writing-docs).
+- Update the affected `AGENTS.md`, skill reference and docs in the same PR as the code
+  ([section 10](#10-writing-docs) has the doc rules and the pre-commit `update-docs` run).
 - Every user-visible change adds a line under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md), in
   the same PR, following the [changelog rules](.claude/skills/release/references/changelog.md).
 
@@ -137,10 +138,10 @@ doc has one job. When two docs need the same fact, one owns it and the others li
 | Doc | Job |
 |---|---|
 | `README.md` | The front door, for players: why, highlights, how in brief, what you need, install in brief, tested on, and the docs index. Build details live in `docs/` |
-| `docs/guide/` | The player guide, for a DOS user with no dev tools: getting started, a real PC, 86Box, playing, troubleshooting, compatibility, the reference. `reference.md` owns the option, hotkey and exit-code tables that `release/README.TXT` mirrors |
+| `docs/guide/` | The player guide, for a DOS user with no dev tools: getting started, a real PC, 86Box, playing, ReBeep Studio, troubleshooting, compatibility, the reference. `reference.md` owns the option, hotkey and exit-code tables that `release/README.TXT` mirrors |
 | `docs/architecture/` | How it works, for the curious: the design, the measured cost (`P_BENCH` numbers), the GPC case study |
 | `docs/roadmap.md` | Where ReBeep is headed: now, ideas, and how to help |
-| `docs/lab/` | For contributors: lab setup and the Verified-on table, the 86Box lab (owns lab troubleshooting), contributing, releasing |
+| `docs/lab/` | For contributors: lab setup and the Verified-on table, the 86Box lab (owns lab troubleshooting), contributing (the studio suite and its reference screens), releasing |
 | `CHANGELOG.md` | Player-facing changes |
 | Folder `AGENTS.md` | That folder's rules and pitfalls |
 | CLI help | The source of truth for commands and options (`rebeep <noun> <verb> --help`) |

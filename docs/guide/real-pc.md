@@ -78,7 +78,11 @@ and changes nothing else.
 ```
 MD C:\REBEEP
 COPY A:\*.* C:\REBEEP
+MD C:\REBEEP\FACTORY
+COPY A:\FACTORY\*.* C:\REBEEP\FACTORY
 ```
+
+The last two lines are for [ReBeep Studio](studio.md), which keeps its factory patches there.
 
 ## 4. Add a ReBeep boot menu entry
 
@@ -192,7 +196,7 @@ These are the lines `INSTALL` prints. To undo, copy your backups back (step 6).
 | `LH C:\REBEEP\REBEEP.COM` | Loads ReBeep high, into upper memory, so games keep their 640 KB |
 
 Want ReBeep's settings at every boot? Put them on its line, for example
-`LH C:\REBEEP\REBEEP.COM /P:1 /R:0`. The options are in [playing](playing.md).
+`LH C:\REBEEP\REBEEP.COM /P:ORGAN /R:0`. The options are in [playing](playing.md).
 
 ## 5. Check it
 
@@ -201,7 +205,7 @@ Reboot and pick **ReBeep (Jemm + QPIEMU)**. As it boots, you should see ReBeep's
 ```
 ReBeep x.y.z loaded in upper memory, nnnn bytes resident.
 OPL3, faithful voice, volume 12.
-Ctrl+Alt+B toggles, Ctrl+Alt+N cycles the voice.
+Ctrl+Alt+B toggles, Ctrl+Alt+N switches between faithful voice and patch.
 Notes below 20 Hz are silent (/L:0).
 Sounds ReBeep can't translate play on the speaker (/R:1).
 ```

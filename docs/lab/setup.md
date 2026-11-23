@@ -10,6 +10,7 @@ From a fresh clone to a booted DOS VM with ReBeep's environment loaded.
 | About 4 GB free | for 86Box, its ROMs, the VM disks and their baselines (`env check` warns below 4 GB) |
 | Linux/macOS only: NASM ≥ 2.16 | `nasm -v` (`sudo apt install nasm`, `brew install nasm`) |
 | Linux only, for the DOS test suite: DOSBox-X | `dosbox-x --version` (distro package or Flatpak) |
+| A `tar` that reads xz, to unpack Open Watcom | Windows: its own `System32\tar.exe`. Linux: GNU tar with `xz-utils`. macOS: its own `tar` |
 
 Then check the host:
 
@@ -92,6 +93,13 @@ Its 1990 Award BIOS forgets the disks when it loads defaults, so the first boot 
 5. Once it boots, quit 86Box and `rebeep vm snapshot slow-386sx`.
 
 ## 4. Everyday loop
+
+ReBeep Studio is C, so the build needs Open Watcom once. `tool fetch` downloads the pinned snapshot
+and unpacks it with the `tar` from the prerequisites:
+
+```sh
+rebeep tool fetch open-watcom
+```
 
 ```sh
 rebeep build run --deploy      # edit src/, assemble, rewrite every VM's D:

@@ -29,14 +29,35 @@ environment loaded. Below, `rebeep` stands for `node tools/rebeep.mjs`.
    | Anything | `rebeep repo check` |
    | `tools/` | `rebeep test run --suite tools` |
    | `src/` or `tests/` | Also `rebeep test run --suite interpreter` and `rebeep test run --suite vm` |
+   | `src/studio/` or `tests/studio/` | Also `rebeep test run --suite studio` |
    | Docs | The rules and budgets in the root [AGENTS.md](../../AGENTS.md#10-writing-docs) |
 
-   CI runs the tools and interpreter suites, the build, a package dry run and the payload guard. It
-   can't run 86Box, so the VM probes are yours to run before you push.
+   CI runs the tools, interpreter and studio suites, the build, a package dry run and the payload
+   guard. It can't run 86Box, so the VM probes are yours to run before you push.
 4. Open a pull request against `main`, as a draft until it's ready, and fill in the template: what
    you ran, and what you heard.
 
 Releases are the maintainer's: [releasing](releasing.md).
+
+## The studio
+
+ReBeep Studio (`src/studio/`, `RBSTUDIO.EXE`) is C, built with Open Watcom, which `rebeep tool fetch
+open-watcom` fetches ([setup](setup.md#1-prerequisites)). Its suite compiles each `tests/studio/T_*.C`
+against the studio's modules, runs them in DOSBox-X, then checks every screen:
+
+```sh
+rebeep test run --suite studio
+```
+
+**The reference screens are the screen spec.** `tests/screens/<screen>.<view>.scr` (view `vga` or
+`mono`) holds what each screen must draw, cell by cell. The suite has the studio draw every screen
+with `RBSTUDIO /DUMP:<screen> [/VIEW:MONO] /O:<file>` (a switch for tests, not for players) and
+compares the dump with its `.scr`. The format and the check are in
+[tests/studio/AGENTS.md](../../tests/studio/AGENTS.md).
+
+**To change a screen, edit its `.scr` first**, in the same change as the code, then make the studio
+draw it. The studio's own [AGENTS.md](../../src/studio/AGENTS.md) has the drawing rules.
+`RBSTUDIO /BENCH` times a full redraw and writes `BENCH.TXT`.
 
 ## Seeing what a game does
 

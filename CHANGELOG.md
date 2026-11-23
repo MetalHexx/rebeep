@@ -4,6 +4,27 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+### Added
+
+- **ReBeep Studio**, a full-screen patch editor: shape your own FM voices, play them on the keyboard,
+  and save them. It comes in the package, and `INSTALL` copies it
+  ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md)).
+- **Patches by name:** `/P:` takes the name of a patch from `USER`, `FACTORY` or a pack folder, and
+  `PATCH=` in `RBSTUDIO.CFG` picks one at every load
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
+- **Four-operator voices** on an OPL3, for patches that have one
+  ([how it works](https://github.com/MetalHexx/rebeep/blob/main/docs/architecture/how-it-works.md#patches)).
+
+### Changed
+
+- **Ctrl+Alt+N** now switches between the faithful voice and the loaded patch
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#hotkeys)).
+
+### Removed
+
+- **`/P:1` to `/P:4`.** Use `/P:ORGAN`, `/P:FLUTE`, `/P:BRASS` and `/P:BELL`
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
+
 ## [0.1.0] - 2026-11-21
 
 ### Added

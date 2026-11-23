@@ -1,7 +1,8 @@
 # Reference
 
-Every option, hotkey and exit code. `REBEEP /?` prints the same list, and the package's
-`README.TXT` carries these tables too. For how to use them, see [playing](playing.md).
+Every option, hotkey and exit code, and the studio's switches. `REBEEP /?` prints the same list, and
+the package's `README.TXT` carries these tables too. For how to use them, see [playing](playing.md)
+and [ReBeep Studio](studio.md).
 
 ## Options
 
@@ -26,7 +27,10 @@ REBEEP [/F | /P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
 - `/S`, `/U`, `/ON` and `/OFF` act only on a loaded copy.
 - On a loaded copy, any other option changes only what it names: `REBEEP /V:8` leaves the voice
   alone.
-- On a fresh load, options you leave out take their defaults.
+- On a fresh load, options you leave out take their defaults, except the patch: with neither `/F`
+  nor `/P:`, a `PATCH=` line in [`RBSTUDIO.CFG`](studio.md#the-settings-file) picks it.
+- A patch ReBeep can't use is a message, and the faithful voice plays
+  ([troubleshooting](troubleshooting.md#a-patch-was-not-used)).
 
 ## Hotkeys
 
@@ -51,6 +55,22 @@ ReBeep returns one in `ERRORLEVEL`, so a batch file can test it.
 | 4 | no FM chip at 388h | 9 | other failure |
 
 What to do about each: [troubleshooting](troubleshooting.md#messages).
+
+## RBSTUDIO
+
+`RBSTUDIO.EXE` is [ReBeep Studio](studio.md), the patch editor.
+
+```
+RBSTUDIO [/VIEW:MONO] [/TRACE] [/?]
+```
+
+| Option | Does |
+|---|---|
+| `/VIEW:MONO` | Draw for a monochrome display |
+| `/TRACE` | Log every FM chip write and key press to `RBSTUDIO.LOG` |
+| `/?` | Help |
+
+Its keys are in [studio](studio.md#the-keys), and are on screen under F1.
 
 ## RBTEST
 

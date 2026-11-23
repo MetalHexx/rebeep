@@ -5,6 +5,10 @@ Where ReBeep is headed. Nothing here is a promise or a date: ideas are talked ov
 
 ## Now
 
+**ReBeep Studio.** A full-screen patch editor: shape your own FM voices, play them on the keyboard,
+save them and hear them in a game. Patches are chosen by name with `/P:`, and OPL3 cards play
+four-operator voices ([studio](guide/studio.md)).
+
 **The first release.** On a 386 or better running Jemm, a real-mode game's PC-speaker sound plays on
 a Sound Blaster's OPL2 or OPL3 FM chip. It is proven on Grand Prix Circuit, on a real PC and in
 86Box.
@@ -21,14 +25,14 @@ what it runs on, and how to get it. It shows the latest release on its own.
 | An AI setup helper | An assistant plugin that walks newcomers through Jemm and the boot files |
 | Jemm in the package | One download instead of two, if Jemm's license allows it |
 | Hotkeys in every game | Catching the keys at the keyboard's port, so games that own the keyboard can't block them |
-| More voices | A larger set of FM patches, each able to play an octave up or down |
-| Per-game profiles | Settings picked per game, such as the voice, the volume and how low notes play |
+| More voices | A larger set of factory patches, beyond the four that ship now |
+| Per-game profiles | Settings picked per game, such as the voice, the volume and how low notes play. Also on the studio's menu, marked coming soon |
 | Digital sound for the rest | Clicks and noise played through the Sound Blaster's digital audio instead of the speaker |
 | XT and 286 machines | A simpler way to catch the beeps on the machines most speaker games were written for |
 | MIDI and other sound chips | Speaker music on a MIDI synth, or on a Tandy-style tone chip |
 | Other memory managers | EMM386 or QEMM, for setups that can't switch to Jemm |
 | Arranged soundtracks | Recognizing a game's tune and playing a full arrangement in its place |
-| A patch editor | Shape your own FM voices instead of picking from the built-in set |
+| A settings page | Change ReBeep's options from a menu in the studio, instead of typing them. It is on the studio's main menu, marked coming soon |
 | Custom sound effects | Replace or add effects, not only tunes |
 
 ## How you can help

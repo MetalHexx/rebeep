@@ -22,19 +22,25 @@ SET RBJEMM=D:\JEMM
 ## Pick a voice
 
 ```
-REBEEP /P:2
+REBEEP /P:FLUTE
 ```
 
 | Option | Voice |
 |---|---|
 | `/F` | Faithful: a square wave, the nearest to the real speaker (default) |
-| `/P:1` | Organ |
-| `/P:2` | Flute |
-| `/P:3` | Brass |
-| `/P:4` | Bell |
+| `/P:ORGAN` | Organ |
+| `/P:FLUTE` | Flute |
+| `/P:BRASS` | Brass |
+| `/P:BELL` | Bell |
+
+A patch is an FM voice kept in a small file. Those four come with ReBeep, and `/P:` takes the name
+of any other you have, such as one you made in [ReBeep Studio](studio.md). `REBEEP /P:name` looks
+in `USER` first, then `FACTORY`; a patch from a pack needs its folder, `/P:HEXX\ORGAN`. If ReBeep
+can't use a patch it says why and plays the faithful voice ([why](troubleshooting.md#a-patch-was-not-used)).
 
 On a card with only an OPL2, such as an AdLib, `/F` is an FM copy of the square wave. It hasn't
-been checked by ear yet: if it sounds wrong, pick a patch.
+been checked by ear yet: if it sounds wrong, pick a patch. A patch with a four-operator voice
+plays that on an OPL3 and its two-operator voice on an OPL2.
 
 On a loaded copy, an option changes only what it names, so the other settings stay as they are.
 
@@ -72,7 +78,7 @@ REBEEP /L:1
 | Keys | Does |
 |---|---|
 | Ctrl+Alt+B | Switch between the sound card and the real speaker |
-| Ctrl+Alt+N | Next voice: faithful, then patches 1 to 4 |
+| Ctrl+Alt+N | Switch between the faithful voice and the patch you loaded |
 
 **They don't work in every game yet.** Games that take over the keyboard, such as Grand Prix
 Circuit, never pass the keys on. Set the voice and volume at the DOS prompt before you start

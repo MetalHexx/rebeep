@@ -14,6 +14,8 @@ Find what you see, then try the fix. If nothing here helps, file a
 | Nothing from the sound card | Run `REBEEP /S`: translation should be on. Try `REBEEP /V:12`, and turn up the card's FM volume in its mixer program. Then `RBTEST /C:1` |
 | The tunes still come from the PC speaker | Ctrl+Alt+B may have switched them there: press it again. If `REBEEP /S` says `traps off`, run `REBEEP /ON` |
 | Clicks from the PC speaker | That's a sound ReBeep can't turn into a note. `REBEEP /R:0` mutes it |
+| `Patch ... not used` and the faithful voice plays | ReBeep couldn't use the patch you named. See [a patch was not used](#a-patch-was-not-used) |
+| Ctrl+Alt+N does nothing at the prompt | No patch is loaded, so there is only the faithful voice. Load one with `REBEEP /P:FLUTE` |
 | A hotkey does nothing in a game | The game owns the keyboard. Set things at the DOS prompt before starting it ([playing](playing.md#hotkeys)) |
 | A game's own AdLib or FM music sounds wrong | `REBEEP /OFF` before the game, `REBEEP /ON` after |
 | A game runs slowly | It beeps very often. `REBEEP /OFF` before starting it |
@@ -37,3 +39,31 @@ Find what you see, then try the fix. If nothing here helps, file a
 | `DOS would not free ReBeep's memory.` | Reboot |
 
 The exit codes behind these messages are in the [reference](reference.md#exit-codes).
+
+## A patch was not used
+
+A patch ReBeep can't use is never an error. It prints one line, and the faithful voice plays:
+
+```
+Patch MYLEAD not used: not found in USER or FACTORY. Playing the faithful voice.
+```
+
+| It says | What to do |
+|---|---|
+| `not found in USER or FACTORY` | No `MYLEAD.RBP` in either folder. Check the spelling, and that the file is in `USER` in the patches folder. A patch in a pack needs its folder: `/P:HEXX\ORGAN` |
+| `not found` | There is no such file in the folder you named |
+| `folder does not exist` | The `PATCHES=` folder in `RBSTUDIO.CFG` isn't there. Fix the line or make the folder |
+| `not a valid patch name` | A name is up to 8 letters, digits, `-` and `_`, and not only digits |
+| `cannot be read` | DOS couldn't read the file. Check the disk |
+| Something about the file, such as `FORMAT is not 1` | The file has a mistake. Open it in a text editor and fix that line. The studio leaves such a file out of its list, and its log says which line |
+
+A `PATCHES=` line that isn't a plain DOS path gets its own message, `PATCHES=... ignored`, and the
+default folder is used. Both lines are explained in [the settings file](studio.md#the-settings-file).
+
+## The studio log
+
+[ReBeep Studio](studio.md) writes `RBSTUDIO.LOG` into the folder that holds `RBSTUDIO.EXE`, usually
+`C:\REBEEP`, and replaces it on every run. F1 in the editor prints its path. It lists what the
+studio found at start, and a line for each problem: a patch file left out of the list and why, a
+bad `PATCHES=` line, a missing `SPLASH.ANS`. Start `RBSTUDIO /TRACE` to log each FM chip write too.
+When you report a studio problem, attach the log.
