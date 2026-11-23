@@ -114,9 +114,8 @@ a message and the faithful voice, never an exit code.
 bytes however many patches exist: its `FOLDER\NAME`, octave, a flags byte (a patch is loaded, it
 has a four-operator variant), the 11-byte two-operator record and the 22-byte four-operator record,
 both already in register order. The voice byte says which voice plays: 0 the faithful one, 1 the
-patch. It once numbered four built-in voices, which is why the layout number, in the first byte,
-went from 1 to 2: a loaded copy with a different layout is refused, because its bytes would be
-misread.
+patch. A loaded copy with a different layout number, in the first byte, is refused, because its
+bytes would be misread.
 
 **Four-operator voices.** On an OPL3, a patch with a `[4OP]` section plays on two channel pairs of
 the second register bank, 0+3 and 1+4 (OPL3 channels 9+12 and 10+13), which register `104h` joins

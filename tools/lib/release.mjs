@@ -189,17 +189,21 @@ function readBuildJson(repo) {
   }
 }
 
+/** The bytes of `file`, which must exist and still match its build.json `sha256`. */
+function readVerified(file, sha256) {
+  if (!fs.existsSync(file)) throw new CliError(`${file} is missing`, { hint: 'rebeep build run' });
+  const bytes = fs.readFileSync(file);
+  if (sha256Buffer(bytes) !== sha256) {
+    throw new CliError(`${file} does not match build/build.json`, { hint: 'rebeep build run' });
+  }
+  return bytes;
+}
+
 /** The build.json record of `name` and the bytes of `build/<name>`, which must still match it. */
 export function readBuiltTarget(repo, name, buildJson = readBuildJson(repo)) {
   const target = buildJson.targets?.find((t) => t.name === name);
   if (!target) throw new CliError(`build/build.json has no ${name}`, { hint: 'rebeep build run' });
-  const file = path.join(repo.build, name);
-  if (!fs.existsSync(file)) throw new CliError(`${file} is missing`, { hint: 'rebeep build run' });
-  const bytes = fs.readFileSync(file);
-  if (sha256Buffer(bytes) !== target.sha256) {
-    throw new CliError(`${file} does not match build/build.json`, { hint: 'rebeep build run' });
-  }
-  return { bytes, sha256: target.sha256 };
+  return { bytes: readVerified(path.join(repo.build, name), target.sha256), sha256: target.sha256 };
 }
 
 /**
@@ -213,13 +217,7 @@ function packagedDataPath(entry) {
 
 /** The bytes of a build.json `files` entry in `build/files/<deploy>/`, which must still match it. */
 function readBuiltDataFile(repo, entry) {
-  const file = path.join(repo.build, 'files', ...String(entry.deploy).split('/'), entry.name);
-  if (!fs.existsSync(file)) throw new CliError(`${file} is missing`, { hint: 'rebeep build run' });
-  const bytes = fs.readFileSync(file);
-  if (sha256Buffer(bytes) !== entry.sha256) {
-    throw new CliError(`${file} does not match build/build.json`, { hint: 'rebeep build run' });
-  }
-  return bytes;
+  return readVerified(path.join(repo.build, 'files', ...String(entry.deploy).split('/'), entry.name), entry.sha256);
 }
 
 /**

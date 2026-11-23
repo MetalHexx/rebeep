@@ -94,9 +94,9 @@ Dev loop: edit `src/` → `rebeep build run --deploy` → boot the VM (the dev e
 - **DOS text files are CRLF.** `.BAT`, `.SYS` and `.TXT` under `env/86box/dos/` and `release/` (see
   `.gitattributes`).
 - **Zero npm dependencies.** Tooling is Node ≥ 22 built-ins only.
-- **Ask before adding a dependency.** Never add a library, tool, download or other external
-  dependency without asking the operator first. An agreed one carries its reason in the PR
-  ([contributing](docs/lab/contributing.md)).
+- **Ask before adding a dependency.** Never install or add a library, tool, download or other
+  external dependency without asking the operator first. An agreed one carries its reason in the
+  PR ([contributing](docs/lab/contributing.md)).
 - **Cross-platform.** Windows, Linux and macOS. Use `path.join`; never hard-code separators or
   shell-specific commands.
 - **Pin every download** in `env/86box/manifest.json` with its SHA-256.

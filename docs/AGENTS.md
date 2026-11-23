@@ -34,6 +34,7 @@
 - **The voice:** concise and high signal. Steps first; tables and code blocks over prose; no filler;
   link, never repeat. Never paper over what a newcomer can't know: show the real command, not "turn
   that feature off". Complete but lean: a cold reader needs nothing else, and reads nothing extra.
+- **The goal:** deliberate, good-looking docs, each page at one level.
 
 **Guide pages:**
 - Explain each term on first use, in a few words: TSR, FM chip, Jemm, QPIEMU, upper memory, boot menu.
@@ -47,8 +48,7 @@ page gets a row here, and a line in its level's group of the [README](../README.
 
 - `guide/reference.md`, `release/README.TXT` and `REBEEP /?` hold the same tables. Change all three.
 - No version number in a doc: `rebeep version check` rejects one. Write `x.y.z`.
-- `architecture/how-it-works.md`'s numbers come from the `P_BENCH` probe. Re-measure them when the
-  trap code changes.
+- `architecture/how-it-works.md`'s numbers come from `P_BENCH`. Re-measure them when the trap code changes.
 - Host-specific lab steps (Windows, Linux, macOS) drift fastest. Mark anything not verified.
 
 ## Run / test

@@ -109,7 +109,7 @@ that fits:
 | The patch | Ctrl+S |
 |---|---|
 | Has a new name | Opens Save As |
-| Is in `USER` or `FACTORY` and equals the factory patch of its name | Deletes `USER\NAME`, so the factory patch is back |
+| Is in `USER` or `FACTORY` and equals the factory patch of its name | Deletes `USER\NAME`, so the factory patch is back. With no `USER\NAME`, says `Nothing to save` |
 | Is in `FACTORY` or a pack, and `USER\NAME` already exists | Refuses, and says `USER\NAME exists: use Save As`. Your file is never overwritten |
 | Anything else | Writes `USER\NAME.RBP` |
 

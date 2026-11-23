@@ -33,7 +33,7 @@ plays them on the card's FM chip instead.
 - **Change it while you play.** Ctrl+Alt+B swaps between the sound card and the speaker, and
   Ctrl+Alt+N switches between the faithful voice and your patch. The keys can be changed. They
   don't work yet in games that take over the keyboard; set those up at the DOS prompt first.
-- **Small and tidy.** One `.COM` file under 7 KB that loads high and unloads cleanly. The game is
+- **Small and tidy.** One `.COM` file that loads high and unloads cleanly. The game is
   never patched.
 
 ## How it works

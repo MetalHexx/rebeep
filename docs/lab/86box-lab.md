@@ -64,7 +64,8 @@ D:\ENV\MSDOS622\INSTALL.BAT  one-time C: setup for MS-DOS 6.22
 D:\ENV\FREEDOS\INSTALL.BAT   one-time C: setup after a FreeDOS installer
 D:\JEMM\                     Jemm 5.87, JLOAD, QPIEMU
 D:\GAMES\<NAME>\             your games
-D:\REBEEP\                   REBEEP.COM, RBTEST.COM and AUTOLOAD.FLG, the latest build, and
+D:\REBEEP\                   REBEEP.COM, RBTEST.COM, RBSTUDIO.EXE, SPLASH.ANS, MENU.ANS,
+                             FACTORY\*.RBP and AUTOLOAD.FLG, the latest build, and
                              REBEEPD.COM, the dev-only trace build
 ```
 
@@ -118,7 +119,7 @@ Because `BOOT.BAT` lives on D:, changing the boot steps needs only a deploy, nev
 
 On the **ReBeep dev** entry, `BOOT.BAT` loads ReBeep high (`LH D:\REBEEP\REBEEP.COM`) after QPIEMU,
 so every boot starts with the newest build resident. `REBEEP /U` unloads it. The **Clean** entry
-loads nothing. `RBTEST.COM` is deployed beside it.
+loads nothing. The other programs are deployed beside it.
 
 ## The `vm` test suite
 
