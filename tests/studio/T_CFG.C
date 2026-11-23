@@ -60,7 +60,7 @@ int main(void)
     t_check(cfg_get(&cfg, "PATCHES") != NULL && strcmp(cfg_get(&cfg, "PATCHES"), "MYPATCH") == 0,
             "the first occurrence counts, padding trimmed, key in any case");
     t_check(cfg_get(&cfg, "patch") != NULL && strcmp(cfg_get(&cfg, "patch"), "BELL") == 0, "a last line without a line end");
-    t_check(cfg_get(&cfg, "COLOUR") != NULL && strcmp(cfg_get(&cfg, "COLOUR"), "Blue") == 0, "unknown keys are kept, values as written");
+    t_check(cfg_get(&cfg, "COLOUR") == NULL, "an unknown key is ignored");
     t_check(cfg_get(&cfg, "COMMENTED") == NULL && cfg_get(&cfg, "NO") == NULL, "comments and bare lines are not keys");
 
     t_case("cfg_load: LF line ends, long lines, many keys");
@@ -78,6 +78,16 @@ int main(void)
     cfg_load(&cfg, "C.CFG");
     t_check(cfg_get(&cfg, "PATCH") != NULL && strcmp(cfg_get(&cfg, "PATCH"), "Z") == 0, "a long line is skipped, not misread");
     t_check(cfg.count <= CFG_MAX_KEYS, "the key table is bounded");
+    {
+        FILE *f = fopen("F.CFG", "wb");
+
+        for (i = 0; i < 40; i++) fprintf(f, "K%d=%d\r\n", i, i);
+        fputs("PATCHES=LATE\r\n", f);
+        fclose(f);
+    }
+    cfg_load(&cfg, "F.CFG");
+    t_check(cfg_get(&cfg, "PATCHES") != NULL && strcmp(cfg_get(&cfg, "PATCHES"), "LATE") == 0,
+            "PATCHES= after many unknown keys is still read");
 
     t_case("PATCHES= from the file: relative, then bad");
     put_text("D.CFG", "PATCHES=MINE\r\n");

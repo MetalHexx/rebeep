@@ -13,7 +13,9 @@
 #define FN_TRAPS_OFF 0x13
 #define FLAG_TRAPS 0x02
 
-static const char signature[16] = {'M', 'e', 't', 'a', 'l', 'H', 'e', 'x', 'R', 'E', 'B', 'E', 'P', ' ', ' ', ' '};
+#define SIG_LEN 16
+
+static const char signature[SIG_LEN + 1] = "MetalHex" "REBEEP  ";
 
 static int res_id = -1;
 static int suspended;
@@ -37,7 +39,7 @@ static int find_rebeep(void)
 
     if (_dos_getvect(AMIS_INT) == NULL) return -1;
     for (id = 0; id < 256; id++) {
-        if (amis(id, FN_INSTALLED, &r) == 0xFF && _fmemcmp(MK_FP(r.x.dx, r.x.di), signature, 16) == 0) return id;
+        if (amis(id, FN_INSTALLED, &r) == 0xFF && _fmemcmp(MK_FP(r.x.dx, r.x.di), signature, SIG_LEN) == 0) return id;
     }
     return -1;
 }

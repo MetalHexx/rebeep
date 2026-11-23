@@ -12,7 +12,20 @@ static int is_blank(char c)
     return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
 
-/* Stores one line, if it is a KEY=VALUE whose key is new. */
+/* The keys the studio reads; any other key is ignored, so it cannot fill the table ahead of one that matters. */
+static const char *const known_keys[] = {"PATCHES", "PATCH"};
+
+static int is_known(const char *key)
+{
+    unsigned i;
+
+    for (i = 0; i < sizeof known_keys / sizeof known_keys[0]; i++) {
+        if (strcmp(known_keys[i], key) == 0) return 1;
+    }
+    return 0;
+}
+
+/* Stores one line, if it is a KEY=VALUE whose key is a known one and new. */
 static void take_line(Settings *s, char *line)
 {
     char *eq = strchr(line, '=');
@@ -36,6 +49,7 @@ static void take_line(Settings *s, char *line)
     *key_end = '\0';
     *value_end = '\0';
     for (i = 0; key[i] != '\0'; i++) key[i] = (char)toupper((unsigned char)key[i]);
+    if (!is_known(key)) return;
     for (i = 0; i < s->count; i++) {
         if (strcmp(s->key[i], key) == 0) return;
     }

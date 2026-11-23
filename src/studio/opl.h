@@ -28,7 +28,8 @@ void opl_shutdown(void);
 
 /* Programs `v` into every channel of its mode. `ops` is 2 or 4; `octave` 0..7 is the patch's, 4 = the game's pitch.
    Switching between 2 and 4 keys every channel off before 104h changes. On an OPL2 a four-operator voice is kept but
-   no note plays and nothing is written (beyond keying off notes that were sounding). Sounding notes keep sounding with the new voice. */
+   no note plays and nothing is written (beyond keying off notes that were sounding). A change within the same mode
+   leaves sounding notes sounding with the new voice. */
 void opl_set_voice(const Voice *v, int ops, int octave);
 
 /* Starts `note` (0 = C0). A note already sounding keeps its slot. Otherwise it takes a free slot, else the oldest

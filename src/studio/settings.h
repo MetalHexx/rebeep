@@ -15,7 +15,8 @@ typedef struct {
 } Settings;
 
 /* Reads `path`. Lines are KEY=VALUE (key case-insensitive, spaces and tabs around key and value trimmed) or `;`
-   comments; other lines are ignored, and the first occurrence of a key counts. A missing file is not an error: it
+   comments; other lines are ignored, as is any key the studio does not read (PATCHES, PATCH; add a new key to
+   `known_keys` in settings.c), and the first occurrence of a key counts. A missing file is not an error: it
    leaves `s` empty and returns 0. Returns -1 only when the file exists but cannot be read. */
 int cfg_load(Settings *s, const char *path);
 
