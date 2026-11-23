@@ -1,34 +1,35 @@
-// Inspect a decoded patch resource (for example patch-003.bin, the AdLib bank in Space Quest III).
-// The record layout is NOT confirmed. This prints the shape and per-column ranges so a human can
-// test hypotheses about the fields.
-// Usage: node inspect-patch.mjs <patch .bin> [record size=21] [header bytes=2]
+// Inspect an AdLib patch bank (SCI0 patch 3, decoded). Prints the instrument count, whether the AB CD
+// separator is present, the first three instruments as hex, and each field's value range across the bank.
+// Usage: node inspect-patch.mjs <decoded patch .bin>
 import fs from 'node:fs';
+import { ADLIB, readAdlibPatch } from '../../lib/sci.mjs';
 
-const [file, recArg, hdrArg] = process.argv.slice(2);
+const [file] = process.argv.slice(2);
 if (!file) {
-  console.error('usage: node inspect-patch.mjs <patch .bin> [record size=21] [header bytes=2]');
+  console.error('usage: node inspect-patch.mjs <decoded patch .bin>');
   process.exit(2);
 }
-const rec = Number(recArg ?? 21);
-const hdr = Number(hdrArg ?? 2);
-const p = fs.readFileSync(file);
-const count = Math.floor((p.length - hdr) / rec);
-console.log(`bytes ${p.length}; header ${hdr} bytes (${p.subarray(0, hdr).toString('hex') || 'none'})`);
-console.log(`${count} records of ${rec} bytes, leftover ${(p.length - hdr) % rec}`);
-
-const hex = (b) => b.toString('hex').match(/../g).join(' ');
-for (let i = 0; i < Math.min(4, count); i++) {
-  console.log(`record ${i}: ${hex(p.subarray(hdr + i * rec, hdr + (i + 1) * rec))}`);
+const buf = fs.readFileSync(file);
+const recs = readAdlibPatch(buf);
+const separator = buf.length - recs.length * ADLIB.record === 2;
+console.log(`${buf.length} bytes: ${recs.length} instruments of ${ADLIB.record} bytes; AB CD separator ${separator ? 'present' : 'absent'}`);
+for (let i = 0; i < Math.min(3, recs.length); i++) {
+  console.log(`instrument ${i}: ${[...recs[i]].map((v) => v.toString(16).padStart(2, '0')).join(' ')}`);
 }
 
-const mins = Array(rec).fill(255);
-const maxs = Array(rec).fill(0);
-for (let i = 0; i < count; i++) {
-  for (let c = 0; c < rec; c++) {
-    const v = p[hdr + i * rec + c];
-    if (v < mins[c]) mins[c] = v;
-    if (v > maxs[c]) maxs[c] = v;
+const fields = [
+  ...Object.entries(ADLIB.op1).map(([name, off]) => [off, `op1 ${name}`]),
+  ...Object.entries(ADLIB.op2).map(([name, off]) => [off, `op2 ${name}`]),
+  [ADLIB.feedback, 'feedback'],
+  [ADLIB.algorithm, 'algorithm'],
+].sort((a, b) => a[0] - b[0]);
+console.log('offset  field        min-max');
+for (const [off, name] of fields) {
+  let lo = 255;
+  let hi = 0;
+  for (const r of recs) {
+    lo = Math.min(lo, r[off]);
+    hi = Math.max(hi, r[off]);
   }
+  console.log(`0x${off.toString(16).padStart(2, '0')}    ${name.padEnd(12)} ${lo}-${hi}`);
 }
-console.log('column min-max:');
-console.log(mins.map((m, c) => `${c}:${m}-${maxs[c]}`).join('  '));

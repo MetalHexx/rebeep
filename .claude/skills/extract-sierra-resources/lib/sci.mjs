@@ -1,4 +1,4 @@
-// Shared SCI0 code: resource map, volume headers, the three decoders, and the sound parser.
+// Shared SCI0 code: resource map, volume headers, the three decoders, the sound parser, and the AdLib patch layout.
 // Checked against Space Quest III (SCI0): LZW output matches the game's loose SOUND.NNN copies
 // apart from one header byte per file. Raw (method 0) and Huffman (method 2) are not verified.
 import fs from 'node:fs';
@@ -250,6 +250,35 @@ export function toMidi(sound) {
   const n = track.length;
   const trk = [0x4d, 0x54, 0x72, 0x6b, (n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff];
   return Buffer.from([...header, ...trk, ...track]);
+}
+
+// AdLib patch bank (SCI0 patch 3, decoded). Each instrument is 28 bytes and describes one two-operator
+// voice. Offsets follow the SCI Wiki's Adlib Patch Resource Format Specification. The spec does not say
+// how the values map to OPL2 register bits; reference/patches/README.md lists those assumptions.
+export const ADLIB = {
+  record: 28,
+  block: 48,
+  feedback: 0x02,
+  algorithm: 0x0c,
+  op1: { ksl: 0x00, mult: 0x01, ar: 0x03, sl: 0x04, egt: 0x05, dr: 0x06, rr: 0x07, amp: 0x08, am: 0x09, vib: 0x0a, ksr: 0x0b, wave: 0x1a },
+  op2: { ksl: 0x0d, mult: 0x0e, ar: 0x10, sl: 0x11, egt: 0x12, dr: 0x13, rr: 0x14, amp: 0x15, am: 0x16, vib: 0x17, ksr: 0x18, wave: 0x1b },
+};
+
+// Splits a decoded patch body into 28-byte instruments. The first block of 48 may be followed by the
+// separator AB CD and a second block of 48 (Space Quest III has two blocks; King's Quest IV has one).
+export function readAdlibPatch(buf) {
+  const recs = [];
+  let i = 0;
+  while (i < buf.length) {
+    if (recs.length === ADLIB.block && buf[i] === 0xab && buf[i + 1] === 0xcd) {
+      i += 2;
+      continue;
+    }
+    if (i + ADLIB.record > buf.length) throw new Error(`${buf.length - i} stray bytes at offset ${i}`);
+    recs.push(buf.subarray(i, i + ADLIB.record));
+    i += ADLIB.record;
+  }
+  return recs;
 }
 
 // Find a file in a folder by name, ignoring case. Returns the full path or null.
