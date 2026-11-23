@@ -199,6 +199,25 @@ static void value_text(int x, int y, const char *t, int focused, int colour)
     if (focused) scr_put(x + 3, y, " ", SCR_KEEP, role(R_FOCUS));
 }
 
+/* Where the top bar's items fall. The previous/next control starts at column 27; Variant and Octave share the rest of
+   columns 27 to 78, the free cells split between the gaps before them. Returns Variant's first column; *pos_len is the
+   width of "12 of 40" and *oct_x Octave's first column. */
+static int top_layout(const Editor *e, int *pos_len, int *oct_x)
+{
+    char pos[24];
+    char oct[4];
+    int free_cells;
+    int x;
+
+    sprintf(pos, "%d of %d", e->pos, e->total);
+    sprintf(oct, "%d", e->p.octave);
+    *pos_len = (int)strlen(pos);
+    free_cells = 78 - 27 + 1 - ((16 + *pos_len) + 12 + (7 + (int)strlen(oct)));
+    x = 27 + 16 + *pos_len + (free_cells + 1) / 2;
+    *oct_x = x + 12 + free_cells / 2;
+    return x;
+}
+
 static void top_bar(const Editor *e)
 {
     int name_focus = e->fk == F_NAME;
@@ -208,9 +227,10 @@ static void top_bar(const Editor *e)
     char pos[24];
     char oct[4];
     int len = (int)strlen(e->p.name);
-    int free_cells;
+    int pos_len;
+    int oct_x;
+    int var_x = top_layout(e, &pos_len, &oct_x);
     int x;
-    int total;
 
     memset(name, ' ', 24);
     name[24] = '\0';
@@ -219,31 +239,23 @@ static void top_bar(const Editor *e)
     if (name_focus && len < 24) scr_put(1 + len, 0, "_", role(R_FOCUSTEXT), SCR_KEEP);
     scr_put(25, 0, e->dirty ? "*" : " ", role(R_WARNING), SCR_KEEP);
 
-    /* Previous and next patch, Variant and Octave share columns 27 to 78: the first at the left, the other two with
-       the free cells split between the gaps before them. */
     sprintf(pos, "%d of %d", e->pos, e->total);
     sprintf(oct, "%d", e->p.octave);
-    total = (16 + (int)strlen(pos)) + 12 + (7 + (int)strlen(oct));
-    free_cells = 78 - 27 + 1 - total;
 
     x = 27;
     scr_put(x, 0, "\x11", role(R_ACCENT), SCR_KEEP);
     scr_put(x + 1, 0, " PgUp  ", role(R_TEXT), SCR_KEEP);
     scr_put(x + 8, 0, pos, role(R_TEXT), SCR_KEEP);
-    x += 8 + (int)strlen(pos);
+    x += 8 + pos_len;
     scr_put(x, 0, "  PgDn ", role(R_TEXT), SCR_KEEP);
     scr_put(x + 7, 0, "\x10", role(R_ACCENT), SCR_KEEP);
-    x += 8;
 
-    x += (free_cells + 1) / 2;
-    scr_put(x, 0, "Variant ", role(R_TEXT), SCR_KEEP);
-    scr_put(x + 8, 0, e->n == 4 ? "4-OP" : "2-OP", role(variant_focus ? R_FOCUSTEXT : R_VALUE),
+    scr_put(var_x, 0, "Variant ", role(R_TEXT), SCR_KEEP);
+    scr_put(var_x + 8, 0, e->n == 4 ? "4-OP" : "2-OP", role(variant_focus ? R_FOCUSTEXT : R_VALUE),
             variant_focus ? role(R_FOCUS) : SCR_KEEP);
-    x += 12;
 
-    x += free_cells / 2;
-    scr_put(x, 0, "Octave ", role(R_TEXT), SCR_KEEP);
-    scr_put(x + 7, 0, oct, role(octave_focus ? R_FOCUSTEXT : R_VALUE), octave_focus ? role(R_FOCUS) : SCR_KEEP);
+    scr_put(oct_x, 0, "Octave ", role(R_TEXT), SCR_KEEP);
+    scr_put(oct_x + 7, 0, oct, role(octave_focus ? R_FOCUSTEXT : R_VALUE), octave_focus ? role(R_FOCUS) : SCR_KEEP);
 }
 
 static int is_held(const Editor *e, int key)
@@ -583,4 +595,74 @@ void synth_draw(const Editor *e)
     scr_put(24, ROW_BAND, " Envelope ", role(R_TEXT), SCR_KEEP);
     draw_wave(2, ROW_BAND + 1, voice_of(e)->op[e->cur].v[P_WAVE], rim_colour(e, e->cur));
     draw_env(24, ROW_BAND + 1, &voice_of(e)->op[e->cur], rim_colour(e, e->cur), body_colour(e, e->cur));
+}
+
+static int has_bar(int key)
+{
+    return key != P_WAVE && key != P_TREM && key != P_VIB && key != P_SUS && key != P_KSR;
+}
+
+static void hit_set(SynthHit *h, int kind, int k, int key, int bx, int bw)
+{
+    h->kind = kind;
+    h->k = k;
+    h->key = key;
+    h->bx = bx;
+    h->bw = bw;
+}
+
+void synth_hit(const Editor *e, int x, int y, SynthHit *h)
+{
+    int n = e->n;
+    int z = 4 / n;
+    int slot = 14 * z;
+    int pos_len;
+    int oct_x;
+    int var_x = top_layout(e, &pos_len, &oct_x);
+    int k;
+
+    hit_set(h, SH_NONE, 0, 0, 0, 0);
+    if (y == 0) {
+        char oct[4];
+
+        sprintf(oct, "%d", e->p.octave);
+        if (x >= 1 && x <= 25) hit_set(h, SH_NAME, 0, 0, 0, 0);
+        else if (x >= 27 && x <= 32) hit_set(h, SH_PREV, 0, 0, 0, 0);
+        else if (x >= 27 + 8 + pos_len + 2 && x <= 27 + 8 + pos_len + 7) hit_set(h, SH_NEXT, 0, 0, 0, 0);
+        else if (x >= var_x && x < var_x + 12) hit_set(h, SH_VARIANT, 0, 0, 0, 0);
+        else if (x >= oct_x && x < oct_x + 7 + (int)strlen(oct)) hit_set(h, SH_OCTAVE, 0, 0, 0, 0);
+    } else if (y == 24) {
+        if (x >= KB_X && x < KB_X + ED_KEYS) hit_set(h, SH_PIANO, 0, x - KB_X, 0, 0);
+        else if (x >= 72 && x <= 78) hit_set(h, SH_HELP, 0, 0, 0, 0);
+    } else if (y >= 1 && y <= 4) {
+        if (x >= 1 && x <= 50) {
+            hit_set(h, x >= 2 && x <= 19 && y >= 2 ? SH_CONN_CYCLE : SH_CONN, 0, 0, 0, 0);
+        } else if (x >= 52 && x <= 78) {
+            if (y == 3 && x >= 63 && x < 70) hit_set(h, SH_BAR, 0, F_FB, 63, 7);
+            else hit_set(h, SH_FB, 0, 0, 0, 0);
+        }
+    } else if (y == ROW_HEAD) {
+        for (k = 0; k < n; k++) {
+            int cx = L0 + k * slot + 1;
+
+            if (x >= cx && x < cx + slot - 1) hit_set(h, SH_OPHEAD, k, 0, 0, 0);
+        }
+    } else if (y > ROW_HEAD && y < ROW_BAND) {
+        int key = y - ROW_HEAD - 1;
+
+        if (x >= 1 && x < L0) {
+            hit_set(h, SH_ROW, 0, key, 0, 0);
+            return;
+        }
+        for (k = 0; k < n; k++) {
+            int cx = L0 + k * slot + 1;
+            int bar_w = slot - 1 - 5;
+
+            if (x < cx || x >= cx + slot - 1) continue;
+            if (has_bar(key) && x >= cx + 4 && x < cx + 4 + bar_w) hit_set(h, SH_BAR, k, key, cx + 4, bar_w);
+            else hit_set(h, SH_CELL, k, key, 0, 0);
+        }
+    } else if (y > ROW_BAND && y < 23 && x >= 2 && x < 2 + WAVE_W) {
+        hit_set(h, SH_ROW, 0, P_WAVE, 0, 0);
+    }
 }

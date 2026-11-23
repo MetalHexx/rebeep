@@ -8,6 +8,7 @@
 
 #include "version.h"
 #include "dos.h"
+#include "editor.h"
 #include "jingle.h"
 #include "kbd.h"
 #include "keys.h"
@@ -42,8 +43,9 @@ static char list_msg[80];     /* why the last patch would not open, shown under 
 static void usage(void)
 {
     printf("ReBeep Studio %s\n", REBEEP_VERSION);
-    printf("Usage: RBSTUDIO [/VIEW:MONO] [/BENCH] [/DUMP:<screen> /O:<file>]\n");
+    printf("Usage: RBSTUDIO [/VIEW:MONO] [/TRACE] [/BENCH] [/DUMP:<screen> /O:<file>]\n");
     printf("  /VIEW:MONO  draw for a monochrome display\n");
+    printf("  /TRACE      log every OPL register write and key event to RBSTUDIO.LOG\n");
     printf("  /BENCH      redraw the whole screen %d times, print the time and write %s\n", BENCH_FRAMES, BENCH_FILE);
     printf("  /DUMP:name  draw a reference screen with its sample data; /O:file is the text screen written\n");
     printf("  /?          show this help\n");
@@ -270,45 +272,104 @@ static void run_soon(int item)
     }
 }
 
-/* Reads entry `i` of the library into the editor, on the 4-OP variant when the chip is an OPL3 and the patch has one.
-   Returns 0, or -1 with the reason in `err`. */
-static int editor_load(Editor *ed, const Library *lib, int i, char *err, unsigned errlen)
+/* The list opens on the patch shown, `pos` of the library. */
+static void remember_patch(const Library *lib, int pos)
 {
-    static char path[LIB_DIR_LEN + 32];
+    Entry en;
 
-    memset(ed, 0, sizeof *ed);
-    if (lib_path(lib, i, path, sizeof path) != 0) {
-        snprintf(err, errlen, "No file for patch %d", i + 1);
-        return -1;
+    if (lib_entry(lib, pos - 1) == NULL) return;
+    en = *lib_entry(lib, pos - 1);
+    sprintf(last_patch, "%s\\%s", en.folder, en.name);
+}
+
+/* What the editor asked of the main loop. Returns 1 when the synth screen is left for the list. */
+static int synth_action(Editor *ed, const Library *lib, int act)
+{
+    char err[80];
+
+    switch (act) {
+    case EA_LIST:
+        return editor_leave(ed, lib, EL_LIST, err, sizeof err);
+    case EA_PREV:
+    case EA_NEXT:
+        editor_leave(ed, lib, act == EA_PREV ? EL_PREV : EL_NEXT, err, sizeof err);
+        if (err[0] != '\0') {
+            log_line("Cannot open the next patch: %s", err);
+            editor_msg(ed, "Cannot open that patch", R_WARNING);
+        } else {
+            remember_patch(lib, ed->pos);
+        }
+        break;
+    case EA_HELP:
+    case EA_SAVE:
+    case EA_SAVEAS:
+    case EA_RESET:
+        editor_release(ed);
+        editor_msg(ed, "Coming soon", R_TEXT);
+        break;
+    default:
+        break;
     }
-    if (patch_read(path, &ed->p, err, errlen) != 0) return -1;
-    ed->chip = opl_chip();
-    ed->n = ed->chip == 3 && ed->p.has4 ? 4 : 2;
-    ed->fk = P_AR;
-    ed->lastP = P_AR;
-    ed->pos = i + 1;
-    ed->total = lib_count(lib);
-    ed->kbOct = KB_LOW;
-    ed->msgRole = R_TEXT;
     return 0;
 }
 
-/* The synth screen of the patch in `ed`; Esc goes back. */
-static void run_synth(const Editor *ed)
+/* The synth screen of the patch in `ed`: the keys and the mouse edit and play it, PgUp and PgDn switch patch, Esc goes
+   back to the list. */
+static void run_synth(Editor *ed, const Library *lib)
 {
     int back = 0;
+    int redraw = 1;
+    int was_down;
+    int dragging = 0;
+    int drag_x = 0;
+    int mouse_key = -1;
+    SynthHit drag;
+    int mx;
+    int my;
 
     key_pressed();
-    synth_draw(ed);
-    scr_flush();
+    ed->mods = key_mods();
+    was_down = mouse_read(&mx, &my) & 1;
     while (!back) {
         unsigned event;
+        int down;
 
-        while (kbd_next(&event)) {
-            if (key_lookup(K_SYNTH, event, key_mods()) == KID_ESC) back = 1;
+        while (kbd_next(&event) && !back) {
+            back = synth_action(ed, lib, editor_event(ed, event));
+            redraw = 1;
         }
         while (kbhit()) getch();
+
+        down = mouse_read(&mx, &my) & 1;
+        if (down && !was_down && !back) {
+            SynthHit hit;
+
+            synth_hit(ed, mx, my, &hit);
+            back = synth_action(ed, lib, editor_press(ed, &hit, mx));
+            dragging = hit.kind == SH_BAR;
+            drag = hit;
+            drag_x = mx;
+            mouse_key = hit.kind == SH_PIANO ? hit.key : -1;
+            redraw = 1;
+        } else if (down && dragging && mx != drag_x && !back) {
+            editor_bar(ed, drag.k, drag.key, drag.bx, drag.bw, mx, 1);
+            drag_x = mx;
+            redraw = 1;
+        } else if (!down && was_down) {
+            if (mouse_key >= 0) editor_key_up(ed, mouse_key);
+            mouse_key = -1;
+            dragging = 0;
+            redraw = 1;
+        }
+        was_down = down;
+
+        if (redraw && !back) {
+            synth_draw(ed);
+            scr_flush();
+            redraw = 0;
+        }
     }
+    editor_release(ed);
 }
 
 /* The Patch Editor: the list of patches, then the synth screen of the one chosen. Esc steps back a level. */
@@ -327,6 +388,11 @@ static void run_patch_editor(void)
 
     if (lib_scan(&patch_lib, dos_program_dir(), cfg_get(&settings, "PATCHES")) != 0) {
         log_line("Patch Editor: out of memory reading the patch list");
+        return;
+    }
+    if (editor_init() != 0) {
+        log_line("Patch Editor: out of memory for the undo history");
+        lib_free(&patch_lib);
         return;
     }
     found = last_patch[0] != '\0' ? lib_find(&patch_lib, last_patch) : -1;
@@ -390,7 +456,8 @@ static void run_patch_editor(void)
             if (editor_load(&editor, &patch_lib, sel, list_msg, sizeof list_msg) == 0) {
                 sprintf(last_patch, "%s\\%s", en.folder, en.name);
                 list_msg[0] = '\0';
-                run_synth(&editor);
+                run_synth(&editor, &patch_lib);
+                sel = editor.pos - 1;
                 was_down = mouse_read(&mx, &my) & 1;
             } else {
                 log_line("Cannot open %s\\%s: %s", en.folder, en.name, list_msg);
@@ -404,6 +471,7 @@ static void run_patch_editor(void)
             redraw = 0;
         }
     }
+    editor_done();
     lib_free(&patch_lib);
 }
 
@@ -476,11 +544,12 @@ static void run_menu(void)
     }
 }
 
-static int run_studio(int mono)
+static int run_studio(int mono, int trace)
 {
     Detect detect;
 
     atexit(release_hardware);
+    log_set_trace(trace);
     rebeep_suspend();
     video_init();
     kbd_init();
@@ -538,6 +607,7 @@ int main(int argc, char **argv)
     const char *out = NULL;
     const char *value;
     int bench = 0;
+    int trace = 0;
     int mono = 0;
     int i;
 
@@ -551,6 +621,8 @@ int main(int argc, char **argv)
             dump = value;
         } else if ((value = option_value(argv[i], "/O:")) != NULL && *value != '\0') {
             out = value;
+        } else if (stricmp(argv[i], "/TRACE") == 0) {
+            trace = 1;
         } else if (stricmp(argv[i], "/VIEW:MONO") == 0) {
             mono = 1;
         } else {
@@ -562,5 +634,5 @@ int main(int argc, char **argv)
 
     dos_init(argv[0]);
     if (dump != NULL) return run_dump(dump, out, mono);
-    return bench ? run_bench() : run_studio(mono);
+    return bench ? run_bench() : run_studio(mono, trace);
 }

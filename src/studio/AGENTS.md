@@ -6,7 +6,7 @@
 
 | Path | Role |
 |---|---|
-| `main.c` | The entry point, argument handling and the top-level flow (`/?`, `/BENCH`, `/DUMP:`, the detection log, splash and menu loop, the Patch Editor flow menu → patch list → synth screen with Esc stepping back, giving the chip, mouse and ReBeep back at exit) |
+| `main.c` | The entry point, argument handling and the top-level flow (`/?`, `/BENCH`, `/DUMP:`, `/TRACE`, the detection log, splash and menu loop, the Patch Editor flow menu → patch list → synth screen with Esc stepping back, giving the chip, mouse and ReBeep back at exit) |
 | `dos.c` · `dos.h` | Program folder from `argv[0]`; Ctrl+Break, Ctrl+C and critical-error handlers; `dos_hook` and `dos_restore`; file helpers (`dos_read_file`, `dos_make_dir`, `dos_each`, the safe save `dos_save_file`) |
 | `patch.c` · `patch.h` | The patch model (`Patch`, `Voice`, `Op`: the editor's values, never registers) and the RBP text file: `patch_parse`, `patch_format`, `patch_read`, `patch_write`. P05's NASM parser follows the same rules |
 | `library.c` · `library.h` | The patch list: `FACTORY\` beside the program, `USER\` and packs in the patches folder; lookup, overrides, `name_valid`, `path_valid` for `PATCHES=` |
@@ -21,10 +21,11 @@
 | `roles.c` · `roles.h` | The one role table (a colour and a mono index per role) and the colour or mono view |
 | `ansi.c` · `ansi.h` | `ansi_draw` for the `.ans` art, and `scr_remap_mono` (the shared mono remap) |
 | `mouse.c` · `mouse.h` | INT 33h, used only when a driver answers; cells are pixels / 8 |
-| `keys.c` · `keys.h` | The one table of key bindings (`id, ctx, scan, mods`) and `key_lookup` |
+| `keys.c` · `keys.h` | The one table of key bindings (`id, ctx, scan, mods`), `key_lookup`, the piano's scan codes (`key_piano`) and the name row's characters (`key_name_char`) |
+| `editor.c` · `editor.h` | The editor's logic, no drawing: rows and values (`editor_change`, `editor_bar`), the 4-OP variant, the name, the piano and its releases, undo, a key event or a click to an action (`editor_event`, `editor_press`), patch switching (`editor_leave`) |
 | `scr_log.c` · `scr_spl.c` · `scr_menu.c` · `screens.h` | The detection log, the splash, the menu and its "coming soon" page |
 | `scr_list.c` | The patch list: `list_draw` from the library, `list_scroll` (the window that keeps the selection and its folder heading in view), `list_item_at` (a click's row to an entry) |
-| `scr_syn.c` · `editor.h` | The synth screen, a port of the mockup's `synth()` for both variants (`synth_draw`); `Editor`, the state it draws and the editing keys will change |
+| `scr_syn.c` | The synth screen, a port of the mockup's `synth()` for both variants (`synth_draw`), and `synth_hit`, what a cell is for a click (it shares `top_layout` and the grid constants with the drawing) |
 | `sample.c` | The fixed sample data (version 0.1.0, the sample detection, the sample patch list, patch 12 of 40 BRASS) and the screen names `/DUMP:` can draw |
 | `data/SPLASH.ANS` · `data/MENU.ANS` | The art; `targets.json` `files` ships them to `REBEEP\` |
 | `kbd.c` · `kbd.h` | The `INT 09h` handler: make and break codes, a key-state table, an event queue |
@@ -70,6 +71,13 @@
   packed in PC order (`30 + index`), so a new `.ans` drop is converted on the way in: inside `ESC[...m` only, swap 31/34,
   33/36, 41/44 and 43/46, every other byte (the SAUCE record too) unchanged. The converted file opens correctly in an
   ANSI editor and renders to the indexes the references hold.
+- **The editor draws nothing and owns the history.** `editor.c` holds the one `Undo`; `editor_open` clears it, silences every note and
+  programs the voice. A change records its undo step after the fact (`undo_edit(before)`) only when the patch differs, with the key
+  (row, operator) and `repeat` for a typematic repeat or a drag. Modifier state comes from the event stream (`Editor.mods`), not from
+  `kbd_down`, so a Ctrl released before its key is read still counts. The piano plays from make codes: a key already lit is ignored
+  (typematic). Every note is released on focus to the name, on a patch switch, on a pop-up (`editor_release`) and at exit, so a
+  missed break code never hangs a note.
+- **An edited name is only a name.** The row edits `Patch.name` in place; nothing renames the file the patch came from.
 - **Dump mode** (`/DUMP:<screen> [/VIEW:MONO] /O:<file>`) touches only the art and the output, plays nothing, shows no
   mouse and uses `sample.c`'s data. An unknown screen exits 4 and writes nothing. Drawable now: `detectlog`, `splash`, `menu`,
   `patchlist`, `synth-4op`, `synth-2op`.
@@ -87,7 +95,8 @@
   the including file, and `<dos.h>` still reaches Open Watcom's.
 - `kbd` gets E0-prefixed keys as `KBD_EXT` codes, drops the fake shifts around Print Screen, and swallows Pause's
   `E1 1D 45 E1 9D C5`. A key's make repeats while it is held.
-- The BIOS still sees every key, so `main` empties its buffer, or a full one beeps.
+- The BIOS still sees every key, so `main` empties its buffer, or a full one beeps. The editor reads names from scan codes
+  (US layout, like the piano), never from that buffer.
 - The BIOS tick count at `0040:006Ch` is 18.2 Hz: `/BENCH` resolution is about 55 ms in total, so judge it over its 200 redraws.
 - The stack is the linker default, 2 KB (`Stack size` in `build/RBSTUDIO.MAP`). Keep big arrays off it: static or far storage.
 

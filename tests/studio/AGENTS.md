@@ -16,7 +16,8 @@
 | `T_VOICE.C` | The OPL driver through `opl_sink`: the factory records, the 4-OP slots and bits, KSL and OL edges, octave shift, slot stealing, shutdown, tracing; detection on the real chip |
 | `T_AMIS.C` | `rebeep.c` against a fake resident ReBeep on `INT 2Dh`: the signature, traps off and on, refused, already off, another program, no state block |
 | `T_OPLKND.C` | Proves the OPL2 rerun: the OPL status port reads OPL3 on the default run and OPL2 on `/OPL2` |
-| `T_EDIT.C` | The patch list's scroll window (`list_scroll`), row hit-test (`list_item_at`) and override text for an 8-character name (`list_draw`) over a synthetic library |
+| `T_LSCRL.C` | The patch list's scroll window (`list_scroll`), row hit-test (`list_item_at`) and override text for an 8-character name (`list_draw`) over a synthetic library |
+| `T_EDIT.C` | The editor without drawing: value ranges and wrap, the Waveform limit by chip, the 4-OP variant from FM and AM, undo coalescing, the name, the piano and its releases, key events through the table, a bar's mouse values, PgUp/PgDn across folders |
 
 ## Rules
 

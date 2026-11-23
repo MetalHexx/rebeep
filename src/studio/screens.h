@@ -59,6 +59,10 @@ int list_item_at(const Library *lib, int top, int x, int y);
 /* The synth screen for the variant `e->n` of the patch in the editor, in the role table's colours. */
 void synth_draw(const Editor *e);
 
+/* What the cell (x, y) of the synth screen is, for a click: the control, the operator, the row, the bar with its extent.
+   It follows the layout synth_draw uses at the current variant. */
+void synth_hit(const Editor *e, int x, int y, SynthHit *h);
+
 /* Sample state for the reference screens: the fixed data (version 0.1.0, the sample detection, a log path of
    C:\REBEEP\RBSTUDIO.LOG, the sample patch list, patch 12 of 40 BRASS) that makes a dump comparable. sample_known says
    whether `screen` is one of the reference names this program can draw; sample_draw draws it into the back buffer. */
