@@ -107,6 +107,14 @@ static void note_failure(void)
     write_why = _doserrno == 19 ? DOS_WHY_PROTECTED : (_doserrno == 39 || _doserrno == 112) ? DOS_WHY_FULL : DOS_WHY_OTHER;
 }
 
+int dos_remove(const char *path)
+{
+    write_why = DOS_WHY_OTHER;
+    if (remove(path) == 0) return 0;
+    note_failure();
+    return -1;
+}
+
 int dos_make_dir(const char *path)
 {
     char buf[PATH_MAX_LEN];

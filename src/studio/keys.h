@@ -57,8 +57,8 @@ extern const int key_count;
 /* One line of the help page's key table. `col` 0 is the left column, 1 the right; a column's rows run top to bottom in
    this order. A HEADING shows `keys` as its title; a KEYS row shows `keys` and `text` and documents the bindings in
    `ids` (0-terminated; one row may cover several, as "Up Down" does); an INFO row shows `keys` and `text` with no binding
-   (Mouse, Z to M, Q to P, Digits, the second line of a wrapped text); a BLANK row is a gap. */
-enum { HR_HEADING, HR_KEYS, HR_INFO, HR_BLANK };
+   (Mouse, Z to M, Q to P, Digits, the second line of a wrapped text). */
+enum { HR_HEADING, HR_KEYS, HR_INFO };
 
 typedef struct {
     unsigned char col;

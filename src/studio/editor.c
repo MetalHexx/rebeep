@@ -140,7 +140,7 @@ void editor_op(Editor *e, int k)
     undo_break(&history);
     if (k < 0 || k >= e->n) return;
     e->cur = k;
-    if (e->fk >= P_COUNT) e->fk = e->lastP;
+    if (e->fk >= P_COUNT) editor_focus(e, e->lastP);
 }
 
 static int same_patch(const Patch *a, const Patch *b)
@@ -251,8 +251,8 @@ int editor_bar(Editor *e, int k, int key, int bx, int bw, int x, int repeat)
     int at = x < bx ? 0 : x >= bx + bw ? bw - 1 : x - bx;
     int span = bw > 1 ? bw - 1 : 1;
 
-    if (e->fk != key || e->cur != k) {
-        e->cur = k;
+    if (e->fk != key || (key != F_FB && e->cur != k)) {
+        if (key != F_FB) e->cur = k;
         editor_focus(e, key);
     }
     if (key == F_FB) {
@@ -498,6 +498,19 @@ int editor_event(Editor *e, unsigned event)
     return EA_NONE;
 }
 
+/* A second click on the focused Octave or Waveform: the next value, wrapping to 0 after the top. A Waveform already
+   above the chip's limit drops to 0 rather than rising. */
+static void click_step(Editor *e)
+{
+    Patch before = e->p;
+    int row = e->fk;
+    unsigned char *f = row == F_OCTAVE ? &e->p.octave : &voice_of(e)->op[e->cur].v[P_WAVE];
+    int max = row == F_OCTAVE || e->chip == 3 ? 7 : 3;
+
+    *f = (unsigned char)(*f >= max ? 0 : *f + 1);
+    commit(e, &before, row, 0);
+}
+
 int editor_press(Editor *e, const SynthHit *h, int x)
 {
     if (h->kind != SH_PIANO) e->msg[0] = '\0';
@@ -510,7 +523,13 @@ int editor_press(Editor *e, const SynthHit *h, int x)
         if (e->fk == F_VARIANT) editor_change(e, 1, 0);
         editor_focus(e, F_VARIANT);
         break;
-    case SH_OCTAVE: editor_focus(e, F_OCTAVE); break;
+    case SH_OCTAVE: {
+        int was = e->fk == F_OCTAVE;
+
+        editor_focus(e, F_OCTAVE);
+        if (was) click_step(e);
+        break;
+    }
     case SH_CONN:
         editor_focus(e, F_CONN);
         break;
@@ -526,6 +545,7 @@ int editor_press(Editor *e, const SynthHit *h, int x)
         e->cur = h->k;
         editor_focus(e, h->key);
         if (was && is_switch(h->key)) editor_change(e, voice_of(e)->op[h->k].v[h->key] ? -1 : 1, 0);
+        else if (was && h->key == P_WAVE) click_step(e);
         break;
     }
     case SH_BAR: editor_bar(e, h->k, h->key, h->bx, h->bw, x, 0); break;
@@ -659,7 +679,7 @@ int editor_save(Editor *e, Library *lib)
             editor_msg(e, "Nothing to save", R_TEXT);
             return 0;
         }
-        if (lib_user_path(lib, e->file, path, sizeof path) != 0 || remove(path) != 0) {
+        if (lib_user_path(lib, e->file, path, sizeof path) != 0 || dos_remove(path) != 0) {
             say_failed(e, "remove", e->file);
             return -1;
         }
@@ -704,7 +724,7 @@ static int go(Editor *e, const Library *lib, int where, char *err, unsigned errl
 
     err[0] = '\0';
     editor_release(e);
-    if (where == EL_LIST || where == EL_EXIT) return 1;
+    if (where == EL_LIST) return 1;
     if (total <= 0) return 0;
     i = (e->pos - 1 + (where == EL_NEXT ? 1 : -1) + total) % total;
     editor_load(e, lib, i, err, errlen);

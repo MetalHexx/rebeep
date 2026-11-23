@@ -116,7 +116,7 @@ static void keys_page(const char *detected, const char *log_path)
 
         if (r->kind == HR_HEADING) {
             scr_put(x, y, r->keys, role(R_WINDOWACCENT), SCR_KEEP);
-        } else if (r->kind != HR_BLANK) {
+        } else {
             scr_put(x, y, r->keys, text, SCR_KEEP);
             scr_put(x + TEXT_DX, y, r->text, text, SCR_KEEP);
         }

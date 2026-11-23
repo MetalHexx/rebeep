@@ -319,6 +319,16 @@ int main(void)
     t_checkl(file_ar(PATCHES "USER\\NEWNAME.RBP"), 8, "under the typed name");
     t_check(e.fk != F_NAME && e.saveas == 0, "the name row is left");
 
+    t_case("moving off the name row with Tab disarms Save As, so Esc goes back to the list");
+    fresh();
+    open_patch("HEXX\\SOLO");
+    tweak();
+    ctrl_key(SC_A);
+    t_check(e.saveas == 1, "Save As is armed");
+    key(SC_TAB);
+    t_check(e.fk != F_NAME && e.saveas == 0 && e.pend == 0, "Tab leaves the name row and disarms it");
+    t_checkl(key(SC_ESC), EA_LIST, "Esc steps back to the list");
+
     t_case("leaving a dirty patch asks first, with the question for each place");
     fresh();
     open_patch("FACTORY\\BELL");

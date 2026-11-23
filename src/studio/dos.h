@@ -36,7 +36,10 @@ long dos_read_file(const char *path, void *buf, unsigned max);
    with the old file untouched (a full or read-only disk, a locked file). The folder must exist. */
 int dos_save_file(const char *path, const void *data, unsigned len);
 
-/* Why the last dos_make_dir or dos_save_file failed. */
+/* Deletes the file at `path`. Returns 0, or -1 with dos_write_why set to the reason. */
+int dos_remove(const char *path);
+
+/* Why the last dos_make_dir, dos_save_file or dos_remove failed. */
 enum { DOS_WHY_OTHER, DOS_WHY_FULL, DOS_WHY_PROTECTED };
 int dos_write_why(void);
 

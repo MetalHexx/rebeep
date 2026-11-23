@@ -41,7 +41,7 @@ typedef struct {
 enum { EA_NONE, EA_LIST, EA_PREV, EA_NEXT, EA_SAVE, EA_SAVEAS, EA_RESET, EA_PICK };
 
 /* Where editor_leave goes: the list, the previous or next patch, or out of the program. */
-enum { EL_LIST, EL_PREV, EL_NEXT, EL_EXIT };
+enum { EL_LIST, EL_PREV, EL_NEXT };
 
 /* What a cell of the synth screen is, from synth_hit. `k` is an operator, `key` a P_* row (an F_* row for a bar of
    Feedback, or the piano key of SH_PIANO); a bar covers `bw` cells from column `bx`. */
@@ -114,7 +114,8 @@ void editor_redo(Editor *e);
    closes, the prompt moves its focus); Ctrl+A starts a Save As. Returns an EA_* for editor_act. */
 int editor_event(Editor *e, unsigned event);
 
-/* A click on the synth screen: focus, set or play what is under it (the Help control opens the help). Returns an EA_*. A
+/* A click on the synth screen: focus, set or play what is under it (the Help control opens the help). A second click on a
+   focused Variant, Connection, Octave, Waveform or switch changes it. Returns an EA_*. A
    SH_BAR press is followed by editor_bar while the button stays down. A SH_PIANO press is released with editor_key_up. */
 int editor_press(Editor *e, const SynthHit *h, int x);
 
@@ -142,7 +143,7 @@ int editor_save_as(Editor *e, Library *lib);
 int editor_reset(Editor *e, const Library *lib);
 
 /* Leaves the patch: to the list, to the previous or next one in list order (wrapping, on the 4-OP variant when the
-   chip is an OPL3), or out of the program (EL_EXIT, which like the list returns 1). A dirty patch does not go: the save
+   chip is an OPL3). A dirty patch does not go: the save
    prompt opens for `where` and 0 is returned (editor_act continues from its buttons). Returns 1 when the caller goes
    to the list, 0 when it stays in the editor (a failed load leaves the current patch with `err` set). */
 int editor_leave(Editor *e, const Library *lib, int where, char *err, unsigned errlen);

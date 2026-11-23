@@ -118,6 +118,7 @@ int main(void)
     int i;
     char err[80];
     SynthHit hit;
+    int x;
 
     t_case("init");
     t_checkl(editor_init(), 0, "undo history allocates");
@@ -424,6 +425,43 @@ int main(void)
     t_checkl(e.p.v2.op[0].v[P_DR], 15, "the drag ends at the maximum");
     editor_undo(&e);
     t_checkl(e.p.v2.op[0].v[P_DR], 0, "a click and the drag after it are one step");
+    synth_hit(&e, 66, 3, &hit);
+    t_checkl(hit.kind, SH_BAR, "the Feedback bar");
+    e.cur = 1;
+    editor_press(&e, &hit, hit.bx + hit.bw - 1);
+    t_check(e.p.v2.fb == 7 && e.cur == 1, "a click on it sets Feedback and keeps the selected operator");
+    for (x = 0; x < 79; x++) {
+        synth_hit(&e, x, 0, &hit);
+        if (hit.kind == SH_OCTAVE) break;
+    }
+    t_checkl(hit.kind, SH_OCTAVE, "the Octave control");
+    e.p.octave = 6;
+    editor_press(&e, &hit, x);
+    t_check(e.fk == F_OCTAVE && e.p.octave == 6, "a first click only focuses Octave");
+    editor_press(&e, &hit, x);
+    t_checkl(e.p.octave, 7, "a second click steps it");
+    editor_press(&e, &hit, x);
+    t_checkl(e.p.octave, 0, "and wraps from 7 to 0");
+    synth_hit(&e, 24, 13, &hit);
+    t_check(hit.kind == SH_CELL && hit.key == P_WAVE, "operator 1's Waveform cell");
+    e.p.v2.op[0].v[P_WAVE] = 6;
+    editor_press(&e, &hit, 24);
+    t_check(e.fk == P_WAVE && e.p.v2.op[0].v[P_WAVE] == 6, "a first click only focuses Waveform");
+    editor_press(&e, &hit, 24);
+    t_checkl(e.p.v2.op[0].v[P_WAVE], 7, "a second click steps it on an OPL3");
+    editor_press(&e, &hit, 24);
+    t_checkl(e.p.v2.op[0].v[P_WAVE], 0, "and wraps from 7 to 0");
+    fresh_chip(2);
+    open_base(2, 0);
+    e.p.v2.op[0].v[P_WAVE] = 3;
+    editor_press(&e, &hit, 24);
+    editor_press(&e, &hit, 24);
+    t_checkl(e.p.v2.op[0].v[P_WAVE], 0, "on an OPL2 it wraps from 3 to 0");
+    e.p.v2.op[0].v[P_WAVE] = 5;
+    editor_press(&e, &hit, 24);
+    t_checkl(e.p.v2.op[0].v[P_WAVE], 0, "a value above the limit goes down, never up");
+    fresh_chip(3);
+    open_base(3, 0);
     synth_hit(&e, 3 + 12, 24, &hit);
     t_check(hit.kind == SH_PIANO && hit.key == 12, "a piano key");
     synth_hit(&e, 74, 24, &hit);
