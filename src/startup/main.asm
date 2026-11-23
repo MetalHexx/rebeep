@@ -890,8 +890,9 @@ scan_letter:
         ret
 
 ; print_config: "<voice>, volume <n>." then "Ctrl+Alt+<x> toggles, ..." and the /L and /R
-; lines, from the RB_STATE at ES:BX. A patch is named: "patch USER\BELL"; the faithful voice
-; names the patch it still holds: "faithful voice (patch USER\BELL loaded)".
+; lines, from the RB_STATE at ES:BX. A patch is named: "patch USER\BELL", and "(4-OP)" when an
+; OPL3 plays its four-operator variant; the faithful voice names the patch it still holds:
+; "faithful voice (patch USER\BELL loaded)".
 print_config:
         push    ax
         push    dx
@@ -914,6 +915,12 @@ print_config:
         call    print
         lea     di, [bx + RBS_PATCH]
         call    print_asciz
+        test    byte [es:bx + RBS_FLAGS], RBS_F_OPL3
+        jz      .volume
+        test    byte [es:bx + RBS_PFLAGS], RBS_PF_4OP
+        jz      .volume
+        mov     dx, msg_4op
+        call    print
 .volume:
         mov     dx, msg_volume
         call    print
@@ -1045,6 +1052,7 @@ msg_faithful    db      "faithful voice$"
 msg_held_1      db      " (patch $"
 msg_held_2      db      " loaded)$"
 msg_patch       db      "patch $"
+msg_4op         db      " (4-OP)$"
 msg_volume      db      ", volume $"
 msg_keys_1      db      ".", 13, 10, "Ctrl+Alt+$"
 msg_keys_2      db      " toggles, Ctrl+Alt+$"

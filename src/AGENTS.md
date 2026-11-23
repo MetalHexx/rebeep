@@ -39,8 +39,8 @@
   is the module's segment. `interp.asm` and `opl.asm` preserve every register but their outputs.
 - `interp_sync` reports no event: if a tone was playing, call `opl_note_off`. Stack use: interpreter at most
   8 bytes, OPL target at most 16 (`T_OPL` checks). `opl_write` is the one path to the chip (`OPL_TEST_SINK`).
-- Each note on takes the other of channels 7 and 8; `opl_pitch` stays on its channel and never clears the key bit,
-  or a glide retriggers. OPL3's `C0h` needs the left/right bits. OPL2's faithful voice is a 2:1 FM approximation.
+- Each note on takes the other channel: 7 and 8, or a 4-OP voice's bank 1 pairs 0+3 and 1+4, keyed through the first channel. `opl_pitch` stays on its own and never clears the key bit, or a glide retriggers.
+  `opl_set_voice` latches the mode (`opl_four`) and keys the old channels off before `104h` changes: nothing else reads `RB_STATE`, which already holds the new block. OPL3's `C0h` needs the left/right bits.
 - A PIT control word never changes the current tone; the new mode and pitch apply when the count completes.
   Below 20 Hz (above `DIV_MAX`, or 0 = 65536) is `M_REST`, OPL keyed off, or `M_TONE` once `interp_low` is set (`/L:1`).
 - While the traps are off the OPL belongs to the game: no OPL or `61h` write, and uninstall skips
