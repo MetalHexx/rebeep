@@ -145,6 +145,67 @@
         }
       }
     },
+    "open-watcom": {
+      "version": "2026-11-01",
+      "description": "Open Watcom 2.0 snapshot 2026-11-01-Build: the C compiler and linker for the DOS studio (unpacked with the host's tar)",
+      "homepage": "https://github.com/open-watcom/open-watcom-v2",
+      "platforms": {
+        "win32-x64": {
+          "url": "https://github.com/open-watcom/open-watcom-v2/releases/download/2026-11-01-Build/ow-snapshot.tar.xz",
+          "sha256": "89e90b7544cf3ea4a38124ec4c104a5027f31101405d7115c3f833daa465bb48",
+          "sha256Source": "publisher",
+          "size": 150225124,
+          "archive": "tar.xz",
+          "extract": ["binnt64", "h", "lib286"],
+          "bin": "binnt64/wcl.exe"
+        },
+        "win32-arm64": {
+          "url": "https://github.com/open-watcom/open-watcom-v2/releases/download/2026-11-01-Build/ow-snapshot.tar.xz",
+          "sha256": "89e90b7544cf3ea4a38124ec4c104a5027f31101405d7115c3f833daa465bb48",
+          "sha256Source": "publisher",
+          "size": 150225124,
+          "archive": "tar.xz",
+          "extract": ["binnt64", "h", "lib286"],
+          "bin": "binnt64/wcl.exe"
+        },
+        "linux-x64": {
+          "url": "https://github.com/open-watcom/open-watcom-v2/releases/download/2026-11-01-Build/ow-snapshot.tar.xz",
+          "sha256": "89e90b7544cf3ea4a38124ec4c104a5027f31101405d7115c3f833daa465bb48",
+          "sha256Source": "publisher",
+          "size": 150225124,
+          "archive": "tar.xz",
+          "extract": ["binl64", "h", "lib286"],
+          "bin": "binl64/wcl"
+        },
+        "linux-arm64": {
+          "url": "https://github.com/open-watcom/open-watcom-v2/releases/download/2026-11-01-Build/ow-snapshot.tar.xz",
+          "sha256": "89e90b7544cf3ea4a38124ec4c104a5027f31101405d7115c3f833daa465bb48",
+          "sha256Source": "publisher",
+          "size": 150225124,
+          "archive": "tar.xz",
+          "extract": ["arml64", "h", "lib286"],
+          "bin": "arml64/wcl"
+        },
+        "darwin-x64": {
+          "url": "https://github.com/open-watcom/open-watcom-v2/releases/download/2026-11-01-Build/ow-snapshot.tar.xz",
+          "sha256": "89e90b7544cf3ea4a38124ec4c104a5027f31101405d7115c3f833daa465bb48",
+          "sha256Source": "publisher",
+          "size": 150225124,
+          "archive": "tar.xz",
+          "extract": ["bino64", "h", "lib286"],
+          "bin": "bino64/wcl"
+        },
+        "darwin-arm64": {
+          "url": "https://github.com/open-watcom/open-watcom-v2/releases/download/2026-11-01-Build/ow-snapshot.tar.xz",
+          "sha256": "89e90b7544cf3ea4a38124ec4c104a5027f31101405d7115c3f833daa465bb48",
+          "sha256Source": "publisher",
+          "size": 150225124,
+          "archive": "tar.xz",
+          "extract": ["armo64", "h", "lib286"],
+          "bin": "armo64/wcl"
+        }
+      }
+    },
     "dosbox-x": {
       "version": "2026.10.01",
       "description": "DOSBox-X, runs the DOS interpreter tests headless",

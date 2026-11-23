@@ -12,3 +12,9 @@ release/**/*.TXT text eol=crlf
 # Never touch binaries
 *.png binary
 *.jpg binary
+
+# Studio data files: never rewritten by git
+*.ANS binary
+*.RBP text eol=crlf
+*.CFG text eol=crlf
+tests/screens/*.scr text eol=lf

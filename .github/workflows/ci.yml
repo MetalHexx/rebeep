@@ -54,6 +54,9 @@ jobs:
       - name: Fetch NASM (pinned on Windows, system NASM elsewhere)
         run: node tools/rebeep.mjs tool fetch nasm
 
+      - name: Fetch Open Watcom (pinned snapshot, unpacked with the host's tar)
+        run: node tools/rebeep.mjs tool fetch open-watcom
+
       - name: Build
         run: node tools/rebeep.mjs build run
 

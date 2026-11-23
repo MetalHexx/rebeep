@@ -8,11 +8,11 @@
 |---|---|
 | `rebeep.mjs` · `commands/<noun>.mjs` | Entry point · one file per noun (`env tool media vm disk build test release version repo site`) |
 | `lib/cli` · `paths` · `log` · `fsx` | Spec, parsing, help, envelope · home and repo layout · output · atomic writes and swaps (use `fsx` for anything that replaces user files) |
-| `lib/manifest` · `download` · `zip` | Pinned tools (`resolveTool`), verified downloads, safe zip read/extract, `writeZip` |
+| `lib/manifest` · `download` · `zip` | Pinned tools (`resolveTool`), verified downloads, safe zip read/extract, `writeZip`. `tar.xz` tools unpack in `commands/tool` |
 | `lib/fat` | FAT images: FAT16 disks `buildImage`, FAT12 floppies `buildFloppy`, and `readImage`, `checkImage` for both |
 | `lib/release` · `lib/version` | Package tree, `CHANGES.TXT`, text checks · SemVer, changelog entries and rules, `checkVersions`, the bump's edit |
 | `lib/profiles` · `vmcfg` · `proc` | VM profiles, 86Box cfg rendering, launch and running-VM detection |
-| `lib/delivery` · `freedos` · `nasm` · `guard` | D: contents · scripted FreeDOS C: · assembling · payload guard |
+| `lib/delivery` · `freedos` · `nasm` · `watcom` · `guard` | D: contents · scripted FreeDOS C: · assembling · compiling C with Open Watcom (`format: "exe"` targets) · payload guard |
 | `lib/suites` · `commands/vmtest` | RESULT.TXT judging and suite discovery · the `vm` suite: probe header, probe D:, boot-and-wait loop |
 | `lib/site` · `siteserve` · `sitedev` · `sitecheck` | The product page: build and release stamp · `/rebeep/` preview server · its live-reload script · `site check` |
 | `test/` | `*.test.mjs`; shared fixtures in `helpers.mjs`, `fake86box.mjs` (a stand-in for 86Box) and `serve.mjs` (a local HTTP server for downloads) |
@@ -40,10 +40,11 @@
 - `node --test` treats arguments as globs: quote them (`"tools/test/**/*.test.mjs"`).
 - Tests use a temp `REBEEP_HOME`, never the real `~/.rebeep`.
 - Game zips are untrusted: read in memory, written into images, never extracted.
+- `tar.xz` tools unpack with the host `tar`; on Windows that is `%SystemRoot%\System32\tar.exe` by absolute path (Git Bash's GNU `tar` reads `C:\...` as `host:file`).
 - 86Box holds its disk images open; check the VM isn't running (`lib/proc`) before writing one.
 - Windows Node can't spawn a `.cmd` without a shell. Tests fake tools with `process.execPath` and
   the `*_PREFIX_ARGS` overrides. Never call `test run --suite tools` from a test.
-- **Overrides:** `REBEEP_HOME`, `REBEEP_MANIFEST`, `REBEEP_REPO_ROOT`, `REBEEP_NASM`,
+- **Overrides:** `REBEEP_HOME`, `REBEEP_MANIFEST`, `REBEEP_REPO_ROOT`, `REBEEP_NASM`, `REBEEP_WATCOM`,
   `REBEEP_DOSBOX`, `REBEEP_86BOX` (absolute paths; each with a `*_PREFIX_ARGS` JSON array),
   `REBEEP_FREEDOS_BUILDER`, `REBEEP_GITHUB_API` (the release lookup's base URL).
 
@@ -56,5 +57,4 @@ node tools/rebeep.mjs test run --suite tools
 
 ## Related
 
-- [env/AGENTS.md](../env/AGENTS.md): what the CLI builds
-- [.claude/skills/rebeep-dev/references/cli.md](../.claude/skills/rebeep-dev/references/cli.md)
+- [env/AGENTS.md](../env/AGENTS.md): what the CLI builds · [cli.md](../.claude/skills/rebeep-dev/references/cli.md)

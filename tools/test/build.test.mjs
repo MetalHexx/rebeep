@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { after, before, describe, test } from 'node:test';
-import { repoLayout } from '../lib/paths.mjs';
+import { layout, repoLayout } from '../lib/paths.mjs';
 import { makeTempDir, removeDir, runRebeep } from './helpers.mjs';
 
 const SOURCE = 'start: db "fake nasm source", 13, 10\n';
@@ -29,6 +29,36 @@ if (process.env.FAKE_NASM_WARN) console.error(process.env.FAKE_NASM_WARN);
 fs.copyFileSync(args[args.length - 1], args[args.indexOf('-o') + 1]);
 `;
 
+/** A fake wcl: logs its arguments and environment, prints a banner with no arguments, can warn or fail, and writes `-fe=` as the output. */
+const FAKE_WCL = `import fs from 'node:fs';
+const args = process.argv.slice(2);
+if (args.length === 0) {
+  console.log('Open Watcom C/C++ x86 16-bit Compile and Link Utility\\nVersion 2.0 beta Nov  1 2026 07:09:50 (64-bit)');
+  process.exit(1);
+}
+if (process.env.FAKE_WCL_LOG) {
+  const env = { WATCOM: process.env.WATCOM, INCLUDE: process.env.INCLUDE, PATH: process.env.PATH };
+  fs.appendFileSync(process.env.FAKE_WCL_LOG, JSON.stringify({ args, env, cwd: process.cwd() }) + '\\n');
+}
+if (process.env.FAKE_WCL_FAIL) {
+  console.error(process.env.FAKE_WCL_FAIL);
+  process.exit(1);
+}
+if (process.env.FAKE_WCL_WARN) console.error(process.env.FAKE_WCL_WARN);
+fs.writeFileSync(args.find((a) => a.startsWith('-fe=')).slice(4), 'MZ fake exe');
+`;
+
+const STUDIO_TARGET = { name: 'RBSTUDIO.EXE', source: 'studio', format: 'exe', deploy: 'REBEEP' };
+
+/** A repo with the NASM target and a C target over `src/studio`, which holds two sources, a header and a text file. */
+function makeStudioRepo({ studio = STUDIO_TARGET, version } = {}) {
+  const root = makeRepo({ targets: { targets: [...DEFAULT_TARGETS.targets, studio] }, version });
+  const dir = path.join(root, 'src', 'studio');
+  fs.mkdirSync(dir, { recursive: true });
+  for (const file of ['video.c', 'main.c', 'dos.h', 'notes.txt']) fs.writeFileSync(path.join(dir, file), '/* source */\n');
+  return root;
+}
+
 function makeRepo({ targets = DEFAULT_TARGETS, source = SOURCE, version = '0.1.0' } = {}) {
   const root = makeTempDir('rebeep-build-');
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'rebeep', version }));
@@ -51,17 +81,28 @@ function nasmOnPath() {
   }
 }
 
+/** `REBEEP_TEST_REAL_HOME` when Open Watcom is fetched in it, else null. Used only for the optional real-compiler check. */
+function realWatcomHome() {
+  const home = process.env.REBEEP_TEST_REAL_HOME;
+  if (!home) return null;
+  const { version } = JSON.parse(fs.readFileSync(repoLayout().manifest, 'utf8')).tools['open-watcom'];
+  return fs.existsSync(layout(home).tool('open-watcom', version)) ? home : null;
+}
+
 const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 
 describe('build run and build clean', () => {
   let fakeDir;
   let script;
+  let wclScript;
   let logCount = 0;
 
   before(() => {
     fakeDir = makeTempDir('rebeep-fake-nasm-');
     script = path.join(fakeDir, 'fake-nasm.mjs');
     fs.writeFileSync(script, FAKE_NASM);
+    wclScript = path.join(fakeDir, 'fake-wcl.mjs');
+    fs.writeFileSync(wclScript, FAKE_WCL);
   });
 
   after(() => removeDir(fakeDir));
@@ -77,11 +118,20 @@ describe('build run and build clean', () => {
           .filter((args) => args[0] !== '-v')
       : [];
 
+  /** What the fake wcl was run with, one entry per compile (the banner probe logs nothing). */
+  const readWclCalls = (log) =>
+    fs.existsSync(`${log}.wcl`)
+      ? fs.readFileSync(`${log}.wcl`, 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line))
+      : [];
+
   const fakeEnv = (root, log, extra = {}) => ({
     REBEEP_REPO_ROOT: root,
     REBEEP_NASM: process.execPath,
     REBEEP_NASM_PREFIX_ARGS: JSON.stringify([script]),
     FAKE_NASM_LOG: log,
+    REBEEP_WATCOM: process.execPath,
+    REBEEP_WATCOM_PREFIX_ARGS: JSON.stringify([wclScript]),
+    FAKE_WCL_LOG: `${log}.wcl`,
     ...extra,
   });
 
@@ -303,6 +353,126 @@ describe('build run and build clean', () => {
     removeDir(root);
   });
 
+  test('a C target is compiled with the DOS flags, its sorted sources, and the generated version header', () => {
+    const root = makeStudioRepo({ version: '12.3.45-beta.1' });
+    const { log, result } = run(root, ['build', 'run']);
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(readCalls(log).length, 1, 'only the bin target goes to NASM');
+
+    const [call] = readWclCalls(log);
+    for (const flag of ['-bt=dos', '-mm', '-0']) assert.ok(call.args.includes(flag), flag);
+    assert.deepEqual(
+      call.args.filter((a) => a.startsWith('-i=')),
+      ['-i=gen'],
+      'the version header folder only: the source folder holds a dos.h that would shadow <dos.h>',
+    );
+    assert.deepEqual(call.args.slice(-2), [path.join('..', 'src', 'studio', 'main.c'), path.join('..', 'src', 'studio', 'video.c')]);
+    assert.ok(call.args.includes('-fe=RBSTUDIO.EXE'));
+    assert.equal(path.basename(call.cwd), 'build');
+    assert.ok(!call.args.some((a) => a.includes(root)), 'no absolute repo path reaches wcl, so a space in it cannot break the command line');
+
+    const header = fs.readFileSync(path.join(root, 'build', 'gen', 'version.h'), 'utf8');
+    assert.match(header, /^#define REBEEP_VERSION "12\.3\.45-beta\.1"$/m);
+    assert.match(header, /^#define REBEEP_VER_MAJOR 12$/m);
+    assert.match(header, /^#define REBEEP_VER_MINOR 3$/m);
+    assert.match(header, /^#define REBEEP_VER_PATCH 45$/m);
+    removeDir(root);
+  });
+
+  test('the compiler runs with WATCOM, INCLUDE and its bin folder first on PATH', () => {
+    const root = makeStudioRepo();
+    const { log, result } = run(root, ['build', 'run']);
+    assert.equal(result.code, 0, result.stderr);
+    const { env } = readWclCalls(log)[0];
+    const watcomRoot = path.dirname(path.dirname(process.execPath));
+    assert.equal(env.WATCOM, watcomRoot);
+    assert.equal(env.INCLUDE, path.join(watcomRoot, 'h'));
+    assert.equal(env.PATH.split(path.delimiter)[0], path.dirname(process.execPath));
+    removeDir(root);
+  });
+
+  test('build.json records the C target like a NASM one, and the compiler beside nasm', () => {
+    const root = makeStudioRepo();
+    assert.equal(run(root, ['build', 'run']).result.code, 0);
+    const built = JSON.parse(fs.readFileSync(path.join(root, 'build', 'build.json'), 'utf8'));
+    const output = fs.readFileSync(path.join(root, 'build', 'RBSTUDIO.EXE'));
+    assert.deepEqual(built.compiler, { bin: process.execPath, version: '2.0 beta Nov  1 2026 07:09:50 (64-bit)' });
+    assert.deepEqual(built.targets[1], {
+      name: 'RBSTUDIO.EXE',
+      size: output.length,
+      sha256: sha256(output),
+      deploy: 'REBEEP',
+      autoload: false,
+    });
+    removeDir(root);
+
+    const plain = makeRepo();
+    assert.equal(run(plain, ['build', 'run']).result.code, 0);
+    assert.equal('compiler' in JSON.parse(fs.readFileSync(path.join(plain, 'build', 'build.json'), 'utf8')), false);
+    removeDir(plain);
+  });
+
+  test('a C target with a bad name, no folder, no .c files or defines fails before the compiler runs', () => {
+    const cases = [
+      [{ ...STUDIO_TARGET, name: 'rbstudio.exe' }, /rbstudio\.exe/, () => {}],
+      [{ ...STUDIO_TARGET, source: 'nowhere' }, /source folder .*nowhere.* does not exist/, () => {}],
+      [
+        STUDIO_TARGET,
+        /has no \.c files/,
+        (root) => {
+          for (const file of ['main.c', 'video.c']) fs.rmSync(path.join(root, 'src', 'studio', file));
+        },
+      ],
+      [{ ...STUDIO_TARGET, defines: { X: 1 } }, /defines is only for "bin" targets/, () => {}],
+      [{ ...STUDIO_TARGET, format: 'elf' }, /format must be "bin" or "exe"/, () => {}],
+    ];
+    for (const [studio, message, prepare] of cases) {
+      const root = makeStudioRepo({ studio });
+      prepare(root);
+      const { log, result } = run(root, ['build', 'run']);
+      assert.equal(result.code, 1, JSON.stringify(studio));
+      assert.match(result.stderr, message);
+      assert.deepEqual(readWclCalls(log), []);
+      assert.deepEqual(readCalls(log), []);
+      removeDir(root);
+    }
+  });
+
+  test("a wcl failure carries wcl's message and removes build.json; its stderr on success is logged as warnings", () => {
+    const root = makeStudioRepo();
+    const warned = run(root, ['build', 'run'], { env: { FAKE_WCL_WARN: 'main.c(3): Warning! W202: unused' } });
+    assert.equal(warned.result.code, 0, warned.result.stderr);
+    assert.match(warned.result.stderr, /warning: wcl \(RBSTUDIO\.EXE\): main\.c\(3\): Warning! W202: unused/);
+    assert.ok(fs.existsSync(path.join(root, 'build', 'build.json')));
+
+    const { result } = run(root, ['build', 'run'], { env: { FAKE_WCL_FAIL: 'main.c(7): Error! E1009: Expecting a semicolon' } });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /wcl failed building RBSTUDIO\.EXE/);
+    assert.match(result.stderr, /E1009: Expecting a semicolon/);
+    assert.equal(fs.existsSync(path.join(root, 'build', 'build.json')), false);
+    removeDir(root);
+  });
+
+  test('a C target without a fetched compiler says to fetch it; REBEEP_WATCOM must be absolute', () => {
+    const root = makeStudioRepo();
+    const home = makeTempDir('rebeep-home-');
+    try {
+      const unfetched = run(root, ['build', 'run'], {
+        env: { REBEEP_WATCOM: '', REBEEP_WATCOM_PREFIX_ARGS: '', REBEEP_HOME: home, REBEEP_MANIFEST: repoLayout().manifest },
+      });
+      assert.equal(unfetched.result.code, 1);
+      assert.match(unfetched.result.stderr, /open-watcom .* is not fetched/);
+      assert.match(unfetched.result.stderr, /rebeep tool fetch open-watcom/);
+
+      const relative = run(root, ['build', 'run'], { env: { REBEEP_WATCOM: 'wcl' } });
+      assert.equal(relative.result.code, 1);
+      assert.match(relative.result.stderr, /REBEEP_WATCOM must be an absolute path/);
+    } finally {
+      removeDir(home);
+      removeDir(root);
+    }
+  });
+
   test('--deploy runs disk deploy through the registry, renders it, and returns its result', () => {
     const root = makeRepo();
     const home = makeTempDir('rebeep-home-');
@@ -324,6 +494,23 @@ describe('build run and build clean', () => {
       removeDir(home);
       removeDir(root);
     }
+  });
+
+  test('compiles the real src/studio with the fetched Open Watcom into a DOS EXE', {
+    skip: realWatcomHome() ? false : 'no fetched Open Watcom (set REBEEP_TEST_REAL_HOME to a home that has it)',
+  }, () => {
+    const root = makeStudioRepo({ studio: STUDIO_TARGET });
+    fs.rmSync(path.join(root, 'src', 'studio'), { recursive: true });
+    fs.cpSync(path.join(repoLayout().src, 'studio'), path.join(root, 'src', 'studio'), { recursive: true });
+    const { result } = run(root, ['build', 'run'], {
+      env: { REBEEP_WATCOM: '', REBEEP_WATCOM_PREFIX_ARGS: '', REBEEP_HOME: realWatcomHome(), REBEEP_MANIFEST: repoLayout().manifest },
+    });
+    assert.equal(result.code, 0, result.stderr);
+    assert.doesNotMatch(result.stderr, /warning: wcl/);
+    const exe = fs.readFileSync(path.join(root, 'build', 'RBSTUDIO.EXE'));
+    assert.equal(exe.subarray(0, 2).toString('latin1'), 'MZ');
+    assert.ok(exe.length > 4000, 'more than a stub');
+    removeDir(root);
   });
 
   test('build clean removes build/ and succeeds when it is already gone', () => {

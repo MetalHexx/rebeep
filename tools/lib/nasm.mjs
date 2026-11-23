@@ -84,7 +84,7 @@ export function runTool({ bin, prefix }, args, opts = {}) {
 const dirArg = (dir) => path.join(dir, path.sep);
 
 /** The `major.minor.patch` numbers at the start of a version such as `0.1.0` or `1.2.3-beta.1`. */
-function versionParts(version) {
+export function versionParts(version) {
   const match = /^(\d+)\.(\d+)\.(\d+)/.exec(version);
   if (!match) throw new CliError(`version '${version}' must start with major.minor.patch (for example 0.1.0)`);
   return { major: match[1], minor: match[2], patch: match[3] };

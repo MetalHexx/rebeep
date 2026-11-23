@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { after, afterEach, before, beforeEach, describe, test } from 'node:test';
@@ -15,6 +16,22 @@ const mainZip = makeZip([
   { name: 'pkg/data/two.txt', data: 'two', method: 8 },
 ]);
 const extraZip = makeZip([{ name: 'x.txt', data: 'extra' }]);
+
+const TAR = process.platform === 'win32' ? path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
+
+/** True when the host tar can write a .tar.xz, which the tar.xz fixtures need. */
+function tarCanWriteXz() {
+  const dir = makeTempDir('rebeep-tarprobe-');
+  try {
+    fs.writeFileSync(path.join(dir, 'a.txt'), 'a');
+    execFileSync(TAR, ['-cJf', path.join(dir, 'a.tar.xz'), '-C', dir, 'a.txt'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    removeDir(dir);
+  }
+}
 
 let server;
 let tmp;
@@ -261,5 +278,80 @@ exit 3`);
     } finally {
       await evil.close();
     }
+  });
+});
+
+describe('tar.xz tools', { skip: !tarCanWriteXz() && 'the host tar cannot write xz archives' }, () => {
+  const makeTree = (files, name) => {
+    const dir = path.join(tmp, name);
+    for (const [rel, data] of Object.entries(files)) {
+      fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+      fs.writeFileSync(path.join(dir, rel), data);
+    }
+    return dir;
+  };
+  const archive = (args) => {
+    const out = path.join(tmp, 'fixture.tar.xz');
+    execFileSync(TAR, ['-cJf', out, ...args]);
+    return fs.readFileSync(out);
+  };
+  const manifestFor = (base, bytes, extract) => ({
+    schema: 1,
+    tools: {
+      ow: {
+        version: '1.0',
+        description: 'tar.xz tool',
+        platforms: { any: { url: `${base}/ow.tar.xz`, sha256: sha256Buffer(bytes), archive: 'tar.xz', extract, bin: 'bin/wcl' } },
+      },
+    },
+  });
+  /** Serves `bytes` as the one tool's archive and fetches it. */
+  const fetchOw = async (bytes, extract = ['bin', 'h', 'lib286']) => {
+    const host = await serve({ '/ow.tar.xz': bytes });
+    try {
+      useManifest(manifestFor(host.base, bytes, extract));
+      return await rebeep('tool', 'fetch', 'ow');
+    } finally {
+      await host.close();
+    }
+  };
+
+  test('unpacks only the folders the manifest names, records them, and verifies', async () => {
+    const tree = makeTree(
+      { 'bin/wcl': 'compiler', 'h/stdio.h': 'header', 'lib286/clibm.lib': 'library', 'docs/manual.txt': 'not needed' },
+      'good',
+    );
+    const result = await fetchOw(archive(['-C', tree, '.']));
+    assert.equal(result.code, 0, result.stderr);
+
+    const dir = toolDir('ow', '1.0');
+    assert.equal(fs.readFileSync(path.join(dir, 'bin', 'wcl'), 'utf8'), 'compiler');
+    assert.equal(fs.existsSync(path.join(dir, 'docs')), false);
+    const record = JSON.parse(fs.readFileSync(path.join(dir, '.rebeep-tool.json'), 'utf8'));
+    assert.deepEqual(Object.keys(record.files).sort(), ['bin/wcl', 'h/stdio.h', 'lib286/clibm.lib']);
+    assert.equal((await rebeep('tool', 'verify', 'ow')).code, 0);
+  });
+
+  test('an entry that would escape the tool folder is refused and nothing is installed', async () => {
+    makeTree({ 'evil.txt': 'evil' }, 'hostile');
+    makeTree({ 'bin/wcl': 'compiler' }, 'hostile/inner');
+    const result = await fetchOw(archive(['-P', '-C', path.join(tmp, 'hostile', 'inner'), 'bin', '../evil.txt']));
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /unsafe zip entry name "\.\.\/evil\.txt"/);
+    assert.equal(fs.existsSync(path.join(toolDir('ow', '1.0'), '.rebeep-tool.json')), false);
+    assert.equal(fs.existsSync(path.join(path.dirname(toolDir('ow', '1.0')), 'evil.txt')), false);
+  });
+
+  test('a folder the archive lacks is an error', async () => {
+    const result = await fetchOw(archive(['-C', makeTree({ 'bin/wcl': 'compiler' }, 'thin'), '.']), ['bin', 'lib286']);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /has no 'lib286' folder/);
+  });
+
+  test('an archive the tar cannot read stops the fetch and names the tar that ran', async () => {
+    const result = await fetchOw(Buffer.from('this is not an xz archive'));
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /tar.* cannot read ow\.tar\.xz/);
+    assert.equal(fs.existsSync(toolDir('ow', '1.0')), false);
   });
 });

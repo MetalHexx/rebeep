@@ -33,6 +33,12 @@
       "root": "tests",
       "format": "bin",
       "deploy": "REBEEP"
+    },
+    {
+      "name": "RBSTUDIO.EXE",
+      "source": "studio",
+      "format": "exe",
+      "deploy": "REBEEP"
     }
   ]
 }

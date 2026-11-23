@@ -1,12 +1,12 @@
 # src
 
-> ReBeep's NASM source: the resident TSR, its startup code, the speaker interpreter and the OPL target.
+> ReBeep's NASM source (the resident TSR, its startup code, the speaker interpreter, the OPL target) and the C studio.
 
 ## What's here
 
 | Path | Role |
 |---|---|
-| `targets.json` | What `rebeep build run` assembles: name, source, format, optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it), `defines` (extra NASM `-D` names: `REBEEP_TRACE` builds `REBEEPD.COM`, dev-only, never packaged; `REBEEP.COM` is unchanged by it) |
+| `targets.json` | What `rebeep build run` builds: name, source, `format` (`bin` = one NASM file, `exe` = a folder of C files built with Open Watcom), optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it), `defines` (extra NASM `-D` names: `REBEEP_TRACE` builds `REBEEPD.COM`, dev-only, never packaged; `REBEEP.COM` is unchanged by it) |
 | `rebeep.asm` | `REBEEP.COM`: the resident part, then `resident_end`, then the startup part |
 | `resident/` | `data.asm`: `RB_STATE`, saved vectors, the private stack. `amis.asm`: the `INT 2Dh` handler and uninstall |
 | `capture/` | `trap.asm`: QPI trap install and remove, the callback, the port semantics (masking, read view, OPL events). `trace.asm`: REBEEPD's log |
@@ -14,6 +14,7 @@
 | `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
 | `startup/` | `main.asm`: options, checks, load, change, unload, messages. `dump.asm`: `REBEEPD /D`. Freed when going resident |
 | `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [exitcode.inc](include/exitcode.inc): the exit codes. `trace.inc`: REBEEPD's record. None is restated elsewhere |
+| `studio/` | `RBSTUDIO.EXE`, the tracker studio, in C. Its rules: [studio/AGENTS.md](studio/AGENTS.md) |
 | `diag/` | `qpichk.asm` → `QPICHK.COM`, reports whether QPIEMU is up (run by `BOOT.BAT`). `fdboot.asm` → `FDBOOT.BIN`, the release floppy's boot sector: hands the boot to C:, asks for a key only when C: has none |
 
 ## Rules
@@ -27,8 +28,8 @@
   high (`10`), so it never steps; `/R:0` holds bit 1 in every mode. `IN 61h` returns the game's bits 0-1; a change re-issues `61h`.
 - The callback saves every register: QPIEMU restores only `ECX`, `EDX` and the flags. It pushes nothing on the caller's stack, which can be a small DOS one a game's interrupt landed on; it switches first (RBTEST `stack-footprint`).
 - `engine/` assembles under `CPU 8086`; only `capture/` and `startup/` may use 386 (the CPU check must run on any CPU).
-- NASM 3.02 and ≥ 2.16. Output names are 8.3, uppercase. A new build target goes in `targets.json`.
-- The build defines `REBEEP_VERSION` and `REBEEP_VER_MAJOR/MINOR/PATCH`; `rebeep.asm` stops without them.
+- NASM 3.02 and ≥ 2.16. Output names are 8.3, uppercase. A new build target goes in `targets.json`. The build defines
+  `REBEEP_VERSION` and `REBEEP_VER_MAJOR/MINOR/PATCH` (`-D` for NASM, a generated `version.h` for C); `rebeep.asm` stops without them.
 - **Manually verified only** (the VM can't produce them): CPU below 386 (exit 2), no OPL (4), speaker ports
   already trapped (5), a refused `/ON`. Each is its own short routine: `check_cpu`, `opl_detect`, `capture_install`.
 
@@ -44,8 +45,7 @@
   Below 20 Hz (above `DIV_MAX`, or 0 = 65536) is `M_REST`, OPL keyed off, or `M_TONE` once `interp_low` is set (`/L:1`).
 - While the traps are off the OPL belongs to the game: no OPL or `61h` write, and uninstall skips
   `opl_shutdown`. The hotkey then only updates `RB_STATE`. `/OFF` first undoes any masking; `/ON` resyncs.
-- A command-line change writes only the fields it names. Defaults apply on a plain load alone.
-- NASM rejects an out-of-range short jump under `cpu 8086`; keep branches local. DOS `09h` returns `AL = '$'`.
+- A command-line change writes only the fields it names; defaults apply on a plain load alone. NASM rejects an out-of-range short jump under `cpu 8086`: keep branches local. DOS `09h` returns `AL = '$'`.
 
 ## Run / test
 

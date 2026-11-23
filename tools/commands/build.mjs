@@ -3,11 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { CliError } from '../lib/cli.mjs';
 import { assemble, nasmVersion, resolveBinary } from '../lib/nasm.mjs';
+import { compileExe, resolveWatcom, watcomVersion } from '../lib/watcom.mjs';
 
 const NAME_83 = /^[A-Z0-9_]{1,8}\.[A-Z0-9_]{1,3}$/;
 const DIR_83 = /^[A-Z0-9_]{1,8}$/;
 const DEFINE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const ROOTS = ['src', 'tests'];
+const FORMATS = ['bin', 'exe'];
 
 const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
@@ -17,8 +19,9 @@ export function readPackageVersion(repo) {
 
 /**
  * Validates `targets.json` and returns its targets with defaults filled in. `root` (`src`, the
- * default, or `tests`) is the repo folder the source is resolved under. `autoload` (default false)
- * marks the target `BOOT.BAT` loads at boot; the delivery writes the flag file for it.
+ * default, or `tests`) is the repo folder the source is resolved under. `format` `bin` is one NASM
+ * source file; `exe` is a folder of C files compiled and linked together. `autoload` (default
+ * false) marks the target `BOOT.BAT` loads at boot; the delivery writes the flag file for it.
  */
 function validateTargets(doc, file) {
   const fail = (message) => {
@@ -47,7 +50,7 @@ function validateTargets(doc, file) {
     if (t.root !== undefined && !ROOTS.includes(t.root)) {
       fail(`${where}.root must be one of ${ROOTS.map((r) => `"${r}"`).join(', ')}`);
     }
-    if (t.format !== 'bin') fail(`${where}.format must be "bin"`);
+    if (!FORMATS.includes(t.format)) fail(`${where}.format must be "bin" or "exe"`);
     if (t.deploy !== undefined && (typeof t.deploy !== 'string' || !DIR_83.test(t.deploy))) {
       fail(`${where}.deploy must be an 8.3 upper-case DOS folder name`);
     }
@@ -56,6 +59,7 @@ function validateTargets(doc, file) {
     }
     const defines = t.defines ?? {};
     if (!isPlainObject(defines)) fail(`${where}.defines must be an object`);
+    if (t.format === 'exe' && Object.keys(defines).length) fail(`${where}.defines is only for "bin" targets`);
     for (const [key, value] of Object.entries(defines)) {
       if (!DEFINE_NAME.test(key)) fail(`${where}.defines has an invalid name '${key}'`);
       if (typeof value !== 'string' && typeof value !== 'number') {
@@ -66,6 +70,7 @@ function validateTargets(doc, file) {
       name: t.name,
       source: t.source,
       root: t.root ?? 'src',
+      format: t.format,
       deploy: t.deploy ?? null,
       autoload: t.autoload ?? false,
       defines,
@@ -81,6 +86,20 @@ function loadTargets(repo) {
     throw new CliError(`cannot read ${repo.targets}: ${err.message}`);
   }
   return validateTargets(doc, repo.targets);
+}
+
+/** A C target's `*.c` files, sorted. Throws if the source folder is missing or has none. */
+function cSources(repo, target) {
+  const dir = path.join(repo[target.root], target.source);
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    throw new CliError(`${target.name}: source folder ${dir} does not exist`);
+  }
+  const names = entries.filter((e) => e.isFile() && /\.c$/i.test(e.name)).map((e) => e.name).sort();
+  if (names.length === 0) throw new CliError(`${target.name}: ${dir} has no .c files`);
+  return names.map((name) => path.join(dir, name));
 }
 
 const sha256 = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
@@ -102,25 +121,47 @@ async function buildRun(ctx) {
   const version = readPackageVersion(repo);
   const nasm = await resolveBinary(ctx, 'nasm', 'REBEEP_NASM');
   const nasmVer = await nasmVersion(nasm);
+  const cTargets = new Map(targets.filter((t) => t.format === 'exe').map((t) => [t.name, cSources(repo, t)]));
+  const watcom = cTargets.size ? await resolveWatcom(ctx) : null;
+  const compiler = watcom ? { bin: watcom.bin, version: await watcomVersion(watcom) } : undefined;
   fs.mkdirSync(repo.build, { recursive: true });
 
   const built = [];
   for (const target of targets) {
     const stem = target.name.slice(0, target.name.lastIndexOf('.'));
     const output = path.join(repo.build, target.name);
-    const source = path.join(repo[target.root], target.source);
-    const includes = [...new Set([path.dirname(source), repo.src, path.join(repo.src, 'include')])];
-    ctx.log.step(`Assembling ${target.name}`);
-    const stderr = await assemble(nasm, {
-      version,
-      includes,
-      defines: target.defines,
-      listing: path.join(repo.build, `${stem}.LST`),
-      output,
-      source,
-    });
+    let stderr;
+    let tool;
+    if (target.format === 'exe') {
+      const sources = cTargets.get(target.name);
+      ctx.log.step(`Compiling ${target.name}`);
+      tool = 'wcl';
+      // No include folder: quoted includes resolve beside the including file, and the source folder
+      // holds a dos.h that would shadow <dos.h> on an include path.
+      stderr = await compileExe(watcom, {
+        version,
+        sources,
+        includes: [],
+        output,
+        objDir: path.join(repo.build, 'obj', stem),
+        mapFile: path.join(repo.build, `${stem}.MAP`),
+      });
+    } else {
+      const source = path.join(repo[target.root], target.source);
+      const includes = [...new Set([path.dirname(source), repo.src, path.join(repo.src, 'include')])];
+      ctx.log.step(`Assembling ${target.name}`);
+      tool = 'nasm';
+      stderr = await assemble(nasm, {
+        version,
+        includes,
+        defines: target.defines,
+        listing: path.join(repo.build, `${stem}.LST`),
+        output,
+        source,
+      });
+    }
     for (const line of stderr.split(/\r?\n/).filter((l) => l.trim())) {
-      ctx.log.warn(`nasm (${target.name}): ${line.trim()}`);
+      ctx.log.warn(`${tool} (${target.name}): ${line.trim()}`);
     }
     const size = fs.statSync(output).size;
     ctx.log.ok(`${target.name}: ${size} bytes`);
@@ -136,6 +177,7 @@ async function buildRun(ctx) {
   const summary = {
     builtAt: new Date().toISOString(),
     nasm: { bin: nasm.bin, version: nasmVer },
+    compiler,
     targets: built,
   };
   fs.writeFileSync(path.join(repo.build, 'build.json'), `${JSON.stringify(summary, null, 2)}\n`);
@@ -146,11 +188,11 @@ async function buildRun(ctx) {
 
 export default {
   name: 'build',
-  summary: 'Assemble ReBeep',
+  summary: 'Assemble and compile ReBeep',
   verbs: [
     {
       name: 'run',
-      summary: 'Assemble every target in src/targets.json',
+      summary: 'Build every target in src/targets.json',
       args: [],
       options: [{ name: 'deploy', type: 'boolean', description: 'Then run disk deploy' }],
       destructive: false,

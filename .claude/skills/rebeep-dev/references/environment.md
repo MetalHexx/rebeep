@@ -7,6 +7,7 @@ The environment home is `~/.rebeep` (override with `REBEEP_HOME` or `--home`).
 | Is the host ready? | `rebeep env check` |
 | What's installed and running? | `rebeep env status` |
 | Fetch tools, create VMs, deploy D: | `rebeep env setup` |
+| Fetch only the C compiler (Open Watcom, unpacked with the host `tar`) | `rebeep tool fetch open-watcom` |
 | Bring your own MS-DOS 6.22 | `rebeep media add msdos622 <folder with 3 .ima>` |
 | Bring your own game | `rebeep media add game <zip> --name <NAME>` |
 | Every VM back to its baseline | `rebeep env reset --preview`, then `--yes` |

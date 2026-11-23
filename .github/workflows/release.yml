@@ -66,6 +66,10 @@ jobs:
           TAG: ${{ steps.decide.outputs.tag }}
         run: node tools/rebeep.mjs version check --release --tag "$TAG"
 
+      - name: Fetch Open Watcom
+        if: steps.decide.outputs.release == 'true'
+        run: node tools/rebeep.mjs tool fetch open-watcom
+
       - name: Create the package
         if: steps.decide.outputs.release == 'true'
         run: node tools/rebeep.mjs release create

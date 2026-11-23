@@ -17,7 +17,7 @@ everything to vanilla.
 
 | Folder | What it holds | Guide |
 |---|---|---|
-| `src/` | ReBeep's NASM source and its build targets | [src/AGENTS.md](src/AGENTS.md) |
+| `src/` | ReBeep's NASM source, the C studio and their build targets | [src/AGENTS.md](src/AGENTS.md) |
 | `tests/` | DOS test programs: interpreter tests and the speaker exerciser | [tests/AGENTS.md](tests/AGENTS.md) |
 | `env/` | The 86Box environment definition: tool manifest, VM profiles, DOS boot files | [env/AGENTS.md](env/AGENTS.md) |
 | `release/` | The package's hand-made files: the manual, `INSTALL.BAT`, `RBPLAY.BAT`, sample configs | [release/AGENTS.md](release/AGENTS.md) |
