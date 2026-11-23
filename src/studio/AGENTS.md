@@ -6,7 +6,7 @@
 
 | Path | Role |
 |---|---|
-| `main.c` | Options (`/?`, `/BENCH`), the test screen, the Esc loop, the redraw benchmark |
+| `main.c` | The entry point, argument handling and the top-level flow (`/?`, `/BENCH`, the test screen and Esc loop, the redraw benchmark) |
 | `dos.c` · `dos.h` | Program folder from `argv[0]`; Ctrl+Break, Ctrl+C and critical-error handlers; `dos_hook` and `dos_restore` |
 | `video.c` · `video.h` | The 80x25 back buffer, the flush to `B800:0000`, blink and cursor handling |
 | `kbd.c` · `kbd.h` | The `INT 09h` handler: make and break codes, a key-state table, an event queue |
@@ -15,6 +15,9 @@
 
 - **Build:** `rebeep build run` compiles every `*.c` here with `wcl` (`-bt=dos -mm -0 -os -w4`) and links one EXE.
   The `package.json` version reaches C through the generated `build/gen/version.h` (`REBEEP_VERSION`, `REBEEP_VER_MAJOR/MINOR/PATCH`).
+- **Linking rule:** `rebeep test run --suite studio` links every module here except `main.c` into each test program
+  (`tests/studio/T_*.C`, [tests/studio/AGENTS.md](../../tests/studio/AGENTS.md)). So no module may use a symbol defined in
+  `main.c`, and `main.c` holds only the entry point, argument handling and the top-level flow.
 - **8086 only, medium model** (far code, near data). The 64 KB data group must hold: big buffers (undo history, the
   patch list) go in far memory.
 - **Every vector goes through `dos_hook()`**, and `dos_restore()` puts them all back. It runs at `atexit` and on the

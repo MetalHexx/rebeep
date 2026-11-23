@@ -12,7 +12,8 @@ import path from 'node:path';
 
 export const RESULT_FILE = 'RESULT.TXT';
 const INTERPRETER_PROGRAM = /^t_.+\.asm$/i;
-const VM_PROBE = /^p_.+\.bat$/i;
+const STUDIO_PROGRAM = /^t_.+\.c$/i;
+const VM_PROBE =/^p_.+\.bat$/i;
 
 /**
  * Parses RESULT.TXT. `done` is the count when `DONE <n>` is the last line, `'bare'` when the last
@@ -81,6 +82,13 @@ export function interpreterPrograms(root) {
   return listFiles(path.join(root, 'tests', 'interpreter'), (n) => INTERPRETER_PROGRAM.test(n), false)
     .map((full) => path.basename(full))
     .sort();
+}
+
+/** The studio suite's programs: `T_*.C` directly under tests/studio, in name order. */
+export function studioPrograms(root) {
+  return listFiles(path.join(root, 'tests', 'studio'), (n) => STUDIO_PROGRAM.test(n), false)
+    .map((full) => path.basename(full))
+    .sort((a, b) => a.toUpperCase().localeCompare(b.toUpperCase()));
 }
 
 /** The VM suite's probes: `P_*.BAT` directly under tests/vm, in name order. */

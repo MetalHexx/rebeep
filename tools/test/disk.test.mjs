@@ -154,6 +154,42 @@ describe('disk deploy', () => {
     assert.ok(!readD().exists('REBEEP/AUTOLOAD.FLG'));
   });
 
+  test('puts the data files from build.json on D: at <deploy>/<NAME>, creating the folders', () => {
+    const ctx = context();
+    fs.mkdirSync(path.dirname(s.paths.vm('mirror-msdos').dImg), { recursive: true });
+    writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'SPLASH.ANS'), 'art');
+    writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'FACTORY', 'ORGAN.RBP'), 'patch');
+    writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'FACTORY', 'STRAY.RBP'), 'not listed');
+    writeFile(
+      path.join(ctx.repo.build, 'build.json'),
+      JSON.stringify({
+        builtAt: '',
+        nasm: '3.02',
+        targets: [],
+        files: [
+          { name: 'SPLASH.ANS', deploy: 'REBEEP', size: 3, sha256: 'x' },
+          { name: 'ORGAN.RBP', deploy: 'REBEEP/FACTORY', size: 5, sha256: 'x' },
+          { name: 'GONE.RBP', deploy: 'REBEEP/FACTORY', size: 1, sha256: 'x' },
+          { name: 'long name.rbp', deploy: 'REBEEP', size: 1, sha256: 'x' },
+          { name: 'ESC.RBP', deploy: '../ESCAPE', size: 1, sha256: 'x' },
+        ],
+      }),
+    );
+    const delivery = composeDelivery(ctx);
+    assert.ok(delivery.warnings.some((w) => /GONE\.RBP.*missing/.test(w)));
+    assert.ok(delivery.warnings.some((w) => /long name\.rbp.*8\.3/.test(w)));
+    assert.ok(delivery.warnings.some((w) => /ESC\.RBP.*8\.3/.test(w)));
+
+    deployDisk(ctx, 'mirror-msdos');
+    const image = readD();
+    assert.equal(image.readFile('REBEEP/SPLASH.ANS').toString(), 'art');
+    assert.equal(image.readFile('REBEEP/FACTORY/ORGAN.RBP').toString(), 'patch');
+    assert.ok(image.list().some((e) => e.path.toUpperCase() === 'REBEEP/FACTORY' && e.isDir));
+    assert.ok(!image.exists('REBEEP/FACTORY/STRAY.RBP'), 'only files listed in build.json are delivered');
+    assert.ok(!image.exists('REBEEP/FACTORY/GONE.RBP'));
+    assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
+  });
+
   test('without JEMM fetched the disk is still built, with a warning', () => {
     fs.rmSync(path.join(s.paths.tool('jemm', '5.87'), '.rebeep-tool.json'));
     const ctx = context();

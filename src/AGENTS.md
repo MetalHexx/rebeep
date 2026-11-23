@@ -6,7 +6,7 @@
 
 | Path | Role |
 |---|---|
-| `targets.json` | What `rebeep build run` builds: name, source, `format` (`bin` = one NASM file, `exe` = a folder of C files built with Open Watcom), optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it), `defines` (extra NASM `-D` names: `REBEEP_TRACE` builds `REBEEPD.COM`, dev-only, never packaged; `REBEEP.COM` is unchanged by it) |
+| `targets.json` | What `rebeep build run` builds, plus an optional `files` list of data files under `src/` (`source` with an 8.3 upper-case base name, `deploy` one or two 8.3 folders such as `REBEEP/FACTORY`): copied to `build/files/` and put on D:. Each target: name, source, `format` (`bin` = one NASM file, `exe` = a folder of C files built with Open Watcom), optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it), `defines` (extra NASM `-D` names: `REBEEP_TRACE` builds `REBEEPD.COM`, dev-only, never packaged; `REBEEP.COM` is unchanged by it) |
 | `rebeep.asm` | `REBEEP.COM`: the resident part, then `resident_end`, then the startup part |
 | `resident/` | `data.asm`: `RB_STATE`, saved vectors, the private stack. `amis.asm`: the `INT 2Dh` handler and uninstall |
 | `capture/` | `trap.asm`: QPI trap install and remove, the callback, the port semantics (masking, read view, OPL events). `trace.asm`: REBEEPD's log |

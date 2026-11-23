@@ -473,6 +473,73 @@ describe('build run and build clean', () => {
     }
   });
 
+  describe('data files', () => {
+    const FILES = [
+      { source: 'studio/data/SPLASH.ANS', deploy: 'REBEEP' },
+      { source: 'studio/data/FACTORY/ORGAN.RBP', deploy: 'REBEEP/FACTORY' },
+    ];
+
+    /** A repo whose targets.json carries `files`, with the sources of FILES on disk. */
+    function makeFilesRepo(files = FILES) {
+      const root = makeRepo({ targets: { ...DEFAULT_TARGETS, files } });
+      for (const [rel, text] of [['studio/data/SPLASH.ANS', 'art'], ['studio/data/FACTORY/ORGAN.RBP', 'patch']]) {
+        fs.mkdirSync(path.dirname(path.join(root, 'src', rel)), { recursive: true });
+        fs.writeFileSync(path.join(root, 'src', rel), text);
+      }
+      return root;
+    }
+
+    test('copies each file to build/files/<deploy>/<NAME> and records it in build.json', () => {
+      const root = makeFilesRepo();
+      const { result } = run(root, ['build', 'run']);
+      assert.equal(result.code, 0, result.stderr);
+      assert.equal(fs.readFileSync(path.join(root, 'build', 'files', 'REBEEP', 'SPLASH.ANS'), 'utf8'), 'art');
+      assert.equal(fs.readFileSync(path.join(root, 'build', 'files', 'REBEEP', 'FACTORY', 'ORGAN.RBP'), 'utf8'), 'patch');
+      const built = JSON.parse(fs.readFileSync(path.join(root, 'build', 'build.json'), 'utf8'));
+      assert.deepEqual(built.files, [
+        { name: 'SPLASH.ANS', deploy: 'REBEEP', size: 3, sha256: sha256(Buffer.from('art')) },
+        { name: 'ORGAN.RBP', deploy: 'REBEEP/FACTORY', size: 5, sha256: sha256(Buffer.from('patch')) },
+      ]);
+      removeDir(root);
+    });
+
+    test('a file dropped from targets.json leaves build/files on the next build, and no files is an empty list', () => {
+      const root = makeFilesRepo();
+      assert.equal(run(root, ['build', 'run']).result.code, 0);
+      fs.writeFileSync(path.join(root, 'src', 'targets.json'), JSON.stringify(DEFAULT_TARGETS));
+      assert.equal(run(root, ['build', 'run']).result.code, 0);
+      assert.equal(fs.existsSync(path.join(root, 'build', 'files', 'REBEEP', 'SPLASH.ANS')), false);
+      assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, 'build', 'build.json'), 'utf8')).files, []);
+      removeDir(root);
+    });
+
+    test('bad sources, bad deploy folders, duplicates and a missing source fail before anything is built', () => {
+      const bad = [
+        [[{ source: 'studio/data/splash.ans', deploy: 'REBEEP' }], /8\.3 upper-case DOS name/],
+        [[{ source: 'studio/data/LONGNAMES.ANS', deploy: 'REBEEP' }], /8\.3 upper-case DOS name/],
+        [[{ source: '../src/SPLASH.ANS', deploy: 'REBEEP' }], /source must be a path inside src/],
+        [[{ source: path.resolve('SPLASH.ANS'), deploy: 'REBEEP' }], /source must be a path inside src/],
+        [[{ source: '', deploy: 'REBEEP' }], /source must be a path inside src/],
+        [[{ source: 'studio/data/SPLASH.ANS', deploy: 'rebeep' }], /deploy must be one or two 8\.3/],
+        [[{ source: 'studio/data/SPLASH.ANS', deploy: 'A/B/C' }], /deploy must be one or two 8\.3/],
+        [[{ source: 'studio/data/SPLASH.ANS', deploy: '/REBEEP' }], /deploy must be one or two 8\.3/],
+        [[{ source: 'studio/data/SPLASH.ANS' }], /deploy must be one or two 8\.3/],
+        [[FILES[0], FILES[0]], /duplicate file REBEEP\/SPLASH\.ANS/],
+        [[{ source: 'studio/data/MISSING.ANS', deploy: 'REBEEP' }], /MISSING\.ANS does not exist/],
+        ['SPLASH.ANS', /"files" must be an array/],
+      ];
+      for (const [files, message] of bad) {
+        const root = makeFilesRepo(files);
+        const { log, result } = run(root, ['build', 'run']);
+        assert.equal(result.code, 1, JSON.stringify(files));
+        assert.match(result.stderr, message, JSON.stringify(files));
+        assert.deepEqual(readCalls(log), [], JSON.stringify(files));
+        assert.equal(fs.existsSync(path.join(root, 'build', 'build.json')), false);
+        removeDir(root);
+      }
+    });
+  });
+
   test('--deploy runs disk deploy through the registry, renders it, and returns its result', () => {
     const root = makeRepo();
     const home = makeTempDir('rebeep-home-');

@@ -243,7 +243,7 @@ describe('help', () => {
   test('verb help shows choices, defaults and value names', async () => {
     const r = await drive(['test', 'run', '--help']);
     assert.match(r.stdout, /--suite <name>/);
-    assert.match(r.stdout, /one of: tools, interpreter, vm, all; default: all/);
+    assert.match(r.stdout, /one of: tools, interpreter, studio, vm, all; default: all/);
   });
 
   test('exactly the destructive verbs list --yes and --preview', async () => {
@@ -290,7 +290,7 @@ describe('usage errors (exit 2)', () => {
     [['vm', 'list', '--bogus'], /bogus/, 'Usage: rebeep vm list [options]'],
     [['vm', 'create'], /missing argument <vm>/, 'Usage: rebeep vm create <vm> [options]'],
     [['vm', 'list', 'extra'], /unexpected argument 'extra'/, 'Usage: rebeep vm list [options]'],
-    [['test', 'run', '--suite', 'nope'], /one of: tools, interpreter, vm, all/, 'Usage: rebeep test run [options]'],
+    [['test', 'run', '--suite', 'nope'], /one of: tools, interpreter, studio, vm, all/, 'Usage: rebeep test run [options]'],
     [['vm', 'run', 'x', '--preview'], /preview/, 'Usage: rebeep vm run <vm> [options]'],
     [['--bogus'], /unknown option '--bogus'/, ROOT_SYNOPSIS],
     [['vm', '--bogus'], /unknown option '--bogus'/, VM_SYNOPSIS],

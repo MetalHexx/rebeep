@@ -229,6 +229,18 @@ function buildFiles(ctx, warnings) {
       }
     }
   }
+  // Data files from targets.json; the folders they sit in are created with them.
+  for (const data of Array.isArray(manifest.files) ? manifest.files : []) {
+    const where = `${data.deploy}/${data.name}`;
+    const source = path.join(ctx.repo.build, 'files', ...String(data.deploy).split('/'), String(data.name));
+    if (/[\\/]/.test(String(data.name)) || where.includes('\\') || nameProblem(where)) {
+      warnings.push(`data file ${where} skipped: not a valid 8.3 path`);
+    } else if (!fs.existsSync(source)) {
+      warnings.push(`data file ${where} is listed in build.json but missing from build/files/`);
+    } else {
+      files.push({ path: where, read: () => fs.readFileSync(source), size: fs.statSync(source).size });
+    }
+  }
   return files;
 }
 

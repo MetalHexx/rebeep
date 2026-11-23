@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { after, before, describe, test } from 'node:test';
-import { interpreterPrograms, parseResults, toolTestFiles } from '../lib/suites.mjs';
+import { interpreterPrograms, parseResults, studioPrograms, toolTestFiles } from '../lib/suites.mjs';
 import { repoLayout } from '../lib/paths.mjs';
 import { makeTempDir, removeDir, runRebeep } from './helpers.mjs';
 
@@ -26,7 +26,22 @@ const args = process.argv.slice(2);
 fs.appendFileSync(process.env.FAKE_DOSBOX_LOG, JSON.stringify(args) + '\\n');
 const mount = args.find((a) => a.startsWith('MOUNT C '));
 const dir = mount.slice('MOUNT C '.length).replace(/^"|"$/g, '');
-fs.copyFileSync(process.env.FAKE_DOSBOX_RESULT_FILE, path.join(dir, 'RESULT.TXT'));
+if (process.env.FAKE_DOSBOX_LISTING) {
+  const factory = path.join(dir, 'FACTORY');
+  fs.writeFileSync(process.env.FAKE_DOSBOX_LISTING, fs.existsSync(factory) ? fs.readdirSync(factory).join(',') : 'none');
+}
+if (process.env.FAKE_DOSBOX_RESULT_FILE) fs.copyFileSync(process.env.FAKE_DOSBOX_RESULT_FILE, path.join(dir, 'RESULT.TXT'));
+`;
+
+/** A fake wcl: logs its arguments, can fail, and writes the `-fe=` path as the output (wcl runs in the output's folder). */
+const FAKE_WCL = `import fs from 'node:fs';
+const args = process.argv.slice(2);
+fs.appendFileSync(process.env.FAKE_WCL_LOG, JSON.stringify(args) + '\\n');
+if (process.env.FAKE_WCL_FAIL) {
+  console.error(process.env.FAKE_WCL_FAIL);
+  process.exit(1);
+}
+fs.writeFileSync(args.find((a) => a.startsWith('-fe=')).slice(4), 'MZ fake exe');
 `;
 
 describe('parseResults', () => {
@@ -71,10 +86,12 @@ describe('test list', () => {
       suites.find((s) => s.suite === 'interpreter').files,
       interpreterPrograms(repoLayout().root).length,
     );
+    assert.equal(suites.find((s) => s.suite === 'studio').files, studioPrograms(repoLayout().root).length);
+    assert.ok(studioPrograms(repoLayout().root).includes('T_SMOKE.C'));
     assert.match(tools.runs, /node --test/);
     assert.deepEqual(
       suites.map((s) => s.suite),
-      ['tools', 'interpreter', 'vm', 'all'],
+      ['tools', 'interpreter', 'studio', 'vm', 'all'],
     );
   });
 
@@ -107,6 +124,21 @@ describe('test run', () => {
     assert.equal(json.code, 0, json.stderr);
     const { suites } = JSON.parse(json.stdout).data;
     assert.deepEqual(suites, [{ suite: 'interpreter', ok: true, programs: [] }]);
+  });
+
+  test('--suite studio succeeds with "no tests yet" when tests/studio has no test programs', () => {
+    const root = makeTempDir('rebeep-studio-none-');
+    dirs.push(root);
+    fs.mkdirSync(path.join(root, 'tests', 'studio'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'tests', 'studio', 'testlib.c'), '/* not a test */\n');
+    const env = { REBEEP_REPO_ROOT: root };
+
+    const human = runRebeep(['test', 'run', '--suite', 'studio'], { env });
+    assert.equal(human.code, 0, human.stderr);
+    assert.match(human.stdout, /no tests yet/);
+
+    const json = runRebeep(['test', 'run', '--suite', 'studio', '--json'], { env });
+    assert.deepEqual(JSON.parse(json.stdout).data.suites, [{ suite: 'studio', ok: true, programs: [] }]);
   });
 
   test('the tools suite and all are refused inside a node test (recursion guard)', () => {
@@ -184,5 +216,135 @@ describe('test run --suite interpreter, with fake NASM and DOSBox-X', () => {
     const { result } = runInterp('PASS add\n');
     assert.equal(result.code, 1);
     assert.match(result.stderr, /no final DONE line/);
+  });
+});
+
+describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
+  let fakes;
+  let base;
+  let root;
+  let logCount = 0;
+
+  before(() => {
+    fakes = makeTempDir('rebeep-studio-fakes-');
+    fs.writeFileSync(path.join(fakes, 'fake-wcl.mjs'), FAKE_WCL);
+    fs.writeFileSync(path.join(fakes, 'fake-dosbox.mjs'), FAKE_DOSBOX);
+    base = makeTempDir('rebeep-studio-');
+    root = path.join(base, 'repo with space');
+    const put = (rel, text) => {
+      fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+      fs.writeFileSync(path.join(root, rel), text);
+    };
+    put('package.json', JSON.stringify({ name: 'x', version: '0.1.0' }));
+    put('tests/studio/T_ALPHA.C', '/* SUITE: OPL2 */\nint main(void) { return 0; }\n');
+    put('tests/studio/T_BETA.C', '/* no suite marker */\nint main(void) { return 0; }\n');
+    put('tests/studio/testlib.c', '/* library */\n');
+    put('tests/studio/testlib.h', '/* header */\n');
+    for (const name of ['video.c', 'main.c', 'dos.c']) put(`src/studio/${name}`, '/* module */\n');
+    put('src/studio/data/FACTORY/ORGAN.RBP', 'patch');
+    put('src/studio/data/SPLASH.ANS', 'art');
+    put(
+      'src/targets.json',
+      JSON.stringify({
+        targets: [],
+        files: [
+          { source: 'studio/data/SPLASH.ANS', deploy: 'REBEEP' },
+          { source: 'studio/data/FACTORY/ORGAN.RBP', deploy: 'REBEEP/FACTORY' },
+        ],
+      }),
+    );
+  });
+
+  after(() => {
+    removeDir(fakes);
+    removeDir(base);
+  });
+
+  /** Runs the suite; `results` is the RESULT.TXT the fake DOSBox-X writes, or null for none. */
+  const runStudio = (results, extraEnv = {}) => {
+    const n = ++logCount;
+    const resultFile = path.join(fakes, `result-${n}.txt`);
+    fs.writeFileSync(resultFile, results ?? '');
+    const dosboxLog = path.join(fakes, `dosbox-${n}.log`);
+    const wclLog = path.join(fakes, `wcl-${n}.log`);
+    const listing = path.join(fakes, `listing-${n}.txt`);
+    const result = runRebeep(['test', 'run', '--suite', 'studio'], {
+      env: {
+        REBEEP_REPO_ROOT: root,
+        REBEEP_WATCOM: process.execPath,
+        REBEEP_WATCOM_PREFIX_ARGS: JSON.stringify([path.join(fakes, 'fake-wcl.mjs')]),
+        REBEEP_DOSBOX: process.execPath,
+        REBEEP_DOSBOX_PREFIX_ARGS: JSON.stringify([path.join(fakes, 'fake-dosbox.mjs')]),
+        FAKE_DOSBOX_RESULT_FILE: results === null ? '' : resultFile,
+        FAKE_DOSBOX_LOG: dosboxLog,
+        FAKE_DOSBOX_LISTING: listing,
+        FAKE_WCL_LOG: wclLog,
+        ...extraEnv,
+      },
+    });
+    const lines = (file) =>
+      fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
+    return {
+      result,
+      dosbox: lines(dosboxLog),
+      wcl: lines(wclLog),
+      factory: fs.existsSync(listing) ? fs.readFileSync(listing, 'utf8') : null,
+    };
+  };
+
+  test('compiles each program with testlib and the modules but main.c, stages FACTORY, and passes', () => {
+    const { result, wcl, factory } = runStudio('PASS one\nDONE 1\n');
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stdout + result.stderr, /studio tests passed/);
+
+    assert.equal(wcl.length, 2);
+    const [alpha, beta] = wcl;
+    for (const args of wcl) {
+      for (const flag of ['-bt=dos', '-mm', '-0']) assert.ok(args.includes(flag), flag);
+      assert.ok(args.includes(`-i=${path.join('..', '..', 'tests', 'studio')}`), 'tests/studio is on the include path');
+      assert.ok(args.some((a) => a.endsWith('testlib.c')));
+      assert.ok(args.some((a) => a.endsWith('video.c')) && args.some((a) => a.endsWith('dos.c')));
+      assert.ok(!args.some((a) => a.endsWith('main.c')), 'main.c is not linked into a test');
+      assert.ok(!args.some((a) => a.includes(root)), 'no absolute repo path reaches wcl');
+    }
+    assert.ok(alpha.includes('-fe=T_ALPHA.EXE') && alpha.some((a) => a.endsWith('T_ALPHA.C')));
+    assert.ok(beta.includes('-fe=T_BETA.EXE'));
+    assert.equal(factory, 'ORGAN.RBP', 'only the REBEEP/FACTORY data files are staged');
+  });
+
+  test('a SUITE: OPL2 program runs a second time as an OPL2 card with /OPL2; others run once', () => {
+    const { dosbox } = runStudio('PASS one\nDONE 1\n');
+    const out = path.join(root, 'build', 'studio-tests');
+    assert.equal(dosbox.length, 3);
+    const [alphaDefault, alphaOpl2, beta] = dosbox;
+    assert.ok(alphaDefault.includes(`MOUNT C "${out}"`));
+    assert.ok(alphaDefault.includes('T_ALPHA.EXE > RESULT.TXT'));
+    assert.ok(!alphaDefault.includes('sblaster,oplmode=opl2'));
+    assert.ok(alphaOpl2.includes('sblaster,oplmode=opl2'));
+    assert.ok(alphaOpl2.includes('T_ALPHA.EXE /OPL2 > RESULT.TXT'));
+    assert.ok(beta.includes('T_BETA.EXE > RESULT.TXT'));
+    assert.ok(beta.includes('mixer,nosound=true') && beta.includes('-exit'));
+  });
+
+  test('a FAIL line fails the suite and names the program and case; the OPL2 run is judged on its own', () => {
+    const { result } = runStudio('PASS one\nFAIL two: got 3, want 4\nDONE 2\n');
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /T_ALPHA: two: got 3, want 4/);
+    assert.match(result.stderr, /T_ALPHA \(OPL2\): two: got 3, want 4/);
+    assert.match(result.stderr, /studio tests failed/);
+  });
+
+  test('a program that wrote no RESULT.TXT fails', () => {
+    const { result } = runStudio(null);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /T_BETA: no RESULT\.TXT written/);
+  });
+
+  test('a compile error stops the suite with the compiler message', () => {
+    const { result, dosbox } = runStudio('PASS one\nDONE 1\n', { FAKE_WCL_FAIL: 'T_ALPHA.C(3): Error! E1009' });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /wcl failed building T_ALPHA\.EXE/);
+    assert.match(result.stderr, /E1009/);
+    assert.deepEqual(dosbox, []);
   });
 });

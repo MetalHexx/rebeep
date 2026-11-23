@@ -18,7 +18,7 @@ export function readPackageVersion(repo) {
 }
 
 /**
- * Validates `targets.json` and returns its targets with defaults filled in. `root` (`src`, the
+ * Validates `targets.json`'s `targets` and returns its targets with defaults filled in. `root` (`src`, the
  * default, or `tests`) is the repo folder the source is resolved under. `format` `bin` is one NASM
  * source file; `exe` is a folder of C files compiled and linked together. `autoload` (default
  * false) marks the target `BOOT.BAT` loads at boot; the delivery writes the flag file for it.
@@ -78,14 +78,79 @@ function validateTargets(doc, file) {
   });
 }
 
-function loadTargets(repo) {
-  let doc;
+/**
+ * Validates the optional top-level `files` list: plain data files under `src/` that ship with the
+ * build. `source` is a path inside `src/` whose base name is an 8.3 upper-case DOS name; `deploy`
+ * is one or two 8.3 upper-case folder names joined by `/`. Returns `{ source, deploy, name }`
+ * entries, `source` with `/` separators.
+ */
+function validateFiles(doc, file) {
+  const fail = (message) => {
+    throw new CliError(`${file}: ${message}`);
+  };
+  if (doc?.files === undefined) return [];
+  if (!Array.isArray(doc.files)) fail('"files" must be an array');
+  const seen = new Set();
+  return doc.files.map((f, i) => {
+    const where = `files[${i}]`;
+    if (!isPlainObject(f)) fail(`${where} must be an object`);
+    if (
+      typeof f.source !== 'string' ||
+      f.source === '' ||
+      path.isAbsolute(f.source) ||
+      f.source.split(/[\\/]/).includes('..')
+    ) {
+      fail(`${where}.source must be a path inside src/`);
+    }
+    const source = f.source.replaceAll('\\', '/');
+    const name = source.slice(source.lastIndexOf('/') + 1);
+    if (!NAME_83.test(name)) {
+      fail(`${where}.source '${f.source}' must end in an 8.3 upper-case DOS name such as ORGAN.RBP`);
+    }
+    const segments = typeof f.deploy === 'string' ? f.deploy.split('/') : [];
+    if (segments.length > 2 || !segments.every((s) => DIR_83.test(s)) || segments.length === 0) {
+      fail(`${where}.deploy must be one or two 8.3 upper-case DOS folder names joined by "/", such as REBEEP/FACTORY`);
+    }
+    const key = `${f.deploy}/${name}`;
+    if (seen.has(key)) fail(`duplicate file ${key}`);
+    seen.add(key);
+    return { source, deploy: f.deploy, name };
+  });
+}
+
+function readTargetsDoc(repo) {
   try {
-    doc = JSON.parse(fs.readFileSync(repo.targets, 'utf8'));
+    return JSON.parse(fs.readFileSync(repo.targets, 'utf8'));
   } catch (err) {
     throw new CliError(`cannot read ${repo.targets}: ${err.message}`);
   }
-  return validateTargets(doc, repo.targets);
+}
+
+function loadTargets(repo) {
+  return validateTargets(readTargetsDoc(repo), repo.targets);
+}
+
+/** `targets.json`'s data files, validated, each with its path under `src/` in `from`; a missing source is an error. */
+export function loadDataFiles(repo) {
+  return validateFiles(readTargetsDoc(repo), repo.targets).map((file) => {
+    const from = path.join(repo.src, ...file.source.split('/'));
+    if (!fs.statSync(from, { throwIfNoEntry: false })?.isFile()) {
+      throw new CliError(`${repo.targets}: data file ${file.source} does not exist under src/`);
+    }
+    return { ...file, from };
+  });
+}
+
+/** Copies each data file to `build/files/<deploy>/<NAME>` and returns the `build.json` records. */
+function copyDataFiles(repo, dataFiles) {
+  const root = path.join(repo.build, 'files');
+  fs.rmSync(root, { recursive: true, force: true });
+  return dataFiles.map(({ from, deploy, name }) => {
+    const output = path.join(root, ...deploy.split('/'), name);
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+    fs.copyFileSync(from, output);
+    return { name, deploy, size: fs.statSync(output).size, sha256: sha256(output) };
+  });
 }
 
 /** A C target's `*.c` files, sorted. Throws if the source folder is missing or has none. */
@@ -118,6 +183,7 @@ async function buildRun(ctx) {
   const repo = ctx.repo;
   fs.rmSync(path.join(repo.build, 'build.json'), { force: true });
   const targets = loadTargets(repo);
+  const dataFiles = loadDataFiles(repo);
   const version = readPackageVersion(repo);
   const nasm = await resolveBinary(ctx, 'nasm', 'REBEEP_NASM');
   const nasmVer = await nasmVersion(nasm);
@@ -179,6 +245,7 @@ async function buildRun(ctx) {
     nasm: { bin: nasm.bin, version: nasmVer },
     compiler,
     targets: built,
+    files: copyDataFiles(repo, dataFiles),
   };
   fs.writeFileSync(path.join(repo.build, 'build.json'), `${JSON.stringify(summary, null, 2)}\n`);
 

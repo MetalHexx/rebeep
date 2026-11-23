@@ -12,8 +12,8 @@
 | `lib/fat` | FAT images: FAT16 disks `buildImage`, FAT12 floppies `buildFloppy`, and `readImage`, `checkImage` for both |
 | `lib/release` · `lib/version` | Package tree, `CHANGES.TXT`, text checks · SemVer, changelog entries and rules, `checkVersions`, the bump's edit |
 | `lib/profiles` · `vmcfg` · `proc` | VM profiles, 86Box cfg rendering, launch and running-VM detection |
-| `lib/delivery` · `freedos` · `nasm` · `watcom` · `guard` | D: contents · scripted FreeDOS C: · assembling · compiling C with Open Watcom (`format: "exe"` targets) · payload guard |
-| `lib/suites` · `commands/vmtest` | RESULT.TXT judging and suite discovery · the `vm` suite: probe header, probe D:, boot-and-wait loop |
+| `lib/delivery` · `freedos` · `nasm` · `watcom` · `guard` | D: contents (targets and `targets.json` `files`) · scripted FreeDOS C: · assembling · compiling C with Open Watcom (`format: "exe"` targets; the `studio` suite uses it too) · payload guard |
+| `lib/suites` · `commands/vmtest` | RESULT.TXT judging and discovery for the `interpreter`, `studio` and `vm` suites · the `vm` suite: probe header, probe D:, boot-and-wait loop |
 | `lib/site` · `siteserve` · `sitedev` · `sitecheck` | The product page: build and release stamp · `/rebeep/` preview server · its live-reload script · `site check` |
 | `test/` | `*.test.mjs`; shared fixtures in `helpers.mjs`, `fake86box.mjs` (a stand-in for 86Box) and `serve.mjs` (a local HTTP server for downloads) |
 
