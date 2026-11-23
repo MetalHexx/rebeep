@@ -13,6 +13,8 @@
 #define SCAN_CTRL 0x1D
 #define SCAN_A 0x1E
 #define SCAN_S 0x1F
+#define SCAN_D 0x20
+#define SCAN_C 0x2E
 #define SCAN_LSHIFT 0x2A
 #define SCAN_Z 0x2C
 #define SCAN_RSHIFT 0x36
@@ -35,8 +37,6 @@ const KeyBinding key_table[] = {
     {KID_DOWN, K_SYNTH, SCAN_DOWN, 0},
     {KID_LEFT, K_SYNTH, SCAN_LEFT, 0},
     {KID_RIGHT, K_SYNTH, SCAN_RIGHT, 0},
-    {KID_ENTER, K_SYNTH, SCAN_ENTER, 0},
-    {KID_BACK, K_SYNTH, SCAN_BACKSPACE, 0},
     {KID_OP1, K_SYNTH, SCAN_1, MOD_ALT},
     {KID_OP2, K_SYNTH, SCAN_1 + 1, MOD_ALT},
     {KID_OP3, K_SYNTH, SCAN_1 + 2, MOD_ALT},
@@ -52,10 +52,74 @@ const KeyBinding key_table[] = {
     {KID_UNDO, K_SYNTH, SCAN_Z, MOD_CTRL},
     {KID_REDO, K_SYNTH, SCAN_Y, MOD_CTRL},
     {KID_OCT_UP, K_SYNTH, SCAN_UP, MOD_CTRL},
-    {KID_OCT_DOWN, K_SYNTH, SCAN_DOWN, MOD_CTRL}
+    {KID_OCT_DOWN, K_SYNTH, SCAN_DOWN, MOD_CTRL},
+    {KID_HELP, K_HELP, SCAN_F1, 0},
+    {KID_ESC, K_HELP, SCAN_ESC, 0},
+    {KID_LEFT, K_HELP, SCAN_LEFT, 0},
+    {KID_RIGHT, K_HELP, SCAN_RIGHT, 0},
+    {KID_LEFT, K_PROMPT, SCAN_LEFT, 0},
+    {KID_RIGHT, K_PROMPT, SCAN_RIGHT, 0},
+    {KID_TAB, K_PROMPT, SCAN_TAB, 0},
+    {KID_BTAB, K_PROMPT, SCAN_TAB, MOD_SHIFT},
+    {KID_ENTER, K_PROMPT, SCAN_ENTER, 0},
+    {KID_ESC, K_PROMPT, SCAN_ESC, 0},
+    {KID_PICK1, K_PROMPT, SCAN_S, 0},
+    {KID_PICK2, K_PROMPT, SCAN_A, 0},
+    {KID_PICK3, K_PROMPT, SCAN_D, 0},
+    {KID_PICK4, K_PROMPT, SCAN_C, 0},
+    {KID_ENTER, K_NAME, SCAN_ENTER, 0},
+    {KID_BACK, K_NAME, SCAN_BACKSPACE, 0}
 };
 
 const int key_count = sizeof key_table / sizeof key_table[0];
+
+static const unsigned char IDS_UPDOWN[] = {KID_UP, KID_DOWN, 0};
+static const unsigned char IDS_LEFTRIGHT[] = {KID_LEFT, KID_RIGHT, 0};
+static const unsigned char IDS_OPS[] = {KID_OP1, KID_OP2, KID_OP3, KID_OP4, 0};
+static const unsigned char IDS_TAB[] = {KID_TAB, 0};
+static const unsigned char IDS_BTAB[] = {KID_BTAB, 0};
+static const unsigned char IDS_OCT[] = {KID_OCT_UP, KID_OCT_DOWN, 0};
+static const unsigned char IDS_SAVE[] = {KID_SAVE, 0};
+static const unsigned char IDS_SAVEAS[] = {KID_SAVEAS, 0};
+static const unsigned char IDS_RESET[] = {KID_RESET, 0};
+static const unsigned char IDS_UNDO[] = {KID_UNDO, 0};
+static const unsigned char IDS_REDO[] = {KID_REDO, 0};
+static const unsigned char IDS_PAGES[] = {KID_PGUP, KID_PGDN, 0};
+static const unsigned char IDS_ESC[] = {KID_ESC, 0};
+static const unsigned char IDS_HELP[] = {KID_HELP, 0};
+
+const HelpRow HELP_ROWS[] = {
+    {0, HR_HEADING, "MOVING AND EDITING", "", 0},
+    {0, HR_KEYS, "Up Down", "parameter rows", IDS_UPDOWN},
+    {0, HR_KEYS, "Left Right", "change the value", IDS_LEFTRIGHT},
+    {0, HR_KEYS, "Alt+1 to 4", "operator 1 to 4", IDS_OPS},
+    {0, HR_KEYS, "Tab", "next operator", IDS_TAB},
+    {0, HR_KEYS, "Shift+Tab", "previous operator", IDS_BTAB},
+    {0, HR_INFO, "Mouse", "click to focus; click", 0},
+    {0, HR_INFO, "", "a bar to set it", 0},
+    {0, HR_HEADING, "PLAYING", "", 0},
+    {0, HR_INFO, "Z to M", "lower row, from C3", 0},
+    {0, HR_INFO, "Q to P", "upper row, from C4", 0},
+    {0, HR_INFO, "Digits", "upper row's sharps", 0},
+    {0, HR_KEYS, "Ctrl+Up Dn", "keys up or down an octave", IDS_OCT},
+    {1, HR_HEADING, "PATCH", "", 0},
+    {1, HR_KEYS, "Ctrl+S", "Save", IDS_SAVE},
+    {1, HR_KEYS, "Ctrl+A", "Save As", IDS_SAVEAS},
+    {1, HR_KEYS, "Ctrl+R", "Reset to factory", IDS_RESET},
+    {1, HR_KEYS, "Ctrl+Z", "Undo", IDS_UNDO},
+    {1, HR_KEYS, "Ctrl+Y", "Redo", IDS_REDO},
+    {1, HR_KEYS, "PgUp PgDn", "previous / next patch", IDS_PAGES},
+    {1, HR_KEYS, "Esc", "back one level", IDS_ESC},
+    {1, HR_KEYS, "F1", "this help", IDS_HELP}
+};
+
+const int HELP_ROW_COUNT = sizeof HELP_ROWS / sizeof HELP_ROWS[0];
+
+const char *const HELP_NOTES[HELP_NOTE_COUNT] = {
+    "Reset to factory loads the factory values and leaves the patch unsaved.",
+    "Holding a key on a bar counts as one undo step.",
+    "Esc steps back: help or a pop-up first, then patch list, then menu."
+};
 
 static const unsigned char PIANO_SCAN[KEY_PIANO_KEYS] = {
     0x2C, 0x1F, 0x2D, 0x20, 0x2E, 0x2F, 0x22, 0x30, 0x23, 0x31, 0x24, 0x32,

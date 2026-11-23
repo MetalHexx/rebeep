@@ -99,10 +99,38 @@ static void sample_list(void)
     list_draw(&lib, LIST_SAMPLE_SELECTED, 0, NULL);
 }
 
+static const char *const SAMPLE_SCREENS[] = {
+    "detectlog", "splash", "menu", "patchlist", "synth-4op", "synth-2op", "help1-4op", "help2-4op", "help1-2op",
+    "help2-2op", "save-4op", "save-2op"
+};
+
 int sample_known(const char *screen)
 {
-    return stricmp(screen, "detectlog") == 0 || stricmp(screen, "splash") == 0 || stricmp(screen, "menu") == 0 ||
-           stricmp(screen, "patchlist") == 0 || stricmp(screen, "synth-4op") == 0 || stricmp(screen, "synth-2op") == 0;
+    int i;
+
+    for (i = 0; i < (int)(sizeof SAMPLE_SCREENS / sizeof SAMPLE_SCREENS[0]); i++) {
+        if (stricmp(screen, SAMPLE_SCREENS[i]) == 0) return 1;
+    }
+    return 0;
+}
+
+/* A help or save screen name is "<what>[page]-<variant>": the page digit and the variant's operator count. */
+static void sample_overlay(const char *screen)
+{
+    Editor e;
+    char detected[48];
+    int variant = screen[strlen(screen) - 3] == '4' ? 4 : 2;
+
+    sample_editor(&e, variant);
+    synth_draw(&e);
+    if (strnicmp(screen, "save", 4) == 0) {
+        e.prompt = 1;
+        e.pend = EL_NEXT + 1;
+        save_draw(&e);
+    } else {
+        help_detected(detected, sizeof detected, 3, "Sound Blaster 16 at 220h");
+        help_draw(screen[4] - '0', detected, "C:\\REBEEP\\RBSTUDIO.LOG");
+    }
 }
 
 void sample_draw(const char *screen)
@@ -125,5 +153,7 @@ void sample_draw(const char *screen)
 
         sample_editor(&e, stricmp(screen, "synth-4op") == 0 ? 4 : 2);
         synth_draw(&e);
+    } else {
+        sample_overlay(screen);
     }
 }

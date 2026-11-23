@@ -36,6 +36,7 @@
 
 static Settings settings;     /* RBSTUDIO.CFG, read once by the detection log */
 static Library patch_lib;     /* the patch list, scanned each time the Patch Editor opens */
+static Detect detect;         /* what the detection log found: the help names the chip and the log */
 static Editor editor;
 static char last_patch[20];   /* FOLDER\NAME of the patch opened last: the list opens on it */
 static char list_msg[80];     /* why the last patch would not open, shown under the list */
@@ -283,39 +284,51 @@ static void remember_patch(const Library *lib, int pos)
 }
 
 /* What the editor asked of the main loop. Returns 1 when the synth screen is left for the list. */
-static int synth_action(Editor *ed, const Library *lib, int act)
+static int synth_action(Editor *ed, Library *lib, int act)
 {
     char err[80];
+    int back;
 
-    switch (act) {
-    case EA_LIST:
-        return editor_leave(ed, lib, EL_LIST, err, sizeof err);
-    case EA_PREV:
-    case EA_NEXT:
-        editor_leave(ed, lib, act == EA_PREV ? EL_PREV : EL_NEXT, err, sizeof err);
-        if (err[0] != '\0') {
-            log_line("Cannot open the next patch: %s", err);
-            editor_msg(ed, "Cannot open that patch", R_WARNING);
-        } else {
-            remember_patch(lib, ed->pos);
-        }
-        break;
-    case EA_HELP:
-    case EA_SAVE:
-    case EA_SAVEAS:
-    case EA_RESET:
-        editor_release(ed);
-        editor_msg(ed, "Coming soon", R_TEXT);
-        break;
-    default:
-        break;
+    if (act == EA_NONE) return 0;
+    back = editor_act(ed, lib, act, err, sizeof err);
+    if (err[0] != '\0') {
+        log_line("Cannot open that patch: %s", err);
+        editor_msg(ed, "Cannot open that patch", R_WARNING);
+    } else {
+        remember_patch(lib, ed->pos);
     }
-    return 0;
+    return back;
+}
+
+/* The synth screen, with the help or the save prompt over it when one is open. */
+static void synth_show(const Editor *ed)
+{
+    char what[48];
+
+    synth_draw(ed);
+    if (ed->help != 0) {
+        help_detected(what, sizeof what, detect.chip, detect.card);
+        help_draw(ed->help, what, detect.log_path);
+    }
+    if (ed->prompt) save_draw(ed);
+}
+
+/* A click while the help or the save prompt is open. Returns the action for editor_act. */
+static int overlay_press(Editor *ed, int mx, int my)
+{
+    if (ed->prompt) {
+        int hit = save_hit(mx, my);
+
+        if (hit >= 0 && hit < 4) return EA_PICK + hit;
+        return hit < 0 ? EA_PICK + 3 : EA_NONE;
+    }
+    editor_help(ed, help_hit(mx, my) ? 3 - ed->help : 0);
+    return EA_NONE;
 }
 
 /* The synth screen of the patch in `ed`: the keys and the mouse edit and play it, PgUp and PgDn switch patch, Esc goes
    back to the list. */
-static void run_synth(Editor *ed, const Library *lib)
+static void run_synth(Editor *ed, Library *lib)
 {
     int back = 0;
     int redraw = 1;
@@ -341,7 +354,10 @@ static void run_synth(Editor *ed, const Library *lib)
         while (kbhit()) getch();
 
         down = mouse_read(&mx, &my) & 1;
-        if (down && !was_down && !back) {
+        if (down && !was_down && !back && (ed->help != 0 || ed->prompt)) {
+            back = synth_action(ed, lib, overlay_press(ed, mx, my));
+            redraw = 1;
+        } else if (down && !was_down && !back) {
             SynthHit hit;
 
             synth_hit(ed, mx, my, &hit);
@@ -364,7 +380,7 @@ static void run_synth(Editor *ed, const Library *lib)
         was_down = down;
 
         if (redraw && !back) {
-            synth_draw(ed);
+            synth_show(ed);
             scr_flush();
             redraw = 0;
         }
@@ -546,8 +562,6 @@ static void run_menu(void)
 
 static int run_studio(int mono, int trace)
 {
-    Detect detect;
-
     atexit(release_hardware);
     log_set_trace(trace);
     rebeep_suspend();

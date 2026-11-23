@@ -17,6 +17,7 @@ static struct {
 static int hook_count;
 static isr_t old_break, old_ctrlc, old_critical;
 static char program_dir[80];
+static int write_why;
 
 /* The handlers run on the interrupted program's stack (INT 24h on DOS's own), which the stack
    checker's limit does not describe: so no stack check. */
@@ -95,12 +96,24 @@ int dos_is_file(const char *path)
     return _dos_getfileattr(path, &attr) == 0 && (attr & _A_SUBDIR) == 0;
 }
 
+int dos_write_why(void)
+{
+    return write_why;
+}
+
+/* Records why a DOS call just failed: DOS error 19 is a write-protected disk, 39 and 112 a full one. */
+static void note_failure(void)
+{
+    write_why = _doserrno == 19 ? DOS_WHY_PROTECTED : (_doserrno == 39 || _doserrno == 112) ? DOS_WHY_FULL : DOS_WHY_OTHER;
+}
+
 int dos_make_dir(const char *path)
 {
     char buf[PATH_MAX_LEN];
     size_t len = strlen(path);
     size_t i;
 
+    write_why = DOS_WHY_OTHER;
     if (len == 0 || len >= sizeof buf) return -1;
     memcpy(buf, path, len + 1);
     if (buf[len - 1] == '\\' && len > 1 && buf[len - 2] != ':') buf[--len] = '\0';
@@ -108,7 +121,7 @@ int dos_make_dir(const char *path)
         if (buf[i] != '\\' && buf[i] != '\0') continue;
         if (buf[i - 1] == ':' || buf[i - 1] == '\\') continue;
         buf[i] = '\0';
-        if (!dos_is_dir(buf)) mkdir(buf);
+        if (!dos_is_dir(buf) && mkdir(buf) != 0) note_failure();
         if (i < len) buf[i] = '\\';
     }
     return dos_is_dir(buf) ? 0 : -1;
@@ -151,12 +164,18 @@ static int write_checked(const char *path, const void *data, unsigned len)
     struct find_t found;
     int ok;
 
-    if (f == NULL) return 0;
+    if (f == NULL) {
+        note_failure();
+        return 0;
+    }
     ok = fwrite(data, 1, len, f) == len;
     ok = fflush(f) == 0 && ok;
     ok = fclose(f) == 0 && ok;
     ok = ok && _dos_findfirst(path, _A_NORMAL, &found) == 0 && found.size == len;
-    if (!ok) remove(path);
+    if (!ok) {
+        write_why = DOS_WHY_FULL;   /* the file opened, so the data did not fit */
+        remove(path);
+    }
     return ok;
 }
 
@@ -166,6 +185,7 @@ int dos_save_file(const char *path, const void *data, unsigned len)
     static char bak[PATH_MAX_LEN];
     int had_old;
 
+    write_why = DOS_WHY_OTHER;
     if (!with_extension(path, ".$$$", tmp, sizeof tmp) || !with_extension(path, ".BAK", bak, sizeof bak)) return -1;
     if (!write_checked(tmp, data, len)) return -1;
 
@@ -173,11 +193,13 @@ int dos_save_file(const char *path, const void *data, unsigned len)
     if (had_old) {
         remove(bak);
         if (rename(path, bak) != 0) {
+            note_failure();
             remove(tmp);
             return -1;
         }
     }
     if (rename(tmp, path) != 0) {
+        note_failure();
         if (had_old) rename(bak, path);
         remove(tmp);
         return -1;

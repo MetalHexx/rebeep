@@ -63,6 +63,30 @@ void synth_draw(const Editor *e);
    It follows the layout synth_draw uses at the current variant. */
 void synth_hit(const Editor *e, int x, int y, SynthHit *h);
 
+/* A pill: an operator's number `label` on the colour `col` between half blocks, at (x, y). Returns the column after it. */
+int pill_draw(int x, int y, const char *label, int col);
+
+/* The pop-ups. dim_under greys the sound area (rows 1 to 23) so only the pop-up reads as live; window_draw draws a
+   window over the columns x0..x1 and rows y0..y1 (the frame included) with its title on the top line, a page text at
+   its right (NULL for none) and the shadow below and to the right. */
+void dim_under(void);
+void window_draw(int x0, int y0, int x1, int y1, const char *title, const char *right);
+
+/* The help over the screen as it is: page 1 (the keys, from HELP_ROWS) or 2 (what the controls mean). `detected` is the
+   Detected line (clipped to 34 cells) and `log_path` the log's full path (shortened from the left to 22 characters).
+   help_hit says whether the cell (x, y) is inside the window. help_detected composes the Detected line from the chip
+   (0, 2 or 3) and the card text opl_card gave: "OPL3 on a Sound Blaster 16 at 220h", "OPL3 at 388h" with no card, or
+   "none" with no chip. */
+void help_draw(int page, const char *detected, const char *log_path);
+int help_hit(int x, int y);
+void help_detected(char *out, unsigned len, int chip, const char *card);
+
+/* The save prompt over the screen as it is, for the editor's pending leave: the patch name, the question, the four
+   buttons with the focus on `e->btn`. save_hit gives the button (0 to 3) under the cell (x, y), 4 for the rest of the
+   window, or -1 outside it. */
+void save_draw(const Editor *e);
+int save_hit(int x, int y);
+
 /* Sample state for the reference screens: the fixed data (version 0.1.0, the sample detection, a log path of
    C:\REBEEP\RBSTUDIO.LOG, the sample patch list, patch 12 of 40 BRASS) that makes a dump comparable. sample_known says
    whether `screen` is one of the reference names this program can draw; sample_draw draws it into the back buffer. */

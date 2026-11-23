@@ -24,17 +24,24 @@ typedef struct {
     int pos, total;               /* "12 of 40" */
     unsigned char held[29]; int nheld;   /* piano keys lit, ascending */
     int kbOct;                    /* keyboard octave, KB_LOW = 3 */
-    char msg[27]; int msgRole;    /* message area; msgRole is a Role */
+    char msg[40]; int msgRole;    /* message area; msgRole is a Role */
     char nameBefore[9];           /* the name when its row took the focus: Esc restores it */
     unsigned mods;                /* MOD_* held, as the event stream last said */
     unsigned last_make;           /* the last make event with no break since: a repeat of it is typematic */
+    char folder[9], file[9];      /* the open patch's FOLDER and file name, "FACTORY" and "BELL": what a save acts on; the
+                                     name in p.name is the row's text, which is only a new name once edited */
+    int help;                     /* the help page shown (1 or 2), 0 for none */
+    int prompt, btn;              /* the save prompt is open; its focused button 0 to 3 (Save, Save As, Discard, Cancel) */
+    int pend;                     /* the leave the prompt guards, an EL_* plus 1; 0 for none */
+    int saveas;                   /* the name row takes a Save As name: Enter saves it, Esc cancels */
 } Editor;
 
-/* What the main loop does after an event or a click. */
-enum { EA_NONE, EA_LIST, EA_PREV, EA_NEXT, EA_HELP, EA_SAVE, EA_SAVEAS, EA_RESET };
+/* What the main loop hands to editor_act after an event or a click. EA_SAVEAS is Enter on a Save As name; EA_PICK plus
+   0 to 3 is a button of the save prompt chosen. */
+enum { EA_NONE, EA_LIST, EA_PREV, EA_NEXT, EA_SAVE, EA_SAVEAS, EA_RESET, EA_PICK };
 
-/* Where editor_leave goes. */
-enum { EL_LIST, EL_PREV, EL_NEXT };
+/* Where editor_leave goes: the list, the previous or next patch, or out of the program. */
+enum { EL_LIST, EL_PREV, EL_NEXT, EL_EXIT };
 
 /* What a cell of the synth screen is, from synth_hit. `k` is an operator, `key` a P_* row (an F_* row for a bar of
    Feedback, or the piano key of SH_PIANO); a bar covers `bw` cells from column `bx`. */
@@ -48,10 +55,11 @@ int editor_init(void);
 void editor_done(void);
 
 /* Starts editing `p`: shows its 4-OP variant on an OPL3 when it has one, clears undo, silences held notes and programs
-   the voice. `chip` is 0, 2 or 3; `pos` of `total` is the patch's place in the list. */
+   the voice. `chip` is 0, 2 or 3; `pos` of `total` is the patch's place in the list. The patch's origin is left unset
+   (`file` is its name); editor_load sets it. */
 void editor_open(Editor *e, const Patch *p, int chip, int pos, int total);
 
-/* Reads entry `i` of the library and opens it. Returns 0, or -1 with the reason in `err`. */
+/* Reads entry `i` of the library and opens it, folder and file name included. Returns 0, or -1 with the reason in `err`. */
 int editor_load(Editor *e, const Library *lib, int i, char *err, unsigned errlen);
 
 /* Reprograms the voice shown into the chip (held notes keep sounding). Nothing happens without a chip. */
@@ -102,16 +110,47 @@ void editor_undo(Editor *e);
 void editor_redo(Editor *e);
 
 /* One kbd event (INT 09h make or break) through the key table: Ctrl, Alt and Shift as the stream said, the piano's
-   keys, the name's characters. Returns an EA_* for the main loop. */
+   keys, the name's characters. While the help or the save prompt is open it takes the keys alone (the help flips and
+   closes, the prompt moves its focus); Ctrl+A starts a Save As. Returns an EA_* for editor_act. */
 int editor_event(Editor *e, unsigned event);
 
-/* A click: focus, set or play what is under it. Returns an EA_*. A SH_BAR press is followed by editor_bar while the
-   button stays down. A SH_PIANO press is released with editor_key_up. */
+/* A click on the synth screen: focus, set or play what is under it (the Help control opens the help). Returns an EA_*. A
+   SH_BAR press is followed by editor_bar while the button stays down. A SH_PIANO press is released with editor_key_up. */
 int editor_press(Editor *e, const SynthHit *h, int x);
 
-/* Leaves the patch: to the list, or to the previous or next one in list order (wrapping), on the 4-OP variant when
-   the chip is an OPL3. It switches directly; the save prompt for a dirty patch comes later. Returns 1 when the caller goes to the list, 0 when it stays
-   in the editor (a failed load leaves the current patch with `err` set). */
+/* Opens the help on `page` (1 or 2), or closes it with 0. Opening silences the piano. */
+void editor_help(Editor *e, int page);
+
+/* Starts a Save As: the name row takes the focus with the current name, Enter saves it under the typed name and Esc
+   cancels (and drops the leave the save prompt was guarding). */
+void editor_saveas_begin(Editor *e);
+
+/* Ctrl+S, in this order, the first that applies: a name edited in the name row is a Save As; the open USER or FACTORY
+   patch equal to the FACTORY patch of its name removes USER\<name> if it exists (else there is nothing to write); a
+   FACTORY or pack patch whose USER\<name> exists is refused; otherwise USER\<name>.RBP is written. A write makes the
+   open patch USER\<name>, a removal makes it FACTORY\<name>; either rescans `lib` and moves `pos` to it. The patch is
+   clean afterwards. Nothing but the open USER patch's own file is ever overwritten. Returns 0, or -1 with the reason in
+   the message area (refused, `Disk full`, `Read-only disk`, `Can't write <path>`) and the patch as it was. */
+int editor_save(Editor *e, Library *lib);
+
+/* Saves under the name in the name row as USER\<name>.RBP: refused when the name is not valid (name_valid) or already
+   in USER. The open patch becomes the new one. Returns 0 or -1 as editor_save does. */
+int editor_save_as(Editor *e, Library *lib);
+
+/* Ctrl+R: loads the factory values (the name kept) as an unsaved, undoable change when the open patch is in FACTORY or
+   USER and its name exists in FACTORY; otherwise says `No factory version`. Returns 0 or -1. */
+int editor_reset(Editor *e, const Library *lib);
+
+/* Leaves the patch: to the list, to the previous or next one in list order (wrapping, on the 4-OP variant when the
+   chip is an OPL3), or out of the program (EL_EXIT, which like the list returns 1). A dirty patch does not go: the save
+   prompt opens for `where` and 0 is returned (editor_act continues from its buttons). Returns 1 when the caller goes
+   to the list, 0 when it stays in the editor (a failed load leaves the current patch with `err` set). */
 int editor_leave(Editor *e, const Library *lib, int where, char *err, unsigned errlen);
+
+/* Performs an EA_* that editor_event or editor_press returned. The save prompt's Save goes on with the guarded leave
+   only after a successful save; a refused or failed save, or a Save As cancelled, drops it and the editor stays,
+   dirty, with the message showing. Discard reloads the saved patch and goes on; Cancel stays. `err` is empty unless a
+   patch to switch to could not be read. Returns 1 when the caller goes to the list. */
+int editor_act(Editor *e, Library *lib, int act, char *err, unsigned errlen);
 
 #endif

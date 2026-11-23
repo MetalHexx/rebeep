@@ -30,6 +30,10 @@ typedef struct {
    before its first scan; scanning again releases the old entries and rescans. */
 int lib_scan(Library *lib, const char *progdir, const char *patchdir);
 
+/* Scans again with the folders the last lib_scan settled (after a save or a removal changed them). Returns 0, or -1 when
+   memory runs out. */
+int lib_rescan(Library *lib);
+
 /* Releases the entries. */
 void lib_free(Library *lib);
 
@@ -43,6 +47,9 @@ int lib_find(const Library *lib, const char *spec);
 
 /* The file path of entry i. Returns 0, or -1 when i is out of range or `len` is too small. */
 int lib_path(const Library *lib, int i, char *path, unsigned len);
+
+/* The file path of the USER patch `name`, whether or not it exists. Returns 0, or -1 when `len` is too small. */
+int lib_user_path(const Library *lib, const char *name, char *path, unsigned len);
 
 /* A patch or pack name: A-Z 0-9 _ -, 1 to 8 chars, at least one non-digit. */
 int name_valid(const char *name);

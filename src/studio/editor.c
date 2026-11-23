@@ -1,7 +1,9 @@
 /* ReBeep Studio: the editor's logic. No drawing here; the synth screen reads the Editor these functions change.
    SPDX-License-Identifier: MIT */
+#include <stdio.h>
 #include <string.h>
 
+#include "dos.h"
 #include "editor.h"
 #include "kbd.h"
 #include "keys.h"
@@ -12,6 +14,8 @@
 
 #define FIRST_PARAM_NAV 5   /* the rows before the parameters in the Up/Down order: name, variant, octave, conn, fb */
 #define NAV_ROWS (FIRST_PARAM_NAV + P_COUNT)
+#define USER_FOLDER "USER"
+#define FACTORY_FOLDER "FACTORY"
 
 static Undo history;
 
@@ -79,6 +83,7 @@ void editor_open(Editor *e, const Patch *p, int chip, int pos, int total)
     e->kbOct = KB_LOW;
     e->msgRole = R_TEXT;
     e->mods = key_mods();
+    strcpy(e->file, p->name);
     undo_clear(&history);
     editor_apply(e);
 }
@@ -95,6 +100,8 @@ int editor_load(Editor *e, const Library *lib, int i, char *err, unsigned errlen
     }
     if (patch_read(path, &loaded, err, errlen) != 0) return -1;
     editor_open(e, &loaded, opl_chip(), i + 1, lib_count(lib));
+    _fstrcpy(e->folder, lib_entry(lib, i)->folder);
+    _fstrcpy(e->file, lib_entry(lib, i)->name);
     return 0;
 }
 
@@ -107,6 +114,10 @@ void editor_release(Editor *e)
 void editor_focus(Editor *e, int row)
 {
     undo_break(&history);
+    if (row != F_NAME) {
+        e->saveas = 0;
+        e->pend = 0;
+    }
     if (row == F_NAME && e->fk != F_NAME) {
         editor_release(e);
         strcpy(e->nameBefore, e->p.name);
@@ -377,6 +388,32 @@ static unsigned modifier_bit(unsigned scan)
     return 0;
 }
 
+/* A key while the save prompt is open: Left, Right and Tab move the focus, Enter or a first letter chooses, Esc is Cancel. */
+static int prompt_key(Editor *e, unsigned event)
+{
+    int id = key_lookup(K_PROMPT, event, e->mods);
+
+    switch (id) {
+    case KID_LEFT: case KID_BTAB: e->btn = (e->btn + 3) % 4; break;
+    case KID_RIGHT: case KID_TAB: e->btn = (e->btn + 1) % 4; break;
+    case KID_ENTER: return EA_PICK + e->btn;
+    case KID_ESC: return EA_PICK + 3;
+    case KID_PICK1: case KID_PICK2: case KID_PICK3: case KID_PICK4: return EA_PICK + (id - KID_PICK1);
+    default: break;
+    }
+    return EA_NONE;
+}
+
+/* A key while the help is open: F1 or Esc closes it, Left and Right flip the page. */
+static void help_key(Editor *e, unsigned event)
+{
+    switch (key_lookup(K_HELP, event, e->mods)) {
+    case KID_HELP: case KID_ESC: e->help = 0; break;
+    case KID_LEFT: case KID_RIGHT: e->help = 3 - e->help; break;
+    default: break;
+    }
+}
+
 int editor_event(Editor *e, unsigned event)
 {
     unsigned scan = event & KBD_CODE;
@@ -400,6 +437,11 @@ int editor_event(Editor *e, unsigned event)
     repeat = event == e->last_make;
     e->last_make = event;
 
+    if (e->prompt) return prompt_key(e, event);
+    if (e->help) {
+        help_key(e, event);
+        return EA_NONE;
+    }
     if (piano >= 0 && e->fk != F_NAME && !(e->mods & (MOD_CTRL | MOD_ALT))) {
         editor_key_down(e, piano);
         return EA_NONE;
@@ -409,6 +451,17 @@ int editor_event(Editor *e, unsigned event)
     if (id == 0 && e->fk == F_NAME) {
         char ch = key_name_char(event, e->mods);
 
+        switch (key_lookup(K_NAME, event, e->mods)) {
+        case KID_ENTER:
+            if (e->saveas) return EA_SAVEAS;
+            editor_name_enter(e);
+            return EA_NONE;
+        case KID_BACK:
+            editor_name_back(e);
+            return EA_NONE;
+        default:
+            break;
+        }
         if (ch != 0) editor_name_add(e, ch);
         return EA_NONE;
     }
@@ -423,19 +476,23 @@ int editor_event(Editor *e, unsigned event)
     case KID_BTAB: editor_op(e, (e->cur + e->n - 1) % e->n); break;
     case KID_PGUP: return EA_PREV;
     case KID_PGDN: return EA_NEXT;
-    case KID_HELP: return EA_HELP;
+    case KID_HELP: editor_help(e, 1); break;
     case KID_SAVE: return EA_SAVE;
-    case KID_SAVEAS: return EA_SAVEAS;
+    case KID_SAVEAS: editor_saveas_begin(e); break;
     case KID_RESET: return EA_RESET;
     case KID_UNDO: editor_undo(e); break;
     case KID_REDO: editor_redo(e); break;
     case KID_OCT_UP: editor_kb_octave(e, 1); break;
     case KID_OCT_DOWN: editor_kb_octave(e, -1); break;
     case KID_ESC:
+        if (e->saveas) {
+            editor_name_esc(e);
+            e->saveas = 0;
+            e->pend = 0;
+            break;
+        }
         if (e->fk == F_NAME && editor_name_esc(e)) break;
         return EA_LIST;
-    case KID_ENTER: editor_name_enter(e); break;
-    case KID_BACK: editor_name_back(e); break;
     default: break;
     }
     return EA_NONE;
@@ -448,7 +505,7 @@ int editor_press(Editor *e, const SynthHit *h, int x)
     case SH_NAME: editor_focus(e, F_NAME); break;
     case SH_PREV: return EA_PREV;
     case SH_NEXT: return EA_NEXT;
-    case SH_HELP: return EA_HELP;
+    case SH_HELP: editor_help(e, 1); break;
     case SH_VARIANT:
         if (e->fk == F_VARIANT) editor_change(e, 1, 0);
         editor_focus(e, F_VARIANT);
@@ -479,16 +536,249 @@ int editor_press(Editor *e, const SynthHit *h, int x)
     return EA_NONE;
 }
 
-int editor_leave(Editor *e, const Library *lib, int where, char *err, unsigned errlen)
+void editor_help(Editor *e, int page)
+{
+    if (page != 0) editor_release(e);
+    e->help = page;
+}
+
+void editor_saveas_begin(Editor *e)
+{
+    editor_release(e);
+    editor_focus(e, F_NAME);
+    e->saveas = 1;
+    editor_msg(e, "Save As: type a name", R_TEXT);
+}
+
+/* The message for a refused save: "USER\<name><tail>". */
+static void say_user(Editor *e, const char *name, const char *tail)
+{
+    char text[sizeof e->msg];
+
+    sprintf(text, "USER\\%s%s", name, tail);
+    editor_msg(e, text, R_WARNING);
+}
+
+/* The message for a write or removal that failed, with the reason DOS gave. */
+static void say_failed(Editor *e, const char *what, const char *name)
+{
+    char text[sizeof e->msg];
+
+    switch (dos_write_why()) {
+    case DOS_WHY_FULL: editor_msg(e, "Disk full", R_WARNING); break;
+    case DOS_WHY_PROTECTED: editor_msg(e, "Read-only disk", R_WARNING); break;
+    default:
+        sprintf(text, "Can't %s USER\\%s.RBP", what, name);
+        editor_msg(e, text, R_WARNING);
+        break;
+    }
+}
+
+/* Is there a USER patch "name": listed, or a file under that name even when it cannot be read as a patch. */
+static int user_exists(const Library *lib, const char *name)
+{
+    static char path[LIB_DIR_LEN + 32];
+    char spec[24];
+
+    sprintf(spec, USER_FOLDER "\\%s", name);
+    return lib_find(lib, spec) >= 0 || (lib_user_path(lib, name, path, sizeof path) == 0 && dos_is_file(path));
+}
+
+/* Reads the FACTORY patch "name". Returns 0, or -1 when it is not listed or cannot be read. */
+static int read_factory(const Library *lib, const char *name, Patch *out)
+{
+    static char path[LIB_DIR_LEN + 32];
+    char spec[24];
+    char err[40];
+    int i;
+
+    sprintf(spec, FACTORY_FOLDER "\\%s", name);
+    i = lib_find(lib, spec);
+    if (i < 0 || lib_path(lib, i, path, sizeof path) != 0) return -1;
+    return patch_read(path, out, err, sizeof err);
+}
+
+/* The open patch is FOLDER\name now: the list is read again and pos follows it. */
+static void reopened(Editor *e, Library *lib, const char *folder, const char *name)
+{
+    char spec[24];
+
+    strcpy(e->folder, folder);
+    strcpy(e->file, name);
+    strcpy(e->nameBefore, e->p.name);
+    e->dirty = 0;
+    e->saveas = 0;
+    sprintf(spec, "%s\\%s", folder, name);
+    if (lib_rescan(lib) == 0) {
+        int i = lib_find(lib, spec);
+
+        if (i >= 0) e->pos = i + 1;
+    }
+    e->total = lib_count(lib);
+}
+
+static int write_user(Editor *e, Library *lib, const char *name)
+{
+    static char path[LIB_DIR_LEN + 32];
+
+    if (lib_user_path(lib, name, path, sizeof path) != 0 || patch_write(path, &e->p) != 0) {
+        say_failed(e, "write", name);
+        return -1;
+    }
+    reopened(e, lib, USER_FOLDER, name);
+    editor_msg(e, "Saved", R_TEXT);
+    return 0;
+}
+
+int editor_save_as(Editor *e, Library *lib)
+{
+    editor_release(e);
+    if (!name_valid(e->p.name)) {
+        editor_msg(e, "Not a valid name", R_WARNING);
+        return -1;
+    }
+    if (user_exists(lib, e->p.name)) {
+        say_user(e, e->p.name, " already exists");
+        return -1;
+    }
+    return write_user(e, lib, e->p.name);
+}
+
+int editor_save(Editor *e, Library *lib)
+{
+    static Patch factory;
+    static char path[LIB_DIR_LEN + 32];
+    int in_user = strcmp(e->folder, USER_FOLDER) == 0;
+    int in_factory = strcmp(e->folder, FACTORY_FOLDER) == 0;
+
+    editor_release(e);
+    if (strcmp(e->p.name, e->file) != 0) return editor_save_as(e, lib);
+    if ((in_user || in_factory) && read_factory(lib, e->file, &factory) == 0 && patch_equal(&e->p, &factory)) {
+        if (!user_exists(lib, e->file)) {
+            e->dirty = 0;
+            editor_msg(e, "Nothing to save", R_TEXT);
+            return 0;
+        }
+        if (lib_user_path(lib, e->file, path, sizeof path) != 0 || remove(path) != 0) {
+            say_failed(e, "remove", e->file);
+            return -1;
+        }
+        reopened(e, lib, FACTORY_FOLDER, e->file);
+        editor_msg(e, "Override removed", R_TEXT);
+        return 0;
+    }
+    if (!in_user && user_exists(lib, e->file)) {
+        say_user(e, e->file, " exists: use Save As");
+        return -1;
+    }
+    return write_user(e, lib, e->file);
+}
+
+int editor_reset(Editor *e, const Library *lib)
+{
+    static Patch factory;
+    Patch before = e->p;
+
+    editor_release(e);
+    if ((strcmp(e->folder, USER_FOLDER) != 0 && strcmp(e->folder, FACTORY_FOLDER) != 0) ||
+        read_factory(lib, e->file, &factory) != 0) {
+        editor_msg(e, "No factory version", R_WARNING);
+        return -1;
+    }
+    undo_break(&history);
+    strcpy(factory.name, e->p.name);
+    e->p = factory;
+    if (e->n == 4 && !e->p.has4) e->n = 2;
+    if (e->cur >= e->n) e->cur = e->n - 1;
+    if (!commit(e, &before, e->fk, 0)) editor_apply(e);
+    undo_break(&history);
+    editor_msg(e, "Factory values loaded", R_TEXT);
+    return 0;
+}
+
+/* Goes to the list, or to the previous or next patch in list order, without asking. */
+static int go(Editor *e, const Library *lib, int where, char *err, unsigned errlen)
 {
     int total = lib_count(lib);
     int i;
 
     err[0] = '\0';
     editor_release(e);
-    if (where == EL_LIST) return 1;
+    if (where == EL_LIST || where == EL_EXIT) return 1;
     if (total <= 0) return 0;
     i = (e->pos - 1 + (where == EL_NEXT ? 1 : -1) + total) % total;
     editor_load(e, lib, i, err, errlen);
+    return 0;
+}
+
+int editor_leave(Editor *e, const Library *lib, int where, char *err, unsigned errlen)
+{
+    err[0] = '\0';
+    if (e->dirty) {
+        editor_release(e);
+        e->prompt = 1;
+        e->btn = 0;
+        e->pend = where + 1;
+        return 0;
+    }
+    return go(e, lib, where, err, errlen);
+}
+
+/* Goes on with the leave the prompt was guarding, if any. */
+static int proceed(Editor *e, const Library *lib, int where, char *err, unsigned errlen)
+{
+    e->pend = 0;
+    return where >= 0 ? go(e, lib, where, err, errlen) : 0;
+}
+
+/* Button n of the save prompt. */
+static int pick(Editor *e, Library *lib, int n, char *err, unsigned errlen)
+{
+    int where = e->pend - 1;
+
+    e->prompt = 0;
+    switch (n) {
+    case 0:
+        if (editor_save(e, lib) != 0) {
+            e->pend = 0;
+            return 0;
+        }
+        return proceed(e, lib, where, err, errlen);
+    case 1:
+        editor_saveas_begin(e);
+        return 0;
+    case 2:
+        if (e->pos < 1 || editor_load(e, lib, e->pos - 1, err, errlen) != 0) e->dirty = 0;
+        err[0] = '\0';
+        return proceed(e, lib, where, err, errlen);
+    default:
+        e->pend = 0;
+        return 0;
+    }
+}
+
+int editor_act(Editor *e, Library *lib, int act, char *err, unsigned errlen)
+{
+    int where;
+
+    err[0] = '\0';
+    switch (act) {
+    case EA_LIST: return editor_leave(e, lib, EL_LIST, err, errlen);
+    case EA_PREV: return editor_leave(e, lib, EL_PREV, err, errlen);
+    case EA_NEXT: return editor_leave(e, lib, EL_NEXT, err, errlen);
+    case EA_SAVE: editor_save(e, lib); break;
+    case EA_RESET: editor_reset(e, lib); break;
+    case EA_SAVEAS:
+        where = e->pend - 1;
+        if (editor_save_as(e, lib) != 0) {
+            e->pend = 0;
+            break;
+        }
+        editor_name_enter(e);
+        return proceed(e, lib, where, err, errlen);
+    default:
+        if (act >= EA_PICK) return pick(e, lib, act - EA_PICK, err, errlen);
+        break;
+    }
     return 0;
 }

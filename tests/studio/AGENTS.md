@@ -17,6 +17,7 @@
 | `T_AMIS.C` | `rebeep.c` against a fake resident ReBeep on `INT 2Dh`: the signature, traps off and on, refused, already off, another program, no state block |
 | `T_OPLKND.C` | Proves the OPL2 rerun: the OPL status port reads OPL3 on the default run and OPL2 on `/OPL2` |
 | `T_LSCRL.C` | The patch list's scroll window (`list_scroll`), row hit-test (`list_item_at`) and override text for an 8-character name (`list_draw`) over a synthetic library |
+| `T_SAVE.C` | Saving over a tree built at run time: the Ctrl+S rules (factory, pack and user patches, override removal only when equal and never from a pack patch, a name edit as Save As), Save As validation, Reset to factory, the save prompt guarding a leave, a failed write that keeps the old file, the help's keys, and every non-piano binding documented by a help row |
 | `T_EDIT.C` | The editor without drawing: value ranges and wrap, the Waveform limit by chip, the 4-OP variant from FM and AM, undo coalescing, the name, the piano and its releases, key events through the table, a bar's mouse values, PgUp/PgDn across folders |
 
 ## Rules
@@ -42,7 +43,7 @@
 - **The screen check** is the last step of the studio suite: it compiles `RBSTUDIO.EXE` into `build/studio-tests/`, stages the
   data files deployed under `REBEEP` beside it, runs one `DUMPS.BAT` (`RBSTUDIO /DUMP:<screen> [/VIEW:MONO] /O:Dnn.DMP` per
   reference) in one DOSBox-X start, and compares each 4000-byte dump (`tools/lib/screens.mjs`) with its `.scr`, failing with
-  the first differing cells. A screen RBSTUDIO cannot draw yet exits 4 and is reported **pending**, a warning and not a pass, except the six it draws now (`detectlog`, `splash`, `menu`, `patchlist`, `synth-4op`, `synth-2op`), where pending fails; P04-T02 makes every pending reference a failure.
+  the first differing cells. A screen RBSTUDIO cannot draw exits 4 and fails the run. The whole set runs again under DOSBox-X's `machine=cga`, `ega` and `vgaonly` (reported as `SCREENS (cga)` and so on): the blink-off path differs on a CGA, so the attributes must still match. A dump cannot show whether blink is really off, so also look at a bright-background screen (the synth focus bar, the save prompt's buttons) in DOSBox-X under `machine=cga` and `ega`.
 
 ## Pitfalls
 

@@ -19,10 +19,15 @@ const FACTORY_DEPLOY = 'REBEEP/FACTORY';
 /** The data-file folder whose files sit beside RBSTUDIO.EXE, as they do beside the installed program. */
 const PROGRAM_DEPLOY = 'REBEEP';
 const SCREEN_FILE = /^([a-z0-9-]+)\.(vga|mono)\.scr$/;
-/** RBSTUDIO's exit code for a /DUMP of a screen it cannot draw yet (no other /DUMP path exits with it). */
+/** RBSTUDIO's exit code for a /DUMP of a screen it does not draw (no other /DUMP path exits with it). */
 const UNKNOWN_SCREEN_CODE = 4;
-/** Screens RBSTUDIO draws already: a reference for one of these that comes back pending fails the run. */
-const REQUIRED_SCREENS = new Set(['detectlog', 'splash', 'menu', 'patchlist', 'synth-4op', 'synth-2op']);
+/** The file DUMPS.BAT appends a dump's name to when RBSTUDIO does not draw its screen. */
+const UNKNOWN_FILE = 'PENDING.TXT';
+/**
+ * The DOSBox-X machines the whole dump set runs under after the default one: the blink-off path differs on a CGA, an
+ * EGA and a VGA, so the attributes must match under each (`-set "dosbox machine=<name>"`).
+ */
+const DISPLAY_MACHINES = ['cga', 'ega', 'vgaonly'];
 const SHOWN_DIFFERENCES = 5;
 
 /** Pulls the `tests`, `pass` and `fail` totals from Node's test summary. */
@@ -68,14 +73,18 @@ function dosboxEnv(ctx) {
     : ctx.env;
 }
 
-/** Runs `command` headless in DOSBox-X with `dir` as C:. `opl2` switches the emulated Sound Blaster from the default OPL3 to OPL2. */
-function runDosbox(ctx, dosbox, dir, command, { opl2 = false } = {}) {
+/**
+ * Runs `command` headless in DOSBox-X with `dir` as C:. `opl2` switches the emulated Sound Blaster from the default OPL3
+ * to OPL2; `machine` sets the emulated display adapter (cga, ega, vgaonly; the default is DOSBox-X's own).
+ */
+function runDosbox(ctx, dosbox, dir, command, { opl2 = false, machine = null } = {}) {
   return runTool(dosbox, [
     // Each setting is one argument, section and key separated by a space: DOSBox-X ignores the
     // comma form and a section and key passed as two arguments.
     '-set',
     'mixer nosound=true', // unlike -silent, keeps the Sound Blaster and its OPL emulated
     ...(opl2 ? ['-set', 'sblaster oplmode=opl2'] : []),
+    ...(machine ? ['-set', `dosbox machine=${machine}`] : []),
     '-exit',
     '-nogui',
     '-nomenu',
@@ -172,9 +181,10 @@ const describeCell = (cell) => `'${cell.ch}' fg ${cell.fg.toString(16).toUpperCa
 
 /**
  * Compiles RBSTUDIO.EXE as `build run` does, writes one batch file that dumps every reference screen in one DOSBox-X
- * start (`/DUMP:<screen>`, with `/VIEW:MONO` for the mono views), and compares each dump with its `.scr` file. A screen
- * the program does not know yet exits with `UNKNOWN_SCREEN_CODE` and writes nothing: that reference is pending, a warning
- * and not a pass, unless the screen is in `REQUIRED_SCREENS`, where it fails.
+ * start (`/DUMP:<screen>`, with `/VIEW:MONO` for the mono views), and compares each dump with its `.scr` file. The set runs
+ * under DOSBox-X's default machine and again under each of `DISPLAY_MACHINES`. A screen the program does not draw exits
+ * with `UNKNOWN_SCREEN_CODE` and writes nothing: that reference fails the run. Returns one result per run, or null with
+ * no references.
  */
 async function runScreens(ctx, repo, { watcom, dosbox, version, out }) {
   const references = referenceScreens(repo);
@@ -200,31 +210,39 @@ async function runScreens(ctx, repo, { watcom, dosbox, version, out }) {
   stageProgramData(repo, out);
 
   const dumps = references.map((ref, i) => ({ ...ref, dump: `D${String(i).padStart(2, '0')}` }));
-  const pendingFile = 'PENDING.TXT';
-  for (const name of [pendingFile, ...dumps.map((d) => `${d.dump}.DMP`)]) fs.rmSync(path.join(out, name), { force: true });
   const batch = dumps.flatMap((d) => [
     `RBSTUDIO /DUMP:${d.screen}${d.view === 'mono' ? ' /VIEW:MONO' : ''} /O:${d.dump}.DMP`,
-    `IF ERRORLEVEL ${UNKNOWN_SCREEN_CODE} IF NOT ERRORLEVEL ${UNKNOWN_SCREEN_CODE + 1} ECHO ${d.dump}>>${pendingFile}`,
+    `IF ERRORLEVEL ${UNKNOWN_SCREEN_CODE} IF NOT ERRORLEVEL ${UNKNOWN_SCREEN_CODE + 1} ECHO ${d.dump}>>${UNKNOWN_FILE}`,
   ]);
   fs.writeFileSync(path.join(out, 'DUMPS.BAT'), `${batch.join('\r\n')}\r\n`);
 
-  ctx.log.step(`Dumping ${dumps.length} reference screens in DOSBox-X`);
-  const run = await runDosbox(ctx, dosbox, out, 'DUMPS.BAT');
-  const result = { program: 'SCREENS', passed: [], failed: [], pending: [] };
+  const results = [];
+  for (const machine of [null, ...DISPLAY_MACHINES]) {
+    results.push(await runDumpSet(ctx, { dosbox, out, dumps, machine }));
+  }
+  return results;
+}
+
+/** One run of DUMPS.BAT under `machine` (null for the default), judged against the references. */
+async function runDumpSet(ctx, { dosbox, out, dumps, machine }) {
+  for (const name of [UNKNOWN_FILE, ...dumps.map((d) => `${d.dump}.DMP`)]) fs.rmSync(path.join(out, name), { force: true });
+
+  ctx.log.step(`Dumping ${dumps.length} reference screens in DOSBox-X${machine ? ` (machine ${machine})` : ''}`);
+  const run = await runDosbox(ctx, dosbox, out, 'DUMPS.BAT', { machine });
+  const result = { program: machine ? `SCREENS (${machine})` : 'SCREENS', passed: [], failed: [] };
   if (run.timedOut || run.elapsedMs >= (DOSBOX_TIME_LIMIT_S - 1) * 1000) {
     return { ...result, ok: false, problem: 'timed out' };
   }
-  const pendingPath = path.join(out, pendingFile);
-  const pending = new Set(
-    fs.existsSync(pendingPath) ? fs.readFileSync(pendingPath, 'utf8').split(/\r?\n/).map((l) => l.trim()).filter(Boolean) : [],
+  const unknownPath = path.join(out, UNKNOWN_FILE);
+  const unknown = new Set(
+    fs.existsSync(unknownPath) ? fs.readFileSync(unknownPath, 'utf8').split(/\r?\n/).map((l) => l.trim()).filter(Boolean) : [],
   );
 
   for (const d of dumps) {
     const name = `${d.screen}.${d.view}`;
     const dumpPath = path.join(out, `${d.dump}.DMP`);
-    if (pending.has(d.dump)) {
-      if (REQUIRED_SCREENS.has(d.screen)) result.failed.push({ name, detail: 'RBSTUDIO does not draw this screen' });
-      else result.pending.push(name);
+    if (unknown.has(d.dump)) {
+      result.failed.push({ name, detail: 'RBSTUDIO does not draw this screen' });
       continue;
     }
     if (!fs.existsSync(dumpPath)) {
@@ -246,17 +264,16 @@ async function runScreens(ctx, repo, { watcom, dosbox, version, out }) {
       result.failed.push({ name, detail: err.message });
     }
   }
-  for (const failure of result.failed) ctx.log.error(`screen ${failure.name}: ${failure.detail}`);
-  if (result.pending.length > 0) {
-    ctx.log.warn(`pending, not checked (RBSTUDIO cannot draw them yet): ${result.pending.join(', ')}`);
-  }
+  const where = machine ? ` (machine ${machine})` : '';
+  for (const failure of result.failed) ctx.log.error(`screen ${failure.name}${where}: ${failure.detail}`);
   return { ...result, ok: result.failed.length === 0 };
 }
 
 /**
  * Compiles each `tests/studio/T_*.C` with testlib and every studio module except `main.c`, through
  * the same wrapper and flags as `build run`, and runs it in DOSBox-X. A program whose first line is
- * a `SUITE: OPL2` comment runs again with an OPL2 card and the argument `/OPL2`. Last comes the screen check.
+ * a `SUITE: OPL2` comment runs again with an OPL2 card and the argument `/OPL2`. Last comes the screen check, run under
+ * each display machine.
  */
 async function runStudio(ctx, repo) {
   const dir = path.join(repo.tests, 'studio');
@@ -309,7 +326,7 @@ async function runStudio(ctx, repo) {
     }
   }
   const screens = await runScreens(ctx, repo, { watcom, dosbox, version, out });
-  if (screens) results.push(screens);
+  if (screens) results.push(...screens);
   return { suite: 'studio', ok: results.every((r) => r.ok), programs: results };
 }
 

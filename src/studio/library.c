@@ -251,19 +251,12 @@ static void mark_overrides(Library *lib)
     }
 }
 
-int lib_scan(Library *lib, const char *progdir, const char *patchdir)
+/* Reads FACTORY, USER and the packs into lib, whose folders are settled. */
+static void scan_all(Library *lib)
 {
     static char dir[LIB_DIR_LEN + 14];
     static char spec[LIB_DIR_LEN + 8];
     int i;
-
-    lib_free(lib);
-    memset(lib, 0, sizeof *lib);
-    lib->entries = (Entry __far *)_fmalloc(sizeof(Entry) * LIB_MAX);
-    if (lib->entries == NULL) return -1;
-    if (strlen(progdir) < sizeof lib->progdir) strcpy(lib->progdir, progdir);
-
-    resolve_patchdir(lib, patchdir);
 
     sprintf(dir, "%sFACTORY", lib->progdir);
     lib->factory = scan_folder(lib, dir, FACTORY_FOLDER);
@@ -290,6 +283,37 @@ int lib_scan(Library *lib, const char *progdir, const char *patchdir)
             lib->packs++;
         }
     }
+}
+
+int lib_scan(Library *lib, const char *progdir, const char *patchdir)
+{
+    lib_free(lib);
+    memset(lib, 0, sizeof *lib);
+    lib->entries = (Entry __far *)_fmalloc(sizeof(Entry) * LIB_MAX);
+    if (lib->entries == NULL) return -1;
+    if (strlen(progdir) < sizeof lib->progdir) strcpy(lib->progdir, progdir);
+
+    resolve_patchdir(lib, patchdir);
+    scan_all(lib);
+    return 0;
+}
+
+int lib_rescan(Library *lib)
+{
+    static char progdir[sizeof lib->progdir];
+    static char patchdir[LIB_DIR_LEN];
+    int missing = lib->patches_missing;
+
+    strcpy(progdir, lib->progdir);
+    strcpy(patchdir, lib->patchdir);
+    lib_free(lib);
+    memset(lib, 0, sizeof *lib);
+    lib->entries = (Entry __far *)_fmalloc(sizeof(Entry) * LIB_MAX);
+    if (lib->entries == NULL) return -1;
+    strcpy(lib->progdir, progdir);
+    strcpy(lib->patchdir, patchdir);
+    lib->patches_missing = missing;
+    scan_all(lib);
     return 0;
 }
 
@@ -337,6 +361,13 @@ int lib_find(const Library *lib, const char *spec)
     if (strlen(spec) > NAME_LIMIT) return -1;
     found = find_in(lib, USER_FOLDER, spec);
     return found >= 0 ? found : find_in(lib, FACTORY_FOLDER, spec);
+}
+
+int lib_user_path(const Library *lib, const char *name, char *path, unsigned len)
+{
+    int n = snprintf(path, len, "%s\\" USER_FOLDER "\\%s" EXT_RBP, lib->patchdir, name);
+
+    return (n < 0 || (unsigned)n >= len) ? -1 : 0;
 }
 
 int lib_path(const Library *lib, int i, char *path, unsigned len)

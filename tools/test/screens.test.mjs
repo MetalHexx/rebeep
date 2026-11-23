@@ -151,7 +151,8 @@ fs.writeFileSync(args.find((a) => a.startsWith('-fe=')).slice(4), 'MZ fake exe')
 
 /**
  * A fake DOSBox-X that plays RBSTUDIO for DUMPS.BAT: for each /DUMP line it writes the /O: file as a screen of 'A' on
- * attribute 1F (or one 'B' cell different), or records the screen as unknown (exit code 4, no file) in PENDING.TXT.
+ * attribute 1F (or one 'B' cell different), or records the screen as unknown (exit code 4, no file) in PENDING.TXT. Each
+ * run appends the machine it was given (`-set "dosbox machine=<name>"`, else "default") to MACHINES.LOG.
  */
 const FAKE_DOSBOX = `import fs from 'node:fs';
 import path from 'node:path';
@@ -162,6 +163,8 @@ if (args.includes('T_ALPHA.EXE > RESULT.TXT')) {
   fs.writeFileSync(path.join(dir, 'RESULT.TXT'), 'PASS one' + String.fromCharCode(10) + 'DONE 1' + String.fromCharCode(10));
   process.exit(0);
 }
+const machine = args.find((a) => a.startsWith('dosbox machine='));
+fs.appendFileSync(path.join(dir, 'MACHINES.LOG'), (machine ? machine.slice('dosbox machine='.length) : 'default') + String.fromCharCode(10));
 const behaviour = JSON.parse(process.env.FAKE_DUMPS);
 const batch = fs.readFileSync(path.join(dir, 'DUMPS.BAT'), 'utf8').split(String.fromCharCode(10)).map((l) => l.trim());
 for (const line of batch.filter((l) => l.startsWith('RBSTUDIO'))) {
@@ -180,7 +183,7 @@ for (const line of batch.filter((l) => l.startsWith('RBSTUDIO'))) {
 `;
 
 describe('test run --suite studio: the screen check, with fake Open Watcom and DOSBox-X', () => {
-  const run = (behaviour, { required = false } = {}) => {
+  const run = (behaviour) => {
     const fakes = makeTempDir('rebeep-screens-fakes-');
     const root = makeTempDir('rebeep-screens-');
     try {
@@ -199,8 +202,7 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
       put('src/targets.json', JSON.stringify({ targets: [], files: [{ source: 'studio/data/SPLASH.ANS', deploy: 'REBEEP' }] }));
       put('tests/screens/demo.vga.scr', scrText({ glyph: 'A', fg: 'F', bg: '1' }));
       put('tests/screens/demo.mono.scr', scrText({ glyph: 'A', fg: 'F', bg: '1' }));
-      put('tests/screens/later.vga.scr', scrText());
-      if (required) put('tests/screens/menu.vga.scr', scrText());
+      put('tests/screens/later.vga.scr', scrText({ glyph: 'A', fg: 'F', bg: '1' }));
       const result = runRebeep(['test', 'run', '--suite', 'studio', '--json'], {
         env: {
           REBEEP_REPO_ROOT: root,
@@ -212,41 +214,51 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
         },
       });
       const out = path.join(root, 'build', 'studio-tests');
-      return { result, staged: fs.existsSync(path.join(out, 'SPLASH.ANS')), batch: fs.readFileSync(path.join(out, 'DUMPS.BAT'), 'utf8') };
+      return {
+        result,
+        staged: fs.existsSync(path.join(out, 'SPLASH.ANS')),
+        batch: fs.readFileSync(path.join(out, 'DUMPS.BAT'), 'utf8'),
+        machines: fs.readFileSync(path.join(out, 'MACHINES.LOG'), 'utf8').split('\n').filter(Boolean),
+      };
     } finally {
       removeDir(fakes);
       removeDir(root);
     }
   };
-  const screensOf = (result) => JSON.parse(result.stdout).data?.suites?.[0].programs.find((p) => p.program === 'SCREENS')
-    ?? JSON.parse(result.stdout).error?.data?.suites?.[0].programs.find((p) => p.program === 'SCREENS');
+  const screensOf = (result) => {
+    const parsed = JSON.parse(result.stdout);
+    return (parsed.data ?? parsed.error?.data).suites[0].programs.filter((p) => p.program.startsWith('SCREENS'));
+  };
 
-  test('matching dumps pass, an unknown screen is pending and does not fail the run, and the art is staged', () => {
-    const { result, staged, batch } = run({ demo: 'match', later: 'pending' });
+  test('matching dumps pass under the default machine and again under cga, ega and vgaonly, and the art is staged', () => {
+    const { result, staged, batch, machines } = run({ demo: 'match', later: 'match' });
     assert.equal(result.code, 0, result.stderr);
-    const screens = screensOf(result);
-    assert.deepEqual(screens.passed, ['demo.mono', 'demo.vga']);
-    assert.deepEqual(screens.pending, ['later.vga']);
+    const runs = screensOf(result);
+    assert.deepEqual(runs.map((r) => r.program), ['SCREENS', 'SCREENS (cga)', 'SCREENS (ega)', 'SCREENS (vgaonly)']);
+    for (const r of runs) assert.deepEqual(r.passed, ['demo.mono', 'demo.vga', 'later.vga'], r.program);
+    assert.deepEqual(machines, ['default', 'cga', 'ega', 'vgaonly']);
     assert.ok(staged, 'SPLASH.ANS sits beside RBSTUDIO.EXE');
     assert.match(batch, /RBSTUDIO \/DUMP:demo \/VIEW:MONO \/O:D00\.DMP/);
     assert.match(batch, /RBSTUDIO \/DUMP:demo \/O:D01\.DMP/);
   });
 
   test('a differing cell fails the run and names the cell', () => {
-    const { result } = run({ demo: 'differ', later: 'pending' });
+    const { result } = run({ demo: 'differ', later: 'match' });
     assert.equal(result.code, 1);
     assert.match(result.stderr, /screen demo\.vga: 1 cells differ: row 1 col 3 glyph: want 'A' fg F bg 1, got 'B' fg F bg 1/);
+    assert.match(result.stderr, /screen demo\.vga \(machine cga\): 1 cells differ/);
   });
 
-  test('a pending reference for a screen the program already draws fails the run', () => {
-    const { result } = run({ demo: 'match', later: 'pending', menu: 'pending' }, { required: true });
+  test('a reference the program does not draw fails the run, under every machine', () => {
+    const { result } = run({ demo: 'match', later: 'pending' });
     assert.equal(result.code, 1);
-    assert.match(result.stderr, /screen menu\.vga: RBSTUDIO does not draw this screen/);
-    assert.deepEqual(screensOf(result).pending, ['later.vga']);
+    assert.match(result.stderr, /screen later\.vga: RBSTUDIO does not draw this screen/);
+    assert.match(result.stderr, /screen later\.vga \(machine vgaonly\): RBSTUDIO does not draw this screen/);
+    for (const r of screensOf(result)) assert.deepEqual(r.failed.map((f) => f.name), ['later.vga'], r.program);
   });
 
   test('a screen that wrote no dump and was not pending fails', () => {
-    const { result } = run({ demo: 'missing', later: 'pending' });
+    const { result } = run({ demo: 'missing', later: 'match' });
     assert.equal(result.code, 1);
     assert.match(result.stderr, /screen demo\.vga: RBSTUDIO wrote no dump/);
   });

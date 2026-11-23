@@ -36,6 +36,10 @@ long dos_read_file(const char *path, void *buf, unsigned max);
    with the old file untouched (a full or read-only disk, a locked file). The folder must exist. */
 int dos_save_file(const char *path, const void *data, unsigned len);
 
+/* Why the last dos_make_dir or dos_save_file failed. */
+enum { DOS_WHY_OTHER, DOS_WHY_FULL, DOS_WHY_PROTECTED };
+int dos_write_why(void);
+
 /* Calls fn(name, arg) for each entry matching `spec` (a path with a wildcard, e.g. "C:\X\*.RBP"): the files, or with
    `dirs` set the folders (never "." or ".."). `name` is the bare 8.3 name. Returns the number visited. */
 int dos_each(const char *spec, int dirs, void (*fn)(const char *name, void *arg), void *arg);

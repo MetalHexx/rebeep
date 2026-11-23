@@ -7,6 +7,9 @@
 #define K_GLOBAL 0
 #define K_MENU 1     /* the menu and the patch list */
 #define K_SYNTH 2
+#define K_HELP 3     /* the help overlay: page flip and close */
+#define K_PROMPT 4   /* the save prompt: its buttons and their first letters */
+#define K_NAME 5     /* the name row while it takes text: Enter and Backspace */
 
 /* Binding ids. */
 #define KID_UP 1
@@ -32,6 +35,10 @@
 #define KID_OCT_UP 21
 #define KID_OCT_DOWN 22
 #define KID_BACK 23
+#define KID_PICK1 24   /* the save prompt's first letters S (Save), A (Save As), D (Discard), C (Cancel): KID_PICK1 plus the button */
+#define KID_PICK2 25
+#define KID_PICK3 26
+#define KID_PICK4 27
 
 #define MOD_SHIFT 1
 #define MOD_CTRL 2
@@ -46,6 +53,27 @@ typedef struct {
 
 extern const KeyBinding key_table[];
 extern const int key_count;
+
+/* One line of the help page's key table. `col` 0 is the left column, 1 the right; a column's rows run top to bottom in
+   this order. A HEADING shows `keys` as its title; a KEYS row shows `keys` and `text` and documents the bindings in
+   `ids` (0-terminated; one row may cover several, as "Up Down" does); an INFO row shows `keys` and `text` with no binding
+   (Mouse, Z to M, Q to P, Digits, the second line of a wrapped text); a BLANK row is a gap. */
+enum { HR_HEADING, HR_KEYS, HR_INFO, HR_BLANK };
+
+typedef struct {
+    unsigned char col;
+    unsigned char kind;
+    const char *keys;
+    const char *text;
+    const unsigned char *ids;
+} HelpRow;
+
+extern const HelpRow HELP_ROWS[];
+extern const int HELP_ROW_COUNT;
+
+/* The notes under the two columns of help page 1. */
+#define HELP_NOTE_COUNT 3
+extern const char *const HELP_NOTES[HELP_NOTE_COUNT];
 
 /* The Shift, Ctrl and Alt keys held now (MOD_* bits), from the kbd key-state table. */
 unsigned key_mods(void);

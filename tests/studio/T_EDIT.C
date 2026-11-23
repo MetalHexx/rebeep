@@ -444,7 +444,9 @@ int main(void)
     editor_change(&e, -1, 0);
     editor_change(&e, 1, 0);
     keyoffs = 0;
-    t_checkl(editor_leave(&e, &lib, EL_NEXT, err, sizeof err), 0, "PgDn stays in the editor");
+    t_checkl(editor_leave(&e, &lib, EL_NEXT, err, sizeof err), 0, "PgDn on a dirty patch asks first");
+    t_check(e.prompt == 1 && strcmp(e.p.name, "AAA") == 0, "the prompt is open over AAA");
+    t_checkl(editor_act(&e, &lib, EA_PICK + 2, err, sizeof err), 0, "Discard goes on to the next patch");
     t_check(strcmp(e.p.name, "BBB") == 0 && e.pos == 2, "FACTORY\\BBB");
     t_check(e.nheld == 0 && keyoffs >= 1, "the held note was released");
     t_checkl(e.dirty, 0, "the new patch is clean");

@@ -81,8 +81,7 @@ static int body_colour(const Editor *e, int k)
     return role(is_carrier(e, k) ? R_BODY : R_SHADOW);
 }
 
-/* A pill: an operator's number on a coloured ground between half blocks. Returns the column after it. */
-static int pill(int x, int y, const char *label, int col)
+int pill_draw(int x, int y, const char *label, int col)
 {
     int len = (int)strlen(label);
 
@@ -112,7 +111,7 @@ static void pill_n(const Editor *e, int x, int y, int k)
 
     label[0] = (char)('1' + k);
     label[1] = '\0';
-    pill(x, y, label, rim_colour(e, k));
+    pill_draw(x, y, label, rim_colour(e, k));
 }
 
 /* `n` line cells, then the glyph `end` when it is not 0. */
@@ -293,7 +292,8 @@ static void bottom_bar(const Editor *e)
     int i;
     int warn = e->chip == 2 && e->n == 4;
     char held[24];
-    char msg[27];
+    char msg[40];
+    int msg_x = 45;   /* the message has the cells up to column 70; it starts earlier when no held note needs them */
 
     scr_put(1, y, "\x0E", role(R_ACCENT), SCR_KEEP);
     for (i = 0; i < ED_KEYS; i++) {
@@ -311,9 +311,10 @@ static void bottom_bar(const Editor *e)
     held_text(e, held);
     scr_put(33, y, held, role(R_LIT), SCR_KEEP);
 
-    strncpy(msg, warn ? "Cannot play 4-OP on OPL2" : e->msg, sizeof msg - 1);
-    msg[sizeof msg - 1] = '\0';
-    scr_put(45, y, msg, role(warn ? R_WARNING : (Role)e->msgRole), SCR_KEEP);
+    if (held[0] == '\0') msg_x = 33;
+    strncpy(msg, warn ? "Cannot play 4-OP on OPL2" : e->msg, 71 - msg_x);
+    msg[71 - msg_x] = '\0';
+    scr_put(msg_x, y, msg, role(warn ? R_WARNING : (Role)e->msgRole), SCR_KEEP);
     scr_put(72, y, "F1", role(R_ACCENT), SCR_KEEP);
     scr_put(75, y, "Help", role(R_TEXT), SCR_KEEP);
 }
