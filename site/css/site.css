@@ -581,7 +581,9 @@ kbd {
 /* ---------- monitor / video ---------- */
 
 .monitor {
-  max-width: 980px;
+  max-width: 880px;
+  /* the whole set, stand included, fits a laptop's window (it is about 1.2 times as wide as tall) */
+  max-width: min(880px, max(480px, calc((100svh - 96px) * 1.2)));
   margin: 0 auto;
   position: relative;
 }
@@ -636,7 +638,7 @@ kbd {
 }
 .monitor__screen {
   position: relative;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
   border-radius: 12px;
   background: #070807;
@@ -700,57 +702,17 @@ kbd {
     radial-gradient(rgba(80, 208, 16, 0.16) 1px, transparent 1.6px) 0 0 / 12px 12px,
     #070807;
 }
-.soon__scan {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.0) 0 2px, rgba(0, 0, 0, 0.28) 2px 4px);
-  mix-blend-mode: multiply;
-}
-.soon__scan::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 30%;
-  top: -30%;
-  background: linear-gradient(180deg, transparent, rgba(80, 208, 16, 0.07), transparent);
-  animation: sweep 6s linear infinite;
-}
-.soon__osd {
-  position: absolute;
-  top: 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-display);
-  font-size: var(--fs-label);
-  letter-spacing: 0;
-  color: rgba(112, 208, 48, 0.85);
-  text-shadow: 0 0 10px rgba(80, 208, 16, 0.6);
-}
-.soon__osd--tl { left: 18px; }
-.soon__osd--tr { right: 18px; }
-@media (min-width: 768px) {
-  .soon__osd { top: 22px; }
-  .soon__osd--tl { left: 28px; }
-  .soon__osd--tr { right: 28px; }
-}
-.soon__rec {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--lime);
-  box-shadow: 0 0 8px var(--lime);
-  animation: blink 1.6s steps(1) infinite;
-}
 .soon__tag {
   margin: 0;
   font-family: var(--font-display);
   font-size: var(--fs-label);
-  letter-spacing: 0.5em;
+  letter-spacing: 0.25em;
   text-transform: uppercase;
   color: var(--khaki);
+  text-shadow: 0 0 14px rgba(176, 176, 144, 0.35);
+}
+@media (min-width: 768px) {
+  .soon__tag { font-size: 32px; letter-spacing: 0.2em; }
 }
 .soon__title {
   margin: 0;
@@ -828,6 +790,194 @@ kbd {
 }
 .video__play svg { width: 30px; height: 30px; margin-left: 4px; }
 .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* ---------- the studio TV: channels that change by themselves ----------
+   The picture sits inside a black border, like a CRT's overscan. A channel change is a CRT shrink: the picture
+   squashes to a hot line, the line pinches to a dot, the dot fades, then the next channel opens the same way back.
+   Only transform, opacity and filter move. site.js runs it; without JS the splash shows, still. */
+
+.tv__picture {
+  position: absolute;
+  inset: 3.4%;
+  overflow: hidden;
+  border-radius: 10px / 12px;
+  background: #000;
+  box-shadow: 0 0 28px rgba(80, 208, 16, 0.14);
+}
+.tv__channels { position: absolute; inset: 0; transform-origin: 50% 50%; }
+.tv__ch { position: absolute; inset: 0; margin: 0; }
+.tv__ch[hidden] { display: none !important; }
+.tv__img { display: block; width: 100%; height: 100%; }
+.tv__sprite { position: absolute; inset: 0; overflow: hidden; --frames: 5; --frame: 0; }
+/* Each frame is 720 rows plus 8 black ones, so a rounding error at the edge shows black, not the next frame. */
+.tv__sprite .tv__img {
+  height: calc(var(--frames) * 100% * 728 / 720);
+  transform: translateY(calc(var(--frame) * -100% / var(--frames)));
+}
+
+.tv__glass {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(128deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.02) 24%, transparent 42%),
+    radial-gradient(ellipse 115% 100% at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.55) 100%),
+    repeating-linear-gradient(180deg, transparent 0 2px, rgba(0, 0, 0, 0.2) 2px 3px);
+}
+.tv__glass::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 30%;
+  top: -30%;
+  background: linear-gradient(180deg, transparent, rgba(112, 208, 48, 0.06), transparent);
+  animation: sweep 7s linear infinite;
+}
+@media (max-width: 560px) {
+  .tv__glass {
+    background:
+      linear-gradient(128deg, rgba(255, 255, 255, 0.06) 0%, transparent 40%),
+      radial-gradient(ellipse 115% 100% at 50% 50%, transparent 62%, rgba(0, 0, 0, 0.5) 100%);
+  }
+}
+
+.tv__beam {
+  position: absolute;
+  z-index: 3;
+  left: 3.4%;
+  right: 3.4%;
+  top: 50%;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 2px;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(160, 240, 90, 0), #e6ffd2 9%, #fff 50%, #e6ffd2 91%, rgba(160, 240, 90, 0));
+  box-shadow: 0 0 10px 2px rgba(170, 245, 110, 0.85), 0 0 36px 8px rgba(80, 208, 16, 0.55);
+}
+.tv__dot {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(circle, #fff 0 14%, rgba(214, 255, 180, 0.95) 24%, rgba(112, 208, 48, 0.5) 46%, transparent 70%);
+}
+.tv.is-dark .tv__channels { opacity: 0; }
+.tv.is-off .tv__channels { animation: crt-off-pic 460ms forwards; }
+.tv.is-off .tv__beam { animation: crt-off-beam 460ms forwards; }
+.tv.is-off .tv__dot { animation: crt-off-dot 460ms forwards; }
+.tv.is-on .tv__channels { animation: crt-on-pic 420ms both; }
+.tv.is-on .tv__beam { animation: crt-on-beam 420ms both; }
+.tv.is-on .tv__dot { animation: crt-on-dot 420ms both; }
+.tv.is-off .monitor__led, .tv.is-on .monitor__led { animation: led-flick 460ms steps(1); }
+
+/* the on-screen display: the channel pops up large, then settles and fades, as on an old set */
+/* It sits on the picture's top text row, on a dark backing, so it never hides more than that row. */
+.tv__osd {
+  position: absolute;
+  z-index: 4;
+  top: calc(3.4% + 1px);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.78);
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #86f046;
+  text-shadow: 0 0 2px rgba(190, 255, 140, 0.9), 0 0 12px rgba(80, 208, 16, 0.85);
+  pointer-events: none;
+}
+.tv__osd--tl { left: calc(3.4% + 6px); }
+.tv__osd--tr { right: calc(3.4% + 6px); }
+.js .tv__osd { opacity: 0; transition: opacity 0.3s ease; }
+.js .tv.osd-on .tv__osd { opacity: 1; }
+@media (min-width: 640px) {
+  .tv.osd-big .tv__osd--tl { font-size: 32px; }
+}
+/* top right: REC, on the video channel only */
+.tv__osd--tr { display: none; }
+.tv.is-rec .tv__osd--tr { display: flex; }
+.tv__rec {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 8px var(--lime);
+  animation: blink 1.6s steps(1) infinite;
+}
+
+/* the chin's controls: beige plastic buttons */
+.tv__controls { display: flex; gap: 8px; margin-left: 16px; }
+.tv__controls[hidden] { display: none; }
+.tv__btn {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: #6d5f48;
+  background: linear-gradient(180deg, #f6e0c4, #dcbf99);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -2px 0 rgba(110, 85, 50, 0.3),
+    0 1px 0 rgba(70, 52, 28, 0.55),
+    0 3px 5px -1px rgba(70, 52, 28, 0.45);
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, color 0.15s ease;
+}
+.tv__btn[hidden] { display: none; }
+.tv__btn svg { width: 10px; height: 10px; }
+.tv__btn:hover { color: #2c7a10; }
+.tv__btn:active,
+.tv__btn[aria-pressed="true"] {
+  transform: translateY(1px);
+  background: linear-gradient(180deg, #dcbf99, #ead0ad);
+  box-shadow:
+    inset 0 2px 3px rgba(90, 68, 38, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.35),
+    0 0 0 rgba(0, 0, 0, 0);
+}
+.tv__btn[aria-pressed="true"] { color: #2c7a10; }
+.tv__btn:focus-visible {
+  outline: 2px solid #2c7a10;
+  outline-offset: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -2px 0 rgba(110, 85, 50, 0.3),
+    0 1px 0 rgba(70, 52, 28, 0.55),
+    0 0 14px 4px rgba(80, 208, 16, 0.55);
+}
+.tv__btn--pause .i-play { display: none; }
+.tv__btn--pause[aria-pressed="true"] .i-play { display: inline; }
+.tv__btn--pause[aria-pressed="true"] .i-pause { display: none; }
+@media (min-width: 768px) {
+  .tv__controls { gap: 10px; margin-left: 24px; }
+  .tv__btn { width: 44px; height: 32px; }
+  .tv__btn svg { width: 20px; height: 20px; }
+}
+
+.tv__foot {
+  display: flex;
+  justify-content: center;
+  margin-top: 36px;
+}
 
 /* ---------- how it works ---------- */
 
@@ -1424,6 +1574,48 @@ kbd {
 }
 @keyframes sweep { to { top: 100%; } }
 
+/* The CRT shrink (see the studio TV). Off: squash to a hot line, pinch to a dot, fade. On: the same, backwards. */
+@keyframes crt-off-pic {
+  0% { opacity: 1; transform: scale(1, 1); filter: brightness(1); animation-timing-function: cubic-bezier(0.7, 0, 0.84, 0); }
+  36% { opacity: 1; transform: scale(1, 0.006); filter: brightness(3); }
+  40%, 100% { opacity: 0; transform: scale(1, 0.006); filter: brightness(3); }
+}
+@keyframes crt-off-beam {
+  0%, 30% { opacity: 0; transform: scaleX(1); }
+  37% { opacity: 1; transform: scaleX(1); animation-timing-function: cubic-bezier(0.6, 0, 0.9, 0.6); }
+  62% { opacity: 1; transform: scaleX(0.02); }
+  68%, 100% { opacity: 0; transform: scaleX(0.01); }
+}
+@keyframes crt-off-dot {
+  0%, 56% { opacity: 0; transform: scale(0.5); }
+  64% { opacity: 1; transform: scale(1); animation-timing-function: ease-out; }
+  100% { opacity: 0; transform: scale(0.45); }
+}
+@keyframes crt-on-dot {
+  0% { opacity: 0; transform: scale(0.3); }
+  12% { opacity: 1; transform: scale(0.85); }
+  26%, 100% { opacity: 0; transform: scale(0.5); }
+}
+@keyframes crt-on-beam {
+  0%, 9% { opacity: 0; transform: scaleX(0.01); }
+  13% { opacity: 1; transform: scaleX(0.02); animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1); }
+  38% { opacity: 1; transform: scaleX(1); }
+  58%, 100% { opacity: 0; transform: scaleX(1); }
+}
+@keyframes crt-on-pic {
+  0%, 36% { opacity: 0; transform: scale(1, 0.006); filter: brightness(3); }
+  38% { opacity: 1; transform: scale(1, 0.006); filter: brightness(3); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1.25); }
+  74% { opacity: 1; transform: scale(1, 1.02); filter: brightness(1.45); }
+  100% { opacity: 1; transform: scale(1, 1); filter: brightness(1); }
+}
+@keyframes led-flick {
+  0% { opacity: 1; }
+  15% { opacity: 0.2; }
+  30% { opacity: 1; }
+  50% { opacity: 0.35; }
+  65% { opacity: 1; }
+}
+
 
 /* ---------- reduced motion ---------- */
 
@@ -1434,7 +1626,8 @@ kbd {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
-  .wave, .note, .node__led, .cursor, .pip, .soon__scan::after { animation: none !important; }
+  .wave, .note, .node__led, .cursor, .pip, .tv__glass::after, .tv__rec { animation: none !important; }
+  .tv__beam, .tv__dot { display: none; }
   .note { opacity: 0.9; }
   .js [data-reveal].is-pending { opacity: 1; transform: none; }
 }

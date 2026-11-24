@@ -246,39 +246,70 @@
       </div>
     </section>
 
-    <!-- ============ VIDEO ============ -->
+    <!-- ============ STUDIO TV ============ -->
     <section class="section section--video" id="demo" aria-labelledby="demo-title">
       <div class="wrap">
         <header class="sechead sechead--center" data-reveal>
-          <p class="eyebrow"><span class="eyebrow__n">02</span>Hear it</p>
-          <h2 class="sechead__title" id="demo-title">Hear the difference</h2>
-          <p class="sechead__lede">The same moment of the same game, through the PC speaker and then the Sound Blaster.</p>
+          <p class="eyebrow"><span class="eyebrow__n">02</span>See it</p>
+          <h2 class="sechead__title" id="demo-title">Meet ReBeep Studio</h2>
+          <p class="sechead__lede">Shape your own FM voices in a full-screen DOS editor that comes with ReBeep. Play the keyboard while you edit, press F12 for a random sound or F11 to mutate it, then hear it in your games.</p>
         </header>
 
-        <div class="monitor" data-reveal>
+        <div class="monitor tv" data-reveal>
           <div class="monitor__bezel">
-            <div class="monitor__screen video" data-video-id="" data-video-title="ReBeep demo: the PC speaker, then the Sound Blaster">
-              <div class="soon">
-                <div class="soon__scan" aria-hidden="true"></div>
-                <span class="soon__osd soon__osd--tl" aria-hidden="true">CH 01</span>
-                <span class="soon__osd soon__osd--tr" aria-hidden="true"><span class="soon__rec"></span>REC</span>
-                <p class="soon__tag">Demo disk</p>
-                <p class="soon__title">Coming soon<span class="cursor" aria-hidden="true"></span></p>
-                <div class="soon__ab" aria-hidden="true">
-                  <span class="soon__chip soon__chip--a">PC speaker</span>
-                  <svg class="soon__arrow" viewBox="0 0 40 12"><path d="M0 6h34M28 1l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                  <span class="soon__chip soon__chip--b">Sound Blaster FM</span>
+            <div class="monitor__screen tv__screen" role="region" aria-roledescription="carousel" aria-label="ReBeep Studio on screen">
+              <div class="tv__picture">
+                <div class="tv__channels" id="tv-channels" aria-live="off">
+                  <figure class="tv__ch" role="group" aria-roledescription="slide" aria-label="1 of 3: the splash">
+                    <img class="tv__img" src="img/studio/splash.webp" width="960" height="720" loading="lazy" decoding="async" alt="ReBeep Studio's splash screen: the ReBeep! logo in grey and green block letters over a smiling green frog, with the credits and press any key.">
+                  </figure>
+                  <figure class="tv__ch tv__ch--synth" role="group" aria-roledescription="slide" aria-label="2 of 3: the patch editor" hidden>
+                    <div class="tv__sprite" data-frames="5">
+                      <img class="tv__img" src="img/studio/synth.webp" width="960" height="3640" loading="lazy" decoding="async" alt="ReBeep Studio's synth screen, editing a four-operator voice. Each press of F12 rolls a new random sound: the connection, the waveforms, the bars and the envelope drawing all change.">
+                    </div>
+                  </figure>
+                  <div class="tv__ch video" role="group" aria-roledescription="slide" aria-label="3 of 3: the demo video" data-hold="3500" data-video-id="" data-video-title="ReBeep demo: the PC speaker, then the Sound Blaster" hidden>
+                    <div class="soon">
+                      <p class="soon__tag">Demo video</p>
+                      <p class="soon__title">Coming soon<span class="cursor" aria-hidden="true"></span></p>
+                      <div class="soon__ab" aria-hidden="true">
+                        <span class="soon__chip soon__chip--a">PC speaker</span>
+                        <svg class="soon__arrow" viewBox="0 0 40 12"><path d="M0 6h34M28 1l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                        <span class="soon__chip soon__chip--b">Sound Blaster FM</span>
+                      </div>
+                      <p class="soon__note">A one-minute before and after is being cut now.</p>
+                    </div>
+                  </div>
                 </div>
-                <p class="soon__note">A one-minute before and after is being cut now.</p>
               </div>
+              <div class="tv__glass" aria-hidden="true"></div>
+              <div class="tv__beam" aria-hidden="true"></div>
+              <div class="tv__dot" aria-hidden="true"></div>
+              <p class="tv__osd tv__osd--tl" aria-hidden="true">CH <span class="tv__num">01</span></p>
+              <p class="tv__osd tv__osd--tr" aria-hidden="true"><span class="tv__rec"></span>Rec</p>
             </div>
-            <div class="monitor__chin" aria-hidden="true">
-              <span class="monitor__badge">ReBeep</span>
-              <span class="monitor__vents"></span>
-              <span class="monitor__led"></span>
+            <div class="monitor__chin">
+              <span class="monitor__badge" aria-hidden="true">ReBeep</span>
+              <div class="tv__controls" hidden>
+                <button class="tv__btn" type="button" data-tv="prev" aria-controls="tv-channels" aria-label="Previous channel">
+                  <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M1 3h8v1H1zM2 4h6v1H2zM3 5h4v1H3zM4 6h2v1H4z"/></svg>
+                </button>
+                <button class="tv__btn" type="button" data-tv="next" aria-controls="tv-channels" aria-label="Next channel">
+                  <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M4 3h2v1H4zM3 4h4v1H3zM2 5h6v1H2zM1 6h8v1H1z"/></svg>
+                </button>
+                <button class="tv__btn tv__btn--pause" type="button" data-tv="pause" aria-controls="tv-channels" aria-pressed="false" aria-label="Pause the channels">
+                  <svg viewBox="0 0 10 10" aria-hidden="true" shape-rendering="crispEdges"><path class="i-pause" fill="currentColor" d="M2 2h2v6H2zM6 2h2v6H6z"/><path class="i-play" fill="currentColor" d="M3 1h1v8H3zM4 2h1v6H4zM5 3h1v4H5zM6 4h1v2H6z"/></svg>
+                </button>
+              </div>
+              <span class="monitor__vents" aria-hidden="true"></span>
+              <span class="monitor__led" aria-hidden="true"></span>
             </div>
           </div>
           <div class="monitor__stand" aria-hidden="true"><span class="monitor__neck"></span><span class="monitor__base"></span></div>
+        </div>
+
+        <div class="tv__foot" data-reveal>
+          <a class="link-arrow" href="https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md">Tour ReBeep Studio <span aria-hidden="true">→</span></a>
         </div>
       </div>
     </section>
@@ -300,10 +331,10 @@
               <g fill="#50d010"><rect x="1" y="9" width="2" height="6"/><rect x="4" y="5" width="2" height="10"/><rect x="7" y="2" width="2" height="13"/><rect x="10" y="6" width="2" height="9"/><rect x="13" y="10" width="2" height="5"/></g>
               <g fill="#f0f0d0"><rect x="1" y="8" width="2" height="1"/><rect x="4" y="4" width="2" height="1"/><rect x="7" y="1" width="2" height="1"/><rect x="10" y="5" width="2" height="1"/><rect x="13" y="9" width="2" height="1"/></g>
             </svg>
-            <h3 class="card__title">Five voices</h3>
-            <p class="card__text">A faithful square wave close to the original, or one of four FM patches.</p>
+            <h3 class="card__title">Five voices, and your own</h3>
+            <p class="card__text">A faithful square wave close to the original, four FM patches, or one you shape in ReBeep Studio.</p>
             <ul class="tags" aria-label="Voices">
-              <li>Square</li><li>Organ</li><li>Flute</li><li>Brass</li><li>Bell</li>
+              <li>Square</li><li>Organ</li><li>Flute</li><li>Brass</li><li>Bell</li><li>Yours</li>
             </ul>
           </article>
 

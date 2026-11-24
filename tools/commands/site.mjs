@@ -139,7 +139,7 @@ export default {
       name: 'check',
       summary: 'Check the built page in build/site/',
       description:
-        'Checks the output of `site create` and reports every failure: file sizes and the 400 KB budget, local links that resolve, https only, img alt text, one h1, a Content-Security-Policy, no dev-server injection, the release markers, lang, title and description, and noopener on external target="_blank" links. Exits 1 if any check fails.',
+        'Checks the output of `site create` and reports every failure: file sizes and the 500 KB budget, local links that resolve, https only, img alt text, one h1, a Content-Security-Policy, no dev-server injection, the release markers, lang, title and description, and noopener on external target="_blank" links. Exits 1 if any check fails.',
       args: [],
       options: [],
       destructive: false,
