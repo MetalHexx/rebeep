@@ -22,6 +22,7 @@ Find what you see, then try the fix. If nothing here helps, file a
 | A game says it needs EMS (expanded memory) | Remove `NOEMS` from the `JEMMEX.EXE` line |
 | A game crashes or hangs | Boot your usual entry and try again. If it still fails, ReBeep isn't the cause. If it fails only with ReBeep, open an issue |
 | `RBPLAY` says ReBeep did not load | Run `REBEEP` to see its message, then look it up below |
+| In the studio, a note doesn't sound when you hold three or more keys | Some keyboards can't send every set of keys at once. Hold the same keys at the DOS prompt: if the last letter doesn't appear there either, it's the keyboard's limit, and the studio can't change it |
 
 ## Messages
 
