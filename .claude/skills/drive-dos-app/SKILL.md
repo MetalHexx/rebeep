@@ -1,6 +1,6 @@
 ---
 name: drive-dos-app
-description: Drive a DOS program in a real DOSBox-X window with scripted keystrokes and screenshots of what it draws. Use to check a flow the headless screen check cannot reach (RBSTUDIO's menu to patch list to synth screen, Esc stepping back, scrolling, keyboard handling), or to look at a DOS program on screen.
+description: Drive a DOS program in a real DOSBox-X window, or a lab VM in 86Box, with scripted keystrokes and screenshots of what it draws. Use to check a flow the headless screen check cannot reach (RBSTUDIO's menu to patch list to synth screen, Esc stepping back, scrolling, keyboard handling), to look at a DOS program on screen, or to take publishable screenshots in 86Box.
 ---
 
 # drive-dos-app
@@ -59,6 +59,11 @@ It needs no new dependency: Node built-ins, PowerShell, and the DOSBox-X that `r
 - End DOSBox-X by its process id only (the script does). Never by name or pattern: that would end the user's own DOSBox-X.
 - `-set "mixer nosound=true"` keeps the Sound Blaster and its OPL emulated but silent, as the test suites do.
 - Screenshots go to `--out` (default: `rebeep-drive` in the system temp folder). Keep them out of the repo.
+
+## On a lab VM in 86Box
+
+For the real machine, or for pictures to publish: `scripts/vm-keys.ps1` types scan codes into a VM's 86Box window,
+and 86Box's raw screenshot saves exact pixels. See [references/86box.md](references/86box.md).
 
 ## Related
 

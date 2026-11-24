@@ -15,7 +15,7 @@
 | `lib/delivery` · `freedos` · `nasm` · `watcom` · `guard` | D: contents (targets, `targets.json` `files`, the lab patch set) · scripted FreeDOS C: · assembling · compiling C with Open Watcom (`format: "exe"` targets; the `studio` suite uses it too) · payload guard |
 | `lib/suites` · `commands/vmtest` | RESULT.TXT judging and discovery for the `interpreter`, `studio` and `vm` suites · the `vm` suite: probe header, probe D:, boot-and-wait loop |
 | `lib/screens` | The studio suite's screen check: `parseScr` (a `tests/screens/*.scr` file), `dumpToCells` (a 4000-byte text-screen dump), `compareScreens` (glyph, bg, and fg unless a space) |
-| `lib/site` · `siteserve` · `sitedev` · `sitecheck` | The product page: build and release stamp · `/rebeep/` preview server · its live-reload script · `site check` |
+| `lib/site` · `siteserve` · `sitedev` · `sitecheck` | The product page: build and release stamp · `/rebeep/` preview server · its live-reload script and the three-width preview · `site check` |
 | `test/` | `*.test.mjs`; shared fixtures in `helpers.mjs`, `fake86box.mjs` (a stand-in for 86Box) and `serve.mjs` (a local HTTP server for downloads) |
 
 ## Rules

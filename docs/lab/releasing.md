@@ -44,6 +44,8 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
   traps on and RBTEST plays.
 - [ ] On the synth screen, F12 rolls a new sound and plays the last note until it is released, holding it
   never rolls again, F11 changes the sound a little, and Ctrl+Z steps back through each press.
+- [ ] The studio's splash and checks screens show the version, so retake the studio screenshots for the docs
+  and the site on this build ([update-site](../../.claude/skills/update-site/references/studio-shots.md)).
 - [ ] A four-operator patch: `REBEEP /P:<that USER patch>`, `REBEEP /S` says `(4-OP)`, and RBTEST case 1
   plays the fuller voice.
 - [ ] Last, attach `build/release/rebeep-<v>-floppy.img` as A: from 86Box's Media menu, run
@@ -111,7 +113,8 @@ The repo ships skills for AI coding assistants, such as Claude Code, which picks
 | [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build |
 | [`update-docs`](../../.claude/skills/update-docs/SKILL.md) | Keeps the docs and `AGENTS.md` files true before each commit |
 | [`release`](../../.claude/skills/release/SKILL.md) | Cuts a release: the changelog from the branch's commits, your review of the notes, the checks, the merge and the publish |
-| [`drive-dos-app`](../../.claude/skills/drive-dos-app/SKILL.md) | Drives a DOS program in a real DOSBox-X window with typed keys and screenshots, for flows the headless checks cannot reach |
+| [`drive-dos-app`](../../.claude/skills/drive-dos-app/SKILL.md) | Drives a DOS program in a real DOSBox-X window, or a lab VM in 86Box, with typed keys and screenshots, for flows the headless checks cannot reach |
+| [`update-site`](../../.claude/skills/update-site/SKILL.md) | Changes the product page with a live three-width preview, and retakes the ReBeep Studio screenshots |
 
 For this page, ask the agent to use the `release` skill. It follows the steps above, and asks you to
 review the release notes before anything merges.

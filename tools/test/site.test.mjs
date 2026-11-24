@@ -717,6 +717,21 @@ describe('the dev server', () => {
     assert.match(css.headers['content-type'], /^text\/css/);
   });
 
+  test('serves the three-width preview, generated in memory and never built', async () => {
+    assert.equal(preview.previewUrl, `http://127.0.0.1:${preview.port}/rebeep/__dev/preview`);
+    const res = await request(preview.port, '/rebeep/__dev/preview');
+    assert.equal(res.status, 200);
+    assert.match(res.headers['content-type'], /^text\/html/);
+    assert.equal(res.headers['cache-control'], 'no-store');
+
+    assert.equal(res.body.split('<iframe').length - 1, 3);
+    const frames = res.body.match(/<iframe\b[^>]*>/g) ?? [];
+    assert.equal(frames.length, 3);
+    for (const frame of frames) assert.match(frame, /\bsrc="\/rebeep\/"/);
+
+    assert.equal(fs.existsSync(builtFile(root, '__dev')), false, 'nothing of the preview is written to build/site/');
+  });
+
   test('rebuilds and sends reload when a file under site/ changes', async () => {
     const stream = await events();
     assert.equal(stream.status, 200);
