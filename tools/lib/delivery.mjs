@@ -11,6 +11,8 @@ const DIR_ENTRY_BYTES = 32;
 /** `BOOT.BAT` loads a deployed target only when this file sits next to it. */
 const AUTOLOAD_FLAG = 'AUTOLOAD.FLG';
 const AUTOLOAD_BYTES = Buffer.from('autoload\r\n');
+/** Where the lab's patch set lands: a pack in the studio's default patches folder. */
+const LAB_PACK = 'REBEEP/PATCHES/LAB';
 
 const fileNames = (dir) =>
   fs
@@ -83,6 +85,21 @@ function envFiles(repo) {
     for (const name of fileNames(dir)) files.push(textFile(path.join(dir, name), `ENV/${dos.toUpperCase()}/${name}`));
   }
   return files;
+}
+
+/**
+ * The lab's patch set (`repo.labPatches`, the rebeep-dev skill's `patches/`): every `.RBP` there goes to
+ * `REBEEP/PATCHES/LAB/`, CRLF, so the studio lists it as the pack `LAB` on every VM. A dev aid only:
+ * `release create` never reads it. No folder, no files and no warning.
+ */
+function labPatchFiles(repo) {
+  if (!repo.labPatches || !fs.existsSync(repo.labPatches)) return [];
+  return fileNames(repo.labPatches)
+    .filter((name) => /\.rbp$/i.test(name))
+    .map((name) => {
+      const bytes = toCrlf(fs.readFileSync(path.join(repo.labPatches, name)));
+      return { path: `${LAB_PACK}/${name.toUpperCase()}`, bytes, size: bytes.length };
+    });
 }
 
 function jemmFiles(ctx, warnings) {
@@ -246,7 +263,7 @@ function buildFiles(ctx, warnings) {
 
 /**
  * Composes the D: delivery disk from the repo's DOS boot files, the fetched JEMM tool, the
- * imported games and the latest build. Returns `{ files, dirs, warnings, skipped }`; `files` and
+ * imported games, the latest build and the lab's patch set. Returns `{ files, dirs, warnings, skipped }`; `files` and
  * `dirs` go straight to `buildImage`. Names that are not 8.3 are left out, listed in `skipped` and
  * reported in `warnings`. Pass the disk's profile section as `d` (`{ geometry, clusterSize }`) so
  * that games which would not fit are skipped, in name order, instead of failing the whole disk.
@@ -254,7 +271,12 @@ function buildFiles(ctx, warnings) {
 export function composeDelivery(ctx, { d } = {}) {
   const warnings = [];
   const skipped = [];
-  const base = [...envFiles(ctx.repo), ...jemmFiles(ctx, warnings), ...buildFiles(ctx, warnings)];
+  const base = [
+    ...envFiles(ctx.repo),
+    ...jemmFiles(ctx, warnings),
+    ...buildFiles(ctx, warnings),
+    ...labPatchFiles(ctx.repo),
+  ];
   const kept = [];
   for (const file of base) {
     const problem = nameProblem(file.path);

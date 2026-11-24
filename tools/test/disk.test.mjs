@@ -190,6 +190,32 @@ describe('disk deploy', () => {
     assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
   });
 
+  test('puts the lab patch set on D: as REBEEP/PATCHES/LAB, CRLF, and only its .RBP files', () => {
+    const labPatches = path.join(s.tmp, 'lab-patches');
+    const ctx = { ...context(), repo: { ...context().repo, labPatches } };
+    fs.mkdirSync(path.dirname(s.paths.vm('mirror-msdos').dImg), { recursive: true });
+
+    assert.ok(!composeDelivery(ctx).files.some((f) => f.path.startsWith('REBEEP/PATCHES')), 'no folder, no pack');
+
+    writeFile(path.join(labPatches, 'Glassy.rbp'), '[PATCH]\nFORMAT=1\n');
+    writeFile(path.join(labPatches, 'PAD.RBP'), '[PATCH]\r\nFORMAT=1\r\n');
+    writeFile(path.join(labPatches, 'README.md'), 'not a patch');
+    writeFile(path.join(labPatches, 'TOOLONGNAME.RBP'), 'x');
+    const delivery = composeDelivery(ctx);
+    assert.ok(delivery.warnings.some((w) => /TOOLONGNAME\.RBP/.test(w)), 'a name that is not 8.3 is skipped with a warning');
+
+    deployDisk(ctx, 'mirror-msdos');
+    const image = readD();
+    assert.equal(image.readFile('REBEEP/PATCHES/LAB/GLASSY.RBP').toString(), '[PATCH]\r\nFORMAT=1\r\n');
+    assert.equal(image.readFile('REBEEP/PATCHES/LAB/PAD.RBP').toString(), '[PATCH]\r\nFORMAT=1\r\n');
+    assert.deepEqual(
+      listed(image).filter((n) => n.startsWith('REBEEP/PATCHES/LAB/')),
+      ['REBEEP/PATCHES/LAB/GLASSY.RBP', 'REBEEP/PATCHES/LAB/PAD.RBP'],
+      'only the .RBP files with 8.3 names',
+    );
+    assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
+  });
+
   test('without JEMM fetched the disk is still built, with a warning', () => {
     fs.rmSync(path.join(s.paths.tool('jemm', '5.87'), '.rebeep-tool.json'));
     const ctx = context();
