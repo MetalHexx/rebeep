@@ -167,6 +167,7 @@ re-pin a tool, follow the procedure in [env/AGENTS.md](../../env/AGENTS.md).
 | No sound at all, even `ECHO` + Ctrl+G | Check 86Box in the host's volume mixer, then **Action → Hard Reset** |
 | A game hangs on a black screen in `mirror-freedos` | Some old games don't run on FreeDOS. Grand Prix Circuit hangs there in both menu entries; use `mirror-msdos` |
 | `QPICHK: no QPI` | Boot the **ReBeep dev** entry. Clean has no Jemm |
+| Arrow keys and PgUp/PgDn do nothing in RBSTUDIO on `slow-386sx`, in the **ReBeep dev** entry | Likely 86Box keyboard timing on that profile with Jemm, QPIEMU and ReBeep resident, not a studio bug (not confirmed). The same keys work in the **Clean** entry, on the `mirror-*` VMs, and on a real Pentium slowed below a 386/33 with ReBeep and Jemm loaded. Use the number pad with NumLock off, or boot **Clean** |
 | `… is running. Quit 86Box first.` | Close the VM window, then retry |
 | Changes made in the 86Box settings dialog vanished | Expected. Edit the profile's `86box.cfg.tmpl` |
 
