@@ -20,6 +20,8 @@
 #define SCAN_RSHIFT 0x36
 #define SCAN_ALT 0x38
 #define SCAN_F1 0x3B
+#define SCAN_F11 0x57
+#define SCAN_F12 0x58
 #define SCAN_UP 0x48
 #define SCAN_PGUP 0x49
 #define SCAN_LEFT 0x4B
@@ -53,6 +55,8 @@ const KeyBinding key_table[] = {
     {KID_REDO, K_SYNTH, SCAN_Y, MOD_CTRL},
     {KID_OCT_UP, K_SYNTH, SCAN_UP, MOD_CTRL},
     {KID_OCT_DOWN, K_SYNTH, SCAN_DOWN, MOD_CTRL},
+    {KID_RANDOM, K_SYNTH, SCAN_F12, 0},
+    {KID_MUTATE, K_SYNTH, SCAN_F11, 0},   /* not Ctrl+F12: 86Box sends Ctrl+Alt+Del on it, DOSBox changes speed */
     {KID_HELP, K_HELP, SCAN_F1, 0},
     {KID_ESC, K_HELP, SCAN_ESC, 0},
     {KID_LEFT, K_HELP, SCAN_LEFT, 0},
@@ -84,6 +88,8 @@ static const unsigned char IDS_SAVEAS[] = {KID_SAVEAS, 0};
 static const unsigned char IDS_RESET[] = {KID_RESET, 0};
 static const unsigned char IDS_UNDO[] = {KID_UNDO, 0};
 static const unsigned char IDS_REDO[] = {KID_REDO, 0};
+static const unsigned char IDS_RANDOM[] = {KID_RANDOM, 0};
+static const unsigned char IDS_MUTATE[] = {KID_MUTATE, 0};
 static const unsigned char IDS_PAGES[] = {KID_PGUP, KID_PGDN, 0};
 static const unsigned char IDS_ESC[] = {KID_ESC, 0};
 static const unsigned char IDS_HELP[] = {KID_HELP, 0};
@@ -106,6 +112,8 @@ const HelpRow HELP_ROWS[] = {
     {1, HR_KEYS, "Ctrl+S", "Save", IDS_SAVE},
     {1, HR_KEYS, "Ctrl+A", "Save As", IDS_SAVEAS},
     {1, HR_KEYS, "Ctrl+R", "Reset to factory", IDS_RESET},
+    {1, HR_KEYS, "F12", "Random sound", IDS_RANDOM},
+    {1, HR_KEYS, "F11", "Mutate the sound", IDS_MUTATE},
     {1, HR_KEYS, "Ctrl+Z", "Undo", IDS_UNDO},
     {1, HR_KEYS, "Ctrl+Y", "Redo", IDS_REDO},
     {1, HR_KEYS, "PgUp PgDn", "previous / next patch", IDS_PAGES},

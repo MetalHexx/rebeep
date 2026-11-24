@@ -11,7 +11,8 @@ the [studio guide](../guide/studio.md); the hard rules for changing the code are
 |---|---|
 | `main.c` | The entry point, argument handling and the top-level flow (`/?`, `/BENCH`, `/DUMP:`, `/TRACE`, the detection log, splash and menu loop, the Patch Editor flow menu → patch list → synth screen with Esc stepping back, the help and the save prompt drawn over the synth screen, giving the chip, mouse and ReBeep back at exit) |
 | `dos.c` · `dos.h` | Program folder from `argv[0]`; Ctrl+Break, Ctrl+C and critical-error handlers; `dos_hook` and `dos_restore`; file helpers (`dos_read_file`, `dos_make_dir`, `dos_each`, the safe save `dos_save_file`) |
-| `patch.c` · `patch.h` | The patch model (`Patch`, `Voice`, `Op`: the editor's values, never registers) and the RBP text file: `patch_parse`, `patch_format`, `patch_read`, `patch_write`. The NASM parser in `startup/patch.asm` follows the same rules |
+| `patch.c` · `patch.h` | The patch model (`Patch`, `Voice`, `Op`: the editor's values, never registers) and the RBP text file: `patch_parse`, `patch_format`, `patch_read`, `patch_write`; `patch_carriers`, which operators a connection makes heard. The NASM parser in `startup/patch.asm` follows the same rules |
+| `dice.c` · `dice.h` | Random and Mutate: a seedable xorshift32 (`dice_seed`, from the BIOS tick count at start), `dice_roll` (a whole voice) and `dice_mutate` (a few small steps); all the tuning is one table at the top |
 | `library.c` · `library.h` | The patch list: `FACTORY\` beside the program, `USER\` and packs in the patches folder; lookup, overrides, `name_valid`, `path_valid` for `PATCHES=` |
 | `settings.c` · `settings.h` | `RBSTUDIO.CFG`, read only (`cfg_load`, `cfg_get`) |
 | `log.c` · `log.h` | `RBSTUDIO.LOG`, replaced each run, each line committed at once (DOS `68h`) |
@@ -26,7 +27,7 @@ the [studio guide](../guide/studio.md); the hard rules for changing the code are
 | `mouse.c` · `mouse.h` | INT 33h, used only when a driver answers; cells are pixels / 8 |
 | `keys.c` · `keys.h` | The one table of key bindings (`id, ctx, scan, mods`), `key_lookup`, the piano's scan codes (`key_piano`) and the name row's characters (`key_name_char`); `HELP_ROWS[]`, the one place help page 1's text lives |
 | `kbd.c` · `kbd.h` | The `INT 09h` handler: make and break codes, a key-state table, an event queue. E0-prefixed keys arrive as `KBD_EXT` codes, the fake shifts around Print Screen are dropped, Pause's `E1 1D 45 E1 9D C5` is swallowed, and a key's make repeats while it is held |
-| `editor.c` · `editor.h` | The editor's logic, no drawing: rows and values (`editor_change`, `editor_bar`), the 4-OP variant, the name, the piano and its releases, undo, a key event or a click to an action (`editor_event`, `editor_press`), saving (`editor_save`, `editor_save_as`, `editor_reset`), the leave and its save prompt (`editor_leave`, `editor_act`) |
+| `editor.c` · `editor.h` | The editor's logic, no drawing: rows and values (`editor_change`, `editor_bar`), the 4-OP variant, the name, the piano and its releases, undo, a key event or a click to an action (`editor_event`, `editor_press`), Random and Mutate (`editor_dice`), saving (`editor_save`, `editor_save_as`, `editor_reset`), the leave and its save prompt (`editor_leave`, `editor_act`) |
 | `scr_log.c` · `scr_spl.c` · `scr_menu.c` · `screens.h` | The detection log, the splash, the menu and its "coming soon" page |
 | `scr_help.c` | The pop-up frame (`dim_under`, `window_draw`) and the two-page help (`help_draw`, `help_hit`, `help_detected`) |
 | `scr_save.c` | The save prompt (`save_draw`, `save_hit`) |
@@ -43,6 +44,14 @@ the [studio guide](../guide/studio.md); the hard rules for changing the code are
   stream (`Editor.mods`), not from `kbd_down`, so a Ctrl released before its key is read still counts. The piano plays from
   make codes: a key already lit is ignored (typematic). Every note is released on focus to the name, on a patch switch, on a
   pop-up (`editor_release`) and at exit, so a missed break code never hangs a note.
+- **Random and Mutate are one ordinary edit.** `editor_dice` rolls or nudges the variant shown, between two `undo_break`s,
+  and commits it like any change, so saving follows the Ctrl+S rules below. A roll starts every carrier loud and ends it
+  after the release (floors on its Attack Rate, Output Level and Release Rate; a fast decay can still make a short pluck),
+  rarely picks high feedback, and takes waveforms only up to the chip's limit; a mutation never changes the connection and
+  never lowers a carrier past a floor. Held notes are not released: they take the new voice. The press then plays the last
+  piano key (C4 until one is played) until F12 and F11 are both up (`Editor.diceKeys`); a key the piano already holds is
+  re-keyed and stays the piano's. A typematic repeat is dropped before the message clears. Never Ctrl+F12: 86Box sends
+  Ctrl+Alt+Del to the guest on it, and DOSBox changes its speed on Ctrl+F11 and Ctrl+F12.
 - **An edited name is only a name.** The row edits `Patch.name` in place; nothing renames the file the patch came from.
   `Editor.folder` and `file` say where the open patch came from.
 - **Saves touch only `USER`, and never another `USER` patch.** The editor writes `USER\<NAME>.RBP` only. Ctrl+S, first match

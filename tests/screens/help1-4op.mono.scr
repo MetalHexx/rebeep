@@ -8,13 +8,13 @@ glyphs
 │ │ Up Down     parameter rows           Ctrl+S      Save                    │ │
 ├ │ Left Right  change the value         Ctrl+A      Save As                 │ ┤
 │►│ Alt+1 to 4  operator 1 to 4          Ctrl+R      Reset to factory        │ │
-│ │ Tab         next operator            Ctrl+Z      Undo                    │ │
-│ │ Shift+Tab   previous operator        Ctrl+Y      Redo                    │ │
-│ │ Mouse       click to focus; click    PgUp PgDn   previous / next patch   │ │
-│ │             a bar to set it          Esc         back one level          │ │
-│ │ PLAYING                              F1          this help               │ │
-│ │ Z to M      lower row, from C3                                           │ │
-│ │ Q to P      upper row, from C4                                           │ │
+│ │ Tab         next operator            F12         Random sound            │ │
+│ │ Shift+Tab   previous operator        F11         Mutate the sound        │ │
+│ │ Mouse       click to focus; click    Ctrl+Z      Undo                    │ │
+│ │             a bar to set it          Ctrl+Y      Redo                    │ │
+│ │ PLAYING                              PgUp PgDn   previous / next patch   │ │
+│ │ Z to M      lower row, from C3       Esc         back one level          │ │
+│ │ Q to P      upper row, from C4       F1          this help               │ │
 │ │ Digits      upper row's sharps                                           │ │
 │ │ Ctrl+Up Dn  keys up or down an octave                                    │ │
 │ │                                                                          │ │

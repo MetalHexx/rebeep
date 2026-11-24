@@ -39,6 +39,8 @@
 #define KID_PICK2 25
 #define KID_PICK3 26
 #define KID_PICK4 27
+#define KID_RANDOM 28   /* F12: a random voice and a note; F11 (KID_MUTATE) nudges the current one */
+#define KID_MUTATE 29
 
 #define MOD_SHIFT 1
 #define MOD_CTRL 2

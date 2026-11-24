@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "version.h"
+#include "dice.h"
 #include "dos.h"
 #include "editor.h"
 #include "jingle.h"
@@ -494,6 +495,7 @@ static int run_studio(int mono, int trace)
     rebeep_suspend();
     video_init();
     kbd_init();
+    dice_seed(bios_ticks());
     role_set_mono(mono || scr_bw80());
 
     run_detection(&detect);

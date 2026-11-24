@@ -34,6 +34,8 @@ typedef struct {
     int prompt, btn;              /* the save prompt is open; its focused button 0 to 3 (Save, Save As, Discard, Cancel) */
     int pend;                     /* the leave the prompt guards, an EL_* plus 1; 0 for none */
     int saveas;                   /* the name row takes a Save As name: Enter saves it, Esc cancels */
+    int audition;                 /* the piano key plus 1 that Random or Mutate holds until its key comes up, 0 for none; not drawn */
+    int diceKeys;                 /* F12 (1) and F11 (2) down, as the event stream said: the note ends when both are up */
 } Editor;
 
 /* What the main loop hands to editor_act after an event or a click. EA_SAVEAS is Enter on a Save As name; EA_PICK plus
@@ -141,6 +143,13 @@ int editor_save_as(Editor *e, Library *lib);
 /* Ctrl+R: loads the factory values (the name kept) as an unsaved, undoable change when the open patch is in FACTORY or
    USER and its name exists in FACTORY; otherwise says `No factory version`. Returns 0 or -1. */
 int editor_reset(Editor *e, const Library *lib);
+
+/* F12 (Random, `mutate` 0) or F11 (Mutate): replaces the variant shown with a random voice, or nudges it, as one
+   unsaved, undoable step (the other variant, Octave and the name stay), then plays the last piano key started (key 12
+   until one is). The note is held until F12 or F11 comes up, like a piano key; a key the piano already holds is
+   re-keyed and stays the piano's. Held notes take the new voice. Waveform stops at 3 unless the chip is an OPL3. Says "Random. Ctrl+Z
+   to go back" or "Mutated. Ctrl+Z to go back". Returns 1 when the voice changed. */
+int editor_dice(Editor *e, int mutate);
 
 /* Leaves the patch: to the list, to the previous or next one in list order (wrapping, on the 4-OP variant when the
    chip is an OPL3). A dirty patch does not go: the save

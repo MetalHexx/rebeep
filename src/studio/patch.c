@@ -372,3 +372,11 @@ int patch_equal(const Patch *a, const Patch *b)
     if (memcmp(&a->v2, &b->v2, sizeof a->v2) != 0) return 0;
     return !a->has4 || memcmp(&a->v4, &b->v4, sizeof a->v4) == 0;
 }
+
+unsigned patch_carriers(const Voice *v, int n)
+{
+    static const unsigned char carriers_4[4] = { 0x08, 0x09, 0x0A, 0x0D };
+    static const unsigned char carriers_2[2] = { 0x02, 0x03 };
+
+    return n == 4 ? carriers_4[v->conn & 3] : carriers_2[v->conn & 1];
+}

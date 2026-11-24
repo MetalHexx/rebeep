@@ -44,4 +44,8 @@ int patch_write(const char *path, const Patch *p);
 /* 1 when the two patches hold the same values; the name is ignored. */
 int patch_equal(const Patch *a, const Patch *b);
 
+/* The operators you hear in `v`'s connection, one bit an operator (bit k is operator k), for a voice of `n` operators
+   (2 or 4). */
+unsigned patch_carriers(const Voice *v, int n);
+
 #endif

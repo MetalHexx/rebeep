@@ -9,6 +9,8 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 - **ReBeep Studio**, a full-screen patch editor: shape your own FM voices, play them on the keyboard,
   and save them. It comes in the package, and `INSTALL` copies it
   ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md)).
+- **Random and Mutate** in the studio: F12 rolls a new sound and F11 nudges the one you have,
+  playing it while you hold the key ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#the-keys)).
 - **Patches by name:** `/P:` takes the name of a patch from `USER`, `FACTORY` or a pack folder, and
   `PATCH=` in `RBSTUDIO.CFG` picks one at every load
   ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).

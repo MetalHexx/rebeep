@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "dice.h"
 #include "dos.h"
 #include "editor.h"
 #include "kbd.h"
@@ -16,8 +17,10 @@
 #define NAV_ROWS (FIRST_PARAM_NAV + P_COUNT)
 #define USER_FOLDER "USER"
 #define FACTORY_FOLDER "FACTORY"
+#define DEFAULT_KEY 12   /* C4 at the start-up keyboard octave */
 
 static Undo history;
+static int last_key = DEFAULT_KEY;   /* the piano key last started, 0 to 28: what Random and Mutate play; kept across editor_open */
 
 static int is_switch(int row)
 {
@@ -109,6 +112,7 @@ void editor_release(Editor *e)
 {
     opl_all_off();
     e->nheld = 0;
+    e->audition = 0;
 }
 
 void editor_focus(Editor *e, int row)
@@ -321,6 +325,7 @@ void editor_key_down(Editor *e, int key)
     int j;
 
     if (key < 0 || key >= ED_KEYS || e->fk == F_NAME || is_held(e, key)) return;
+    last_key = key;
     for (j = e->nheld; j > 0 && e->held[j - 1] > key; j--) e->held[j] = e->held[j - 1];
     e->held[j] = (unsigned char)key;
     e->nheld++;
@@ -333,6 +338,7 @@ void editor_key_up(Editor *e, int key)
     int j;
 
     if (!is_held(e, key)) return;
+    if (e->audition == key + 1) e->audition = 0;
     for (j = 0; e->held[j] != key; j++) {
     }
     for (; j + 1 < e->nheld; j++) e->held[j] = e->held[j + 1];
@@ -388,6 +394,23 @@ static unsigned modifier_bit(unsigned scan)
     return 0;
 }
 
+/* Which of Random's and Mutate's keys an event is, whatever modifiers are held: 1 for F12, 2 for F11, 0 for any other. */
+static int dice_key(unsigned event)
+{
+    int id = (event & KBD_EXT) ? 0 : key_lookup(K_SYNTH, event & ~KBD_BREAK, 0);
+
+    return id == KID_RANDOM ? 1 : id == KID_MUTATE ? 2 : 0;
+}
+
+/* Releases the note Random or Mutate started, if it is still held. */
+static void audition_end(Editor *e)
+{
+    int key = e->audition - 1;
+
+    e->audition = 0;
+    if (key >= 0) editor_key_up(e, key);
+}
+
 /* A key while the save prompt is open: Left, Right and Tab move the focus, Enter or a first letter chooses, Esc is Cancel. */
 static int prompt_key(Editor *e, unsigned event)
 {
@@ -420,6 +443,7 @@ int editor_event(Editor *e, unsigned event)
     unsigned bit = modifier_bit(scan);
     int brk = (event & KBD_BREAK) != 0;
     int piano = key_piano(event);
+    int dice = dice_key(event);
     int repeat;
     int id;
 
@@ -432,10 +456,15 @@ int editor_event(Editor *e, unsigned event)
     if (brk) {
         if ((event & ~KBD_BREAK) == e->last_make) e->last_make = 0;
         if (piano >= 0) editor_key_up(e, piano);
+        if (dice != 0) {
+            e->diceKeys &= ~dice;
+            if (e->diceKeys == 0) audition_end(e);
+        }
         return EA_NONE;
     }
     repeat = event == e->last_make;
     e->last_make = event;
+    e->diceKeys |= dice;
 
     if (e->prompt) return prompt_key(e, event);
     if (e->help) {
@@ -446,8 +475,9 @@ int editor_event(Editor *e, unsigned event)
         editor_key_down(e, piano);
         return EA_NONE;
     }
-    e->msg[0] = '\0';
     id = key_lookup(K_SYNTH, event, e->mods);
+    if ((id == KID_RANDOM || id == KID_MUTATE) && (repeat || e->fk == F_NAME)) return EA_NONE;
+    e->msg[0] = '\0';
     if (id == 0 && e->fk == F_NAME) {
         char ch = key_name_char(event, e->mods);
 
@@ -484,6 +514,8 @@ int editor_event(Editor *e, unsigned event)
     case KID_REDO: editor_redo(e); break;
     case KID_OCT_UP: editor_kb_octave(e, 1); break;
     case KID_OCT_DOWN: editor_kb_octave(e, -1); break;
+    case KID_RANDOM: editor_dice(e, 0); break;
+    case KID_MUTATE: editor_dice(e, 1); break;
     case KID_ESC:
         if (e->saveas) {
             editor_name_esc(e);
@@ -714,6 +746,31 @@ int editor_reset(Editor *e, const Library *lib)
     undo_break(&history);
     editor_msg(e, "Factory values loaded", R_TEXT);
     return 0;
+}
+
+int editor_dice(Editor *e, int mutate)
+{
+    Patch before = e->p;
+    int wavmax = e->chip == 3 ? 7 : 3;
+    int key = last_key;
+    int changed;
+
+    undo_break(&history);
+    if (mutate) dice_mutate(voice_of(e), e->n, wavmax);
+    else dice_roll(voice_of(e), e->n, wavmax);
+    changed = commit(e, &before, e->fk, 0);
+    undo_break(&history);
+    editor_msg(e, mutate ? "Mutated. Ctrl+Z to go back" : "Random. Ctrl+Z to go back", R_TEXT);
+    if (is_held(e, key)) {
+        if (e->chip != 0) {
+            opl_note_off(e->kbOct * 12 + key);
+            opl_note_on(e->kbOct * 12 + key);
+        }
+    } else {
+        editor_key_down(e, key);
+        if (is_held(e, key)) e->audition = key + 1;
+    }
+    return changed;
 }
 
 /* Goes to the list, or to the previous or next patch in list order, without asking. */

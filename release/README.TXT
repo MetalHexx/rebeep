@@ -213,8 +213,8 @@ on again when you quit.
   /?          help
 
 Its keys are on screen under F1. The main ones: Up and Down move between
-rows, Left and Right change a value, Z to M and Q to P play notes, Ctrl+S
-saves and Esc steps back.
+rows, Left and Right change a value, Z to M and Q to P play notes, F12
+rolls a random sound and F11 nudges it, Ctrl+S saves and Esc steps back.
 
 Patches are .RBP text files in three kinds of folder:
 

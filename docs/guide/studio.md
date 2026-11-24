@@ -52,6 +52,8 @@ F1 shows these on screen, over the synth screen. Esc closes it.
 | Ctrl+S | Save |
 | Ctrl+A | Save As: save under a new name |
 | Ctrl+R | Reset to factory: load the factory values and leave the patch unsaved |
+| F12 | Random: a new sound for the voice on screen, played on your last piano key while you hold F12 |
+| F11 | Mutate: change a few values of the voice on screen a little, played the same way |
 | Ctrl+Z, Ctrl+Y | Undo, redo. Holding a key on a bar counts as one undo step |
 | PgUp, PgDn | The previous or next patch in the list |
 | F1 | Help |
@@ -72,6 +74,13 @@ The note keys use the US layout. When you type a name, the same keys type letter
 **The variant row** switches between the patch's 2-OP and 4-OP voice. A patch can hold both. On an
 OPL3 the studio opens a patch on its 4-OP voice when it has one. Choosing 4-OP on a patch that has
 none builds one from the 2-OP voice. A four-operator voice does not play on an OPL2.
+
+**Looking for a sound?** F12 gives the voice on screen a random connection, feedback and operators,
+and leaves the name, the octave and the other variant as they were. F11 nudges a few values of the
+voice you have and keeps its connection, so pressing it again and again drifts the sound. Both play
+the last piano key you pressed (C4 until you press one) for as long as you hold the key, and do
+nothing while you type a name. Each press is one step for Ctrl+Z, and saving works as for any other
+change.
 
 **The octave row** moves the patch up or down from the game's own pitch. The synth screen shows 4
 for the game's pitch, and the list shows the shift from it, `0` for none.

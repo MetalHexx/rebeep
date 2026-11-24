@@ -33,10 +33,6 @@ static const char *const DESC_4[4] = {
 };
 static const char *const DESC_2[2] = {"1 shapes the tone of 2", "1 and 2 side by side"};
 
-/* The operators you hear for each connection, one bit an operator. */
-static const unsigned char CARRIERS_4[4] = {0x08, 0x09, 0x0A, 0x0D};
-static const unsigned char CARRIERS_2[2] = {0x02, 0x03};
-
 static const char *const MULT_TEXT[16] = {
     "\xAB", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "10", "12", "12", "15", "15"
 };
@@ -65,10 +61,7 @@ static const Voice *voice_of(const Editor *e)
 
 static int is_carrier(const Editor *e, int k)
 {
-    int conn = voice_of(e)->conn;
-    unsigned mask = e->n == 4 ? CARRIERS_4[conn & 3] : CARRIERS_2[conn & 1];
-
-    return (mask >> k) & 1;
+    return (patch_carriers(voice_of(e), e->n) >> k) & 1;
 }
 
 /* An operator's rim colour: the ones you hear stand out. */

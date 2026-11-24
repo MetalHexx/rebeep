@@ -14,7 +14,8 @@
 | `T_VOICE.C` | The OPL driver through `opl_sink`: the factory records, the 4-OP slots and bits, KSL and OL edges, octave shift, slot stealing, shutdown, tracing; detection on the real chip |
 | `T_LSCRL.C` | The patch list's scroll window (`list_scroll`), row hit-test (`list_item_at`) and override text for an 8-character name (`list_draw`) over a synthetic library |
 | `T_SAVE.C` | Saving over a tree built at run time: the Ctrl+S rules (factory, pack and user patches, override removal only when equal and never from a pack patch, a name edit as Save As), Save As validation, Reset to factory, the save prompt guarding a leave, a failed write that keeps the old file, the help's keys, and every non-piano binding documented by a help row |
-| `T_EDIT.C` | The editor without drawing: value ranges and wrap, the Waveform limit by chip, the 4-OP variant from FM and AM, undo coalescing, the name, the piano and its releases, key events through the table, a bar's mouse values, PgUp/PgDn across folders |
+| `T_EDIT.C` | The editor without drawing: value ranges and wrap, the Waveform limit by chip, the 4-OP variant from FM and AM, undo coalescing, the name, Random and Mutate with their held note, the piano and its releases, key events through the table, a bar's mouse values, PgUp/PgDn across folders |
+| `T_DICE.C` | The dice: rolls stay in every range and the Waveform limit and give each carrier its floors, a seed repeats; a nudge keeps the connection, moves one to four values a small step and never takes a carrier below its floors |
 | `T_REDRW.C` | The synth screen in parts: `synth_parts` and `synth_redraw` over the old screen against a fresh `synth_draw`, for each field the drawing reads, in both variants and views; the primitives' clipping and `SCR_KEEP` |
 
 ## Rules

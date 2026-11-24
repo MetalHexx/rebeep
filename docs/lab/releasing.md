@@ -42,6 +42,8 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
   a 4-OP one (make a 4-OP variant of a factory patch and Save As a `USER` name). Help pages 1 and 2 and the
   save prompt look right in colour and with `RBSTUDIO /VIEW:MONO`. After Esc out, `REBEEP /S` shows the
   traps on and RBTEST plays.
+- [ ] On the synth screen, F12 rolls a new sound and plays the last note until it is released, holding it
+  never rolls again, F11 changes the sound a little, and Ctrl+Z steps back through each press.
 - [ ] A four-operator patch: `REBEEP /P:<that USER patch>`, `REBEEP /S` says `(4-OP)`, and RBTEST case 1
   plays the fuller voice.
 - [ ] Last, attach `build/release/rebeep-<v>-floppy.img` as A: from 86Box's Media menu, run

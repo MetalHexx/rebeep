@@ -1,9 +1,11 @@
 /* The editor's logic without drawing: value ranges and wrap, the Waveform limit by chip, the 4-OP variant made from a
-   2-OP voice, undo coalescing, the name, the piano and its releases, the keys through the key table, a bar's mouse
-   values and PgUp/PgDn across folders. */
+   2-OP voice, undo coalescing, the name, Random and Mutate with the note they play, the piano and its releases, the keys
+   through the key table, a bar's mouse values and PgUp/PgDn across folders. */
+#include <stdio.h>
 #include <string.h>
 
 #include "testlib.h"
+#include "../../src/studio/dice.h"
 #include "../../src/studio/editor.h"
 #include "../../src/studio/kbd.h"
 #include "../../src/studio/keys.h"
@@ -11,6 +13,7 @@
 #include "../../src/studio/log.h"
 #include "../../src/studio/opl.h"
 #include "../../src/studio/patch.h"
+#include "../../src/studio/roles.h"
 #include "../../src/studio/screens.h"
 
 #define PROG "\\EDTREE\\PROG\\"
@@ -107,6 +110,269 @@ static int is_silent(const Op *o, const Op *like)
     want.v[P_AR] = 0;
     want.v[P_OL] = 0;
     return op_equal(o, &want);
+}
+
+#define SC_F11 0x57
+#define SC_F12 0x58
+#define SC_CTRL 0x1D
+#define SC_Z 0x2C
+#define SC_V 0x2F   /* piano key 5 */
+
+/* The same patch with its 4-OP variant (FM-AM, operators 3 and 4 copies of 1 and 2), the 4-OP shown. */
+static void open_base4(void)
+{
+    make_base(0);
+    base.v4 = base.v2;
+    base.v4.conn = 2;
+    base.v4.op[2] = base.v2.op[0];
+    base.v4.op[3] = base.v2.op[1];
+    base.has4 = 1;
+    editor_open(&e, &base, 3, 1, 3);
+}
+
+/* F12 (Random) goes down, or F11 (Mutate) when `mutate` is set. */
+static void dice_down(int mutate)
+{
+    editor_event(&e, mutate ? SC_F11 : SC_F12);
+}
+
+static void dice_up(int mutate)
+{
+    editor_event(&e, (mutate ? SC_F11 : SC_F12) | KBD_BREAK);
+}
+
+static void ctrl_z(void)
+{
+    editor_event(&e, SC_CTRL);
+    editor_event(&e, SC_Z);
+    editor_event(&e, SC_Z | KBD_BREAK);
+    editor_event(&e, SC_CTRL | KBD_BREAK);
+}
+
+/* The variant the editor shows, in `p`. */
+static const Voice *shown_in(const Patch *p)
+{
+    return e.n == 4 ? &p->v4 : &p->v2;
+}
+
+/* How many bytes of the variant shown differ from `was`. */
+static int shown_bytes_changed(const Patch *was)
+{
+    const unsigned char *a = (const unsigned char *)shown_in(&e.p);
+    const unsigned char *b = (const unsigned char *)shown_in(was);
+    int n = 0;
+    int i;
+
+    for (i = 0; i < (int)sizeof(Voice); i++) n += a[i] != b[i];
+    return n;
+}
+
+/* The other variant, Octave and the name are as `was` had them. */
+static int rest_untouched(const Patch *was)
+{
+    const Voice *a = e.n == 4 ? &e.p.v2 : &e.p.v4;
+    const Voice *b = e.n == 4 ? &was->v2 : &was->v4;
+
+    return memcmp(a, b, sizeof *a) == 0 && e.p.has4 == was->has4 && e.p.octave == was->octave &&
+           strcmp(e.p.name, was->name) == 0;
+}
+
+static void dice_variant(int variant)
+{
+    char name[64];
+    Patch was;
+
+    fresh_chip(3);
+    if (variant == 4) open_base4();
+    else open_base(3, 0);
+
+    sprintf(name, "F12 on the %d-OP variant: one undo step", variant);
+    t_case(name);
+    was = e.p;
+    dice_down(0);
+    t_checkl(e.n, variant, "the variant shown stays");
+    t_check(memcmp(shown_in(&e.p), shown_in(&was), sizeof(Voice)) != 0, "the voice shown is another one");
+    t_check(rest_untouched(&was), "the other variant, Octave and name are untouched");
+    t_checkl(e.dirty, 1, "an unsaved edit");
+    t_check(strcmp(e.msg, "Random. Ctrl+Z to go back") == 0, "the message says so");
+    dice_up(0);
+    ctrl_z();
+    t_check(memcmp(&e.p, &was, sizeof was) == 0, "Ctrl+Z puts the patch back byte for byte");
+    t_check(strcmp(e.msg, "Undo") == 0, "and it was the one step");
+    editor_redo(&e);
+    t_check(memcmp(shown_in(&e.p), shown_in(&was), sizeof(Voice)) != 0, "Ctrl+Y brings the roll back");
+
+    sprintf(name, "F11 on the %d-OP variant: one undo step", variant);
+    t_case(name);
+    was = e.p;
+    dice_down(1);
+    t_check(strcmp(e.msg, "Mutated. Ctrl+Z to go back") == 0, "the message says so");
+    t_check(shown_bytes_changed(&was) >= 1 && shown_bytes_changed(&was) <= 4, "one to four values changed");
+    t_checkl(shown_in(&e.p)->conn, shown_in(&was)->conn, "the connection is the same");
+    t_check(rest_untouched(&was), "the other variant, Octave and name are untouched");
+    dice_up(1);
+    ctrl_z();
+    t_check(memcmp(&e.p, &was, sizeof was) == 0, "Ctrl+Z puts the patch back byte for byte");
+}
+
+/* Runs before any case plays a piano key: the last key starts as key 12. */
+static void dice_cases(void)
+{
+    Patch was;
+    Patch then;
+    int wave_max = 0;
+    int i;
+
+    dice_seed(4242);
+    t_case("F12 and F11 are Random and Mutate");
+    t_checkl(key_lookup(K_SYNTH, SC_F12, 0), KID_RANDOM, "F12");
+    t_checkl(key_lookup(K_SYNTH, SC_F11, 0), KID_MUTATE, "F11");
+    t_checkl(key_lookup(K_SYNTH, SC_F12, MOD_CTRL), 0, "Ctrl+F12 is nothing: 86Box keeps it for Ctrl+Alt+Del");
+    t_checkl(key_lookup(K_SYNTH, SC_F12, MOD_SHIFT), 0, "Shift+F12 is nothing");
+
+    dice_variant(2);
+    dice_variant(4);
+
+    t_case("a typematic repeat of F12 or F11 rolls nothing");
+    fresh_chip(3);
+    open_base(3, 0);
+    was = e.p;
+    dice_down(0);
+    then = e.p;
+    editor_event(&e, SC_F12);
+    editor_event(&e, SC_F12);
+    t_check(memcmp(&e.p, &then, sizeof then) == 0, "the repeats leave the voice as the press made it");
+    t_check(strcmp(e.msg, "Random. Ctrl+Z to go back") == 0, "and keep the message");
+    t_checkl(e.nheld, 1, "and add no key");
+    dice_up(0);
+    dice_down(1);
+    then = e.p;
+    editor_event(&e, SC_F11);
+    t_check(memcmp(&e.p, &then, sizeof then) == 0 && strcmp(e.msg, "Mutated. Ctrl+Z to go back") == 0, "F11 too");
+    dice_up(1);
+    ctrl_z();
+    ctrl_z();
+    t_check(memcmp(&e.p, &was, sizeof was) == 0, "each press was one undo step: two undos are the start");
+
+    t_case("the press holds the last key played, F12 up releases it");
+    fresh_chip(3);
+    open_base(3, 0);
+    keyons = 0;
+    dice_down(0);
+    t_check(e.nheld == 1 && e.held[0] == 12, "key 12 is lit before any other was played");
+    t_check(keyons >= 1, "and sounds");
+    keyoffs = 0;
+    dice_up(0);
+    t_check(e.nheld == 0 && keyoffs >= 1, "F12 up releases it");
+    editor_event(&e, SC_V);
+    editor_event(&e, SC_V | KBD_BREAK);
+    dice_down(0);
+    t_check(e.nheld == 1 && e.held[0] == 5, "after playing key 5, F12 plays key 5");
+    dice_up(0);
+    open_base(3, 0);
+    dice_down(1);
+    t_check(e.nheld == 1 && e.held[0] == 5, "the key is remembered across a patch switch, and F11 plays it too");
+    dice_up(1);
+    t_checkl(e.nheld, 0, "F11 up releases it");
+    dice_down(0);
+    dice_down(1);
+    t_check(e.nheld == 1 && e.held[0] == 5, "F11 while F12 holds the note adds no second entry");
+    dice_up(1);
+    t_checkl(e.nheld, 1, "F11 up while F12 is still down keeps the note");
+    dice_up(0);
+    t_checkl(e.nheld, 0, "the last of the two keys up ends it");
+    dice_down(1);
+    dice_down(0);
+    dice_up(1);
+    t_checkl(e.nheld, 1, "F12 down then F11 up: the note goes on");
+    dice_up(0);
+    t_checkl(e.nheld, 0, "until F12 is up too");
+    dice_down(0);
+    editor_kb_octave(&e, 1);
+    editor_kb_octave(&e, -1);
+    dice_down(1);
+    dice_up(0);
+    t_checkl(e.nheld, 1, "a note F11 started after a release is kept while F11 is down");
+    dice_up(1);
+    t_checkl(e.nheld, 0, "and ends with it");
+
+    t_case("a key the piano holds stays the piano's");
+    editor_event(&e, SC_V);
+    keyons = 0;
+    keyoffs = 0;
+    dice_down(0);
+    t_check(e.nheld == 1 && e.held[0] == 5, "F12 adds no second entry");
+    t_check(keyons >= 1 && keyoffs >= 1, "the note is keyed again");
+    dice_up(0);
+    t_checkl(e.nheld, 1, "F12 up does not release it");
+    editor_event(&e, SC_V | KBD_BREAK);
+    t_checkl(e.nheld, 0, "the piano's break does");
+    dice_down(0);
+    editor_event(&e, SC_V);
+    editor_event(&e, SC_V | KBD_BREAK);
+    t_checkl(e.nheld, 0, "the piano can release the key F12 holds");
+    editor_event(&e, SC_V);
+    keyoffs = 0;
+    dice_up(0);
+    t_check(e.nheld == 1 && keyoffs == 0, "and F12 up leaves it when the piano took it again");
+    editor_event(&e, SC_V | KBD_BREAK);
+
+    t_case("the name row and the help ignore both keys");
+    open_base(3, 0);
+    editor_focus(&e, F_NAME);
+    editor_msg(&e, "keep", R_TEXT);
+    was = e.p;
+    dice_down(0);
+    dice_up(0);
+    dice_down(1);
+    dice_up(1);
+    t_check(memcmp(&e.p, &was, sizeof was) == 0 && e.nheld == 0 && e.dirty == 0, "the name row: nothing happens");
+    t_check(strcmp(e.msg, "keep") == 0, "and the message stays");
+    editor_saveas_begin(&e);
+    dice_down(0);
+    dice_up(0);
+    t_check(memcmp(&e.p, &was, sizeof was) == 0 && strcmp(e.msg, "Save As: type a name") == 0, "a Save As name too");
+    open_base(3, 0);
+    editor_help(&e, 1);
+    dice_down(0);
+    dice_up(0);
+    dice_down(1);
+    dice_up(1);
+    t_check(memcmp(&e.p, &base, sizeof base) == 0 && e.nheld == 0 && e.help == 1, "the help: nothing happens");
+
+    t_case("without a chip the voice changes and the note cannot play");
+    open_base(0, 0);
+    was = e.p;
+    dice_down(0);
+    t_check(memcmp(&e.p.v2, &was.v2, sizeof was.v2) != 0 && e.dirty == 1, "the voice changed");
+    t_check(strstr(e.msg, "cannot play") != NULL, "the message says it cannot play");
+    dice_up(0);
+    t_checkl(e.nheld, 0, "F12 up still releases the lit key");
+
+    t_case("an OPL2 rolls Waveform up to 3 only, an OPL3 higher");
+    fresh_chip(2);
+    open_base(2, 0);
+    for (i = 0; i < 150; i++) {
+        dice_down(0);
+        dice_up(0);
+        if (e.p.v2.op[0].v[P_WAVE] > wave_max) wave_max = e.p.v2.op[0].v[P_WAVE];
+        if (e.p.v2.op[1].v[P_WAVE] > wave_max) wave_max = e.p.v2.op[1].v[P_WAVE];
+        dice_down(1);
+        dice_up(1);
+        if (e.p.v2.op[0].v[P_WAVE] > wave_max) wave_max = e.p.v2.op[0].v[P_WAVE];
+        if (e.p.v2.op[1].v[P_WAVE] > wave_max) wave_max = e.p.v2.op[1].v[P_WAVE];
+    }
+    t_checkl(wave_max, 3, "an OPL2 reaches Waveform 3 and no further, through Random and Mutate");
+    fresh_chip(3);
+    open_base(3, 0);
+    wave_max = 0;
+    for (i = 0; i < 150; i++) {
+        dice_down(0);
+        dice_up(0);
+        if (e.p.v2.op[0].v[P_WAVE] > wave_max) wave_max = e.p.v2.op[0].v[P_WAVE];
+        if (e.p.v2.op[1].v[P_WAVE] > wave_max) wave_max = e.p.v2.op[1].v[P_WAVE];
+    }
+    t_check(wave_max > 3 && wave_max <= 7, "an OPL3 goes past 3");
 }
 
 int main(void)
@@ -324,6 +590,8 @@ int main(void)
     editor_name_add(&e, 's');
     editor_undo(&e);
     t_check(strcmp(e.p.name, "Q") == 0, "a typed run is one undo step");
+
+    dice_cases();
 
     t_case("the piano: a key lights and sounds, a repeat is ignored, release stops it");
     fresh_chip(3);

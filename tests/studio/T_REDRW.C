@@ -1,7 +1,7 @@
 /* The synth screen in parts: after a change, drawing only synth_parts(before, after) over the screen of the old state
    gives every cell a fresh synth_draw of the new state gives, for both variants and both views. The changes come through
-   the editor (key events, clicks, bars, undo, the name, the piano) and, for what a save, the rescan or the prompt would
-   change, straight into the fields. Also the drawing primitives: clipping and SCR_KEEP. */
+   the editor (key events, clicks, bars, undo, the name, the piano, Random and Mutate) and, for what a save, the rescan or
+   the prompt would change, straight into the fields. Also the drawing primitives: clipping and SCR_KEEP. */
 #include <stdio.h>
 #include <string.h>
 
@@ -29,6 +29,8 @@
 #define SC_1 0x02
 #define SC_MINUS 0x0C
 #define SC_Y 0x15
+#define SC_F11 0x57
+#define SC_F12 0x58
 #define SC_Z 0x2C   /* also piano key 0 */
 #define SC_X 0x2D   /* piano key 2 */
 #define SC_C 0x2E   /* piano key 4 */
@@ -389,6 +391,22 @@ static void undo_redo(int variant)
     step("Ctrl+Z, Ctrl+Y");
 }
 
+/* Random and Mutate change many values at once and light the last piano key; its key going up puts the bar back. */
+static void dice(int variant, int thorough)
+{
+    kase(variant, "Random and Mutate");
+    restart(variant);
+    press(SC_F12, "Random");
+    release(SC_F12, "Random's key up");
+    press(SC_F11, "Mutate");
+    release(SC_F11, "Mutate's key up");
+    if (!thorough) return;
+    press(SC_Z, "a piano key held");
+    press(SC_F12, "Random over a held key");
+    release(SC_F12, "F12 up leaves the piano's key lit");
+    release(SC_Z, "the piano key up");
+}
+
 static void name_row(int variant)
 {
     kase(variant, "the name row");
@@ -550,6 +568,7 @@ int main(void)
     rows(4, 1);
     operators(4, 1);
     undo_redo(4);
+    dice(4, 1);
     name_row(4);
     clicks(4, 1);
     direct(4, 1);
@@ -557,11 +576,13 @@ int main(void)
     piano(2, 0);
     rows(2, 0);
     operators(2, 0);
+    dice(2, 0);
     clicks(2, 0);
     direct(2, 0);
 
     role_set_mono(1);
     rows(4, 0);
+    dice(4, 0);
     role_set_mono(0);
 
     opl_sink = NULL;
