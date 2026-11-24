@@ -5,6 +5,39 @@ patches, and hearing them as you edit. A patch is a small text file of settings 
 FM chip. Save one, and ReBeep plays a game's beeps with it. The studio comes in the same package
 as ReBeep, and [`INSTALL`](real-pc.md#3-install-rebeep) copies it beside `REBEEP.COM`.
 
+<p align="center"><a href="../images/studio/synth.gif"><img src="../images/studio/synth.gif" width="360" alt="The synth screen editing a four-operator voice. Each press of F12 rolls a new random sound: the connection, the waveforms, the bars and the envelope drawing change."></a><br>
+<sub><b>The synth screen.</b> Each press of F12 rolls a new random sound.</sub></p>
+
+- **Shape two- and four-operator voices**, one operator at a time, with the envelope and the wave
+  drawn as you go.
+- **Play while you edit.** The keyboard is a piano, and every change is heard at once.
+- **Roll the dice.** F12 gives you a random new sound, and F11 nudges the one you have.
+- **Keep what you make.** Your patches go in their own folder, the factory patches stay as they
+  are, and packs from friends sit beside them.
+- **Hear it in your games** with `REBEEP /P:NAME`.
+
+### Every screen
+
+Click a picture to see it full size.
+
+<table>
+<tr>
+<td align="center"><a href="../images/studio/checks.png"><img src="../images/studio/checks.png" width="240" alt="The checks: the sound chip, the mouse, the program folder, the settings file, the patches and the log file, each with a tick or an exclamation mark."></a><br><b>Checks</b></td>
+<td align="center"><a href="../images/studio/splash.png"><img src="../images/studio/splash.png" width="240" alt="The splash: the ReBeep! logo over a smiling green frog, with the credits and press any key."></a><br><b>Splash</b></td>
+<td align="center"><a href="../images/studio/menu.png"><img src="../images/studio/menu.png" width="240" alt="The main menu: Patch Editor selected; Game Profiles and Settings marked coming soon."></a><br><b>Main menu</b></td>
+</tr>
+<tr>
+<td align="center"><a href="../images/studio/patch-list.png"><img src="../images/studio/patch-list.png" width="240" alt="The patch list: the factory patches and a pack, each with its octave and a mark for a four-operator variant."></a><br><b>Patch list</b></td>
+<td align="center"><a href="../images/studio/synth-2op.png"><img src="../images/studio/synth-2op.png" width="240" alt="The synth screen on the Organ patch's two-operator voice: two carriers side by side, their settings as bars, the wave and the envelope."></a><br><b>Synth, 2-OP</b></td>
+<td align="center"><a href="../images/studio/synth-4op.png"><img src="../images/studio/synth-4op.png" width="240" alt="The synth screen on a four-operator voice in two pairs, with carrier 4 in focus and its envelope drawn."></a><br><b>Synth, 4-OP</b></td>
+</tr>
+<tr>
+<td align="center"><a href="../images/studio/help-1.png"><img src="../images/studio/help-1.png" width="240" alt="Help page 1: the keys for moving, editing, playing and the patch, including F12 Random and F11 Mutate."></a><br><b>Help, page 1</b></td>
+<td align="center"><a href="../images/studio/help-2.png"><img src="../images/studio/help-2.png" width="240" alt="Help page 2: what each control means, from attack rate to feedback."></a><br><b>Help, page 2</b></td>
+<td align="center"><a href="../images/studio/save-prompt.png"><img src="../images/studio/save-prompt.png" width="240" alt="The unsaved changes prompt over the synth screen, with Save, Save As, Discard and Cancel."></a><br><b>Save prompt</b></td>
+</tr>
+</table>
+
 ## What you need
 
 - A sound card with an OPL2 or OPL3 FM chip at port `388h`, as for ReBeep itself. Without one the

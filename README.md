@@ -28,13 +28,21 @@ plays them on the card's FM chip instead.
 - **Five voices, and your own.** A faithful square wave close to the original, or one of four FM
   patches chosen by name: `/P:ORGAN`, `/P:FLUTE`, `/P:BRASS` or `/P:BELL`. OPL3 cards play
   four-operator voices.
-- **ReBeep Studio.** A full-screen editor for your own patches: play them on the keyboard while you
-  shape them, save them, then hear them in a game ([studio](docs/guide/studio.md)).
+- **ReBeep Studio.** Shape, play and save your own patches in a DOS editor: [see it below](#rebeep-studio).
 - **Change it while you play.** Ctrl+Alt+B swaps between the sound card and the speaker, and
   Ctrl+Alt+N switches between the faithful voice and your patch. The keys can be changed. They
   don't work yet in games that take over the keyboard; set those up at the DOS prompt first.
 - **Small and tidy.** One `.COM` file that loads high and unloads cleanly. The game is
   never patched.
+
+## ReBeep Studio
+
+A full-screen FM editor in the same package: play the keyboard while you shape a voice, press F12 for
+a random one or F11 to mutate it, then hear it in your games. **[Take the tour →](docs/guide/studio.md)**
+
+| **Splash** | **Patch editor** |
+|:---:|:---:|
+| <a href="docs/images/studio/splash.png"><img src="docs/images/studio/splash.png" width="300" alt="ReBeep Studio's splash: the ReBeep! logo over a smiling green frog"></a> | <a href="docs/images/studio/synth.gif"><img src="docs/images/studio/synth.gif" width="300" alt="The patch editor rolling new random four-operator voices with F12"></a> |
 
 ## How it works
 
@@ -84,7 +92,7 @@ emulated Pentium MMX and a 386SX/16, backed by automated checks that run in DOS 
 | [Set up on a real PC](docs/guide/real-pc.md) | Jemm, installing, a boot menu entry, checking it, undoing it |
 | [Set up in 86Box](docs/guide/86box.md) | The VM's settings, getting the files in, then the same steps |
 | [Playing](docs/guide/playing.md) | Voices, volume, muting, hotkeys, turning it off |
-| [ReBeep Studio](docs/guide/studio.md) | Make and save your own patches, folders and packs, the settings file |
+| [ReBeep Studio](docs/guide/studio.md) | A tour, then making and saving your own patches, folders and packs, the settings file |
 | [Troubleshooting](docs/guide/troubleshooting.md) | By symptom, then every message |
 | [Compatibility](docs/guide/compatibility.md) | Tested games and machines, settings per game, known conflicts |
 | [Reference](docs/guide/reference.md) | Every option, hotkey, exit code, and the RBSTUDIO and RBTEST commands |
