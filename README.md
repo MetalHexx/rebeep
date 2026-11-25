@@ -40,9 +40,9 @@ plays them on the card's FM chip instead.
 A full-screen FM editor in the same package: play the keyboard while you shape a voice, press F12 for
 a random one or F11 to mutate it, then hear it in your games. **[Take the tour →](docs/guide/studio.md)**
 
-| **Splash** | **Patch editor** |
-|:---:|:---:|
-| <a href="docs/images/studio/splash.png"><img src="docs/images/studio/splash.png" width="300" alt="ReBeep Studio's splash: the ReBeep! logo over a smiling green frog"></a> | <a href="docs/images/studio/synth.gif"><img src="docs/images/studio/synth.gif" width="300" alt="The patch editor rolling new random four-operator voices with F12"></a> |
+<table align="center"><tr>
+<td><a href="docs/images/studio/splash.png"><img src="docs/images/studio/splash.png" width="300" alt="ReBeep Studio's splash: the ReBeep! logo over a smiling green frog"></a></td>
+<td><a href="docs/images/studio/synth.gif"><img src="docs/images/studio/synth.gif" width="300" alt="The patch editor rolling new random four-operator voices with F12"></a></td></tr></table>
 
 ## How it works
 
