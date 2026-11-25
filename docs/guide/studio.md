@@ -48,12 +48,29 @@ Click a picture to see it full size.
 
 ## Start it
 
-```
-C:\REBEEP\RBSTUDIO
-```
+1. At the DOS prompt, go to the folder you installed ReBeep in: `C:\REBEEP`, unless you
+   [chose another](real-pc.md#3-install-rebeep).
 
-On a monochrome display, add `/VIEW:MONO`. The [reference](reference.md#rbstudio) lists the switches.
-The studio finds its files beside itself, wherever you start it from.
+   ```
+   C:
+   CD \REBEEP
+   ```
+
+2. Start the studio:
+
+   ```
+   RBSTUDIO
+   ```
+
+   You should see its checks for a moment, then the splash and a short jingle. Press any key for the
+   main menu, then Enter for **Patch Editor**.
+
+3. To quit, press Esc until you reach the main menu, then Esc once more. If a patch has unsaved
+   changes, a prompt asks first: [save or discard them](#saving-and-overrides).
+
+If your `PATH` line has `C:\REBEEP` ([step 4](real-pc.md#4-add-a-rebeep-boot-menu-entry) adds it),
+step 2 works from any folder: the studio finds its files beside itself. On a monochrome display,
+start it with `RBSTUDIO /VIEW:MONO`. The [reference](reference.md#rbstudio) lists the switches.
 
 ## The screens
 
