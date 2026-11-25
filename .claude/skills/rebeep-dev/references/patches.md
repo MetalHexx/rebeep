@@ -3,7 +3,9 @@
 Patches made while testing the studio in a VM, kept so every VM has them. They live in
 [`../patches/`](../patches/) as `NAME.RBP` files, and every deploy (`build run --deploy`,
 `disk deploy`, a `vm` probe) puts them on D: as the pack `LAB`: `D:\REBEEP\PATCHES\LAB\`. The studio
-lists them under `LAB`, and `REBEEP /P:LAB\NAME` plays one. They are a dev aid and never ship:
+lists them under `LAB`, and `REBEEP /P:LAB\NAME` plays one. Each folder in `../patches/` is a pack of
+its own name: `KQ4/` and `SQ1/` (instruments taken from those games' sound banks) land in
+`D:\REBEEP\PATCHES\KQ4\` and `SQ1\`, played as `/P:KQ4\TKQ4-000`. They are a dev aid and never ship:
 `release create` does not read this folder.
 
 **Collect new ones.** A patch saved in the studio goes to `D:\REBEEP\PATCHES\USER\`, and the next

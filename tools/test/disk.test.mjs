@@ -190,7 +190,7 @@ describe('disk deploy', () => {
     assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
   });
 
-  test('puts the lab patch set on D: as REBEEP/PATCHES/LAB, CRLF, and only its .RBP files', () => {
+  test('puts the lab patch set on D: as REBEEP/PATCHES/LAB, CRLF, and only its .RBP files; each folder is a pack', () => {
     const labPatches = path.join(s.tmp, 'lab-patches');
     const ctx = { ...context(), repo: { ...context().repo, labPatches } };
     fs.mkdirSync(path.dirname(s.paths.vm('mirror-msdos').dImg), { recursive: true });
@@ -201,8 +201,12 @@ describe('disk deploy', () => {
     writeFile(path.join(labPatches, 'PAD.RBP'), '[PATCH]\r\nFORMAT=1\r\n');
     writeFile(path.join(labPatches, 'README.md'), 'not a patch');
     writeFile(path.join(labPatches, 'TOOLONGNAME.RBP'), 'x');
+    writeFile(path.join(labPatches, 'kq4', 'TKQ4-000.RBP'), '[PATCH]\nFORMAT=1\n');
+    writeFile(path.join(labPatches, 'kq4', 'INDEX.txt'), 'not a patch');
+    writeFile(path.join(labPatches, 'TOOLONGPACK', 'A.RBP'), 'x');
     const delivery = composeDelivery(ctx);
     assert.ok(delivery.warnings.some((w) => /TOOLONGNAME\.RBP/.test(w)), 'a name that is not 8.3 is skipped with a warning');
+    assert.ok(delivery.warnings.some((w) => /TOOLONGPACK/.test(w)), 'so is a pack folder whose name is not 8.3');
 
     deployDisk(ctx, 'mirror-msdos');
     const image = readD();
@@ -212,6 +216,12 @@ describe('disk deploy', () => {
       listed(image).filter((n) => n.startsWith('REBEEP/PATCHES/LAB/')),
       ['REBEEP/PATCHES/LAB/GLASSY.RBP', 'REBEEP/PATCHES/LAB/PAD.RBP'],
       'only the .RBP files with 8.3 names',
+    );
+    assert.equal(image.readFile('REBEEP/PATCHES/KQ4/TKQ4-000.RBP').toString(), '[PATCH]\r\nFORMAT=1\r\n');
+    assert.deepEqual(
+      listed(image).filter((n) => n.startsWith('REBEEP/PATCHES/') && !n.startsWith('REBEEP/PATCHES/LAB')),
+      ['REBEEP/PATCHES/KQ4', 'REBEEP/PATCHES/KQ4/TKQ4-000.RBP'],
+      'a folder is a pack of its own name, upper case, with only its .RBP files',
     );
     assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
   });
