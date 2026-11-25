@@ -72,12 +72,14 @@ if (frames.length > 0) {
   const scaled = frames.map((_, i) => `[${i}:v]${SCALE}[f${i}]`).join(';');
   const labels = frames.map((_, i) => `[f${i}]`).join('');
 
-  // The GIF: one palette for all frames, no dithering, each frame held FRAME_SECONDS, looping.
+  // The GIF: one palette for all frames, no dithering, each frame held FRAME_SECONDS, looping. A frame lasts until
+  // the next one starts, so the last has no length of its own: -final_delay gives it one (without it, ffmpeg
+  // writes 1/100 s and the last frame flashes by).
   const gif = path.join(docs, 'synth.gif');
   ffmpeg([...inputs, '-filter_complex',
     `${scaled};${labels}concat=n=${frames.length}:v=1:a=0,settb=1/1000,setpts=N*${FRAME_SECONDS * 1000},split[a][b];` +
       '[a]palettegen=stats_mode=full:reserve_transparent=0[p];[b][p]paletteuse=dither=none',
-    '-loop', '0', '-fps_mode', 'passthrough', gif]);
+    '-loop', '0', '-final_delay', String(Math.round(FRAME_SECONDS * 100)), '-fps_mode', 'passthrough', gif]);
   written.push(gif);
 
   // The site's sprite: the frames stacked, lossless, each followed by 8 black rows so the page's rounding at a
