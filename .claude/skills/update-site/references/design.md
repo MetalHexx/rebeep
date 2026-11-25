@@ -19,8 +19,8 @@ look as if it was always there. Read `site/css/site.css`'s `:root` before adding
 - **The monitor** (`.monitor`, `.monitor__bezel`, `__screen`, `__chin`, `__stand`): beige gradient plastic, a 4:3
   screen with an inner lime glow. As the studio TV (`.tv`) it shows channels.
 - **The studio TV** (`.tv__*` in site.css, the TV block in site.js): channels in `.tv__ch` (`hidden` when off), a
-  CRT shrink between them (`.is-off` → `.is-dark` → `.is-on`, keyframes `crt-*`), an OSD that pops up large then
-  fades, beige chin buttons. A new channel is one more `.tv__ch` with `role="group"`, `aria-roledescription="slide"`
+  CRT shrink between them (`.is-off` → `.is-dark` → `.is-on`, keyframes `crt-*`), a small OSD channel badge that
+  shows after each change then fades, beige chin buttons. A new channel is one more `.tv__ch` with `role="group"`, `aria-roledescription="slide"`
   and an "n of N" label; update every label's count.
 - **Cards** (`.card` with `data-glow`, a cursor-following glow), **tags** (`.tags`), **buttons** (`.btn--primary`,
   `.btn--ghost`), **`.link-arrow`** for "more" links, **section heads** (`.sechead`, an eyebrow number `01`..).

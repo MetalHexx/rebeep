@@ -880,7 +880,7 @@ kbd {
 .tv.is-on .tv__dot { animation: crt-on-dot 420ms both; }
 .tv.is-off .monitor__led, .tv.is-on .monitor__led { animation: led-flick 460ms steps(1); }
 
-/* the on-screen display: the channel pops up large, then settles and fades, as on an old set */
+/* the on-screen display: the channel shows for a moment after each change, then fades, as on an old set */
 /* It sits on the picture's top text row, on a dark backing, so it never hides more than that row. */
 .tv__osd {
   position: absolute;
@@ -905,9 +905,6 @@ kbd {
 .tv__osd--tr { right: calc(3.4% + 6px); }
 .js .tv__osd { opacity: 0; transition: opacity 0.3s ease; }
 .js .tv.osd-on .tv__osd { opacity: 1; }
-@media (min-width: 640px) {
-  .tv.osd-big .tv__osd--tl { font-size: 32px; }
-}
 /* top right: REC, on the video channel only */
 .tv__osd--tr { display: none; }
 .tv.is-rec .tv__osd--tr { display: flex; }

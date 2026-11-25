@@ -103,12 +103,9 @@
     };
     var osd = function () {
       var rec = chans[cur].hasAttribute('data-video-id');
-      tv.classList.add('osd-on', 'osd-big');
+      tv.classList.add('osd-on');
       clearTimeout(osdTimer);
-      osdTimer = setTimeout(function () {
-        tv.classList.remove('osd-big');
-        osdTimer = setTimeout(function () { if (!rec) tv.classList.remove('osd-on'); }, 700);
-      }, 1300);
+      osdTimer = setTimeout(function () { if (!rec) tv.classList.remove('osd-on'); }, 2000);
     };
     var show = function (i) {
       chans[cur].hidden = true;
