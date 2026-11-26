@@ -92,12 +92,12 @@ int main(void)
     t_case("PATCHES= from the file: relative, then bad");
     put_text("D.CFG", "PATCHES=MINE\r\n");
     cfg_load(&cfg, "D.CFG");
-    t_checkl(lib_scan(&lib, "\\PROG\\", cfg_get(&cfg, "PATCHES")), 0, "scan");
+    t_checkl(lib_open(&lib, "\\PROG\\", cfg_get(&cfg, "PATCHES")), 0, "open");
     t_check(strcmp(lib.patchdir, "\\PROG\\MINE") == 0, lib.patchdir);
     t_checkl(lib.patches_missing, 1, "a well-formed folder that is not there");
     put_text("E.CFG", "PATCHES=..\\..\\WINDOWS\r\n");
     cfg_load(&cfg, "E.CFG");
-    t_checkl(lib_scan(&lib, "\\PROG\\", cfg_get(&cfg, "PATCHES")), 0, "scan");
+    t_checkl(lib_open(&lib, "\\PROG\\", cfg_get(&cfg, "PATCHES")), 0, "open");
     t_check(strcmp(lib.patchdir, "\\PROG\\PATCHES") == 0, "a path that climbs is ignored for the default");
     t_checkl(lib.patches_missing, 0, "and does not mark the folder missing");
     lib_free(&lib);

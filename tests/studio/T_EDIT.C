@@ -739,10 +739,11 @@ int main(void)
     put_patch("EDTREE\\PROG\\FACTORY\\AAA.RBP", 0);
     put_patch("EDTREE\\PROG\\FACTORY\\BBB.RBP", 1);
     put_patch("EDTREE\\PROG\\PATCHES\\USER\\CCC.RBP", 0);
-    put_patch("EDTREE\\PROG\\PATCHES\\PACK\\DDD.RBP", 1);
+    put_patch("EDTREE\\PROG\\PATCHES\\BANK\\DDD.RBP", 1);
     log_open("EDTREE.LOG");
     memset(&lib, 0, sizeof lib);
-    t_checkl(lib_scan(&lib, PROG, NULL), 0, "scan");
+    t_checkl(lib_open(&lib, PROG, NULL), 0, "open");
+    t_checkl(lib_load(&lib, NULL, NULL), 0, "load");
     t_checkl(editor_load(&e, &lib, 0, err, sizeof err), 0, "load the first patch");
     t_check(strcmp(e.p.name, "AAA") == 0 && e.pos == 1 && e.total == 4, "AAA is 1 of 4");
     editor_key_down(&e, 5);
@@ -761,7 +762,7 @@ int main(void)
     editor_leave(&e, &lib, EL_NEXT, err, sizeof err);
     t_check(strcmp(e.p.name, "CCC") == 0, "then the USER folder");
     editor_leave(&e, &lib, EL_NEXT, err, sizeof err);
-    t_check(strcmp(e.p.name, "DDD") == 0, "then the pack");
+    t_check(strcmp(e.p.name, "DDD") == 0, "then the bank");
     editor_leave(&e, &lib, EL_NEXT, err, sizeof err);
     t_check(strcmp(e.p.name, "AAA") == 0 && e.pos == 1, "PgDn from the last wraps to the first");
     editor_leave(&e, &lib, EL_PREV, err, sizeof err);

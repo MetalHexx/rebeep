@@ -14,17 +14,27 @@
 #define FACTORY_FOLDER "FACTORY"
 #define USER_FOLDER "USER"
 #define EXT_RBP ".RBP"
+#define LIB_ROOM 32   /* entries kept free beyond the files counted: new saves, before the block grows */
 
 typedef struct {
     Library *lib;
     const char *dir;      /* the folder being read, no trailing backslash */
     const char *folder;   /* its name in the list */
+    int counting;         /* count the files, read none */
+    int found;            /* the files counted */
     int full_logged;
 } FolderScan;
 
-static char pack_names[LIB_MAX_PACKS][13];
-static int pack_count;
-static int pack_overflow;
+/* The load in progress: lib_load's callback and how many files it has taken. */
+static struct {
+    void (*fn)(int done, int total, void *arg);
+    void *arg;
+    int done, total;
+} progress;
+
+static char bank_names[LIB_MAX_BANKS][13];
+static int bank_count;
+static int bank_overflow;
 
 static int is_name_char(char c)
 {
@@ -151,26 +161,15 @@ static void add_entry(FolderScan *scan, const Patch *p)
     lib->entries[lib->count++] = e;
 }
 
-/* One .RBP file of a folder: reads it and lists it, or logs why not. */
-static void take_file(const char *file, void *arg)
+/* Reads one counted file and lists it, or logs why not. */
+static void read_file(FolderScan *scan, const char *file)
 {
-    FolderScan *scan = (FolderScan *)arg;
-    char name[13];
     static char path[LIB_DIR_LEN + 14];   /* static: the stack is 2 KB */
     char err[80];
     Patch p;
-    const char *dot = strchr(file, '.');
-    size_t base = dot != NULL ? (size_t)(dot - file) : strlen(file);
 
-    if (dot == NULL || stricmp(dot, EXT_RBP) != 0 || base > NAME_LIMIT) return;
-    memcpy(name, file, base);
-    name[base] = '\0';
-    if (!name_valid(name)) {
-        log_line("%s\\%s skipped: not a valid patch name", scan->folder, file);
-        return;
-    }
-    if (scan->lib->count == LIB_MAX) {
-        if (!scan->full_logged) log_line("The patch list is full (%d); the rest are not listed", LIB_MAX);
+    if (scan->lib->count >= scan->lib->cap) {
+        if (!scan->full_logged) log_line("The patch list is full (%d); the rest are not listed", scan->lib->cap);
         scan->full_logged = 1;
         return;
     }
@@ -180,6 +179,32 @@ static void take_file(const char *file, void *arg)
         return;
     }
     add_entry(scan, &p);
+}
+
+/* One .RBP file of a folder: counts it, or reads it and reports the progress. */
+static void take_file(const char *file, void *arg)
+{
+    FolderScan *scan = (FolderScan *)arg;
+    char name[13];
+    const char *dot = strchr(file, '.');
+    size_t base = dot != NULL ? (size_t)(dot - file) : strlen(file);
+
+    if (dot == NULL || stricmp(dot, EXT_RBP) != 0 || base > NAME_LIMIT) return;
+    memcpy(name, file, base);
+    name[base] = '\0';
+    if (!name_valid(name)) {
+        if (!scan->counting) log_line("%s\\%s skipped: not a valid patch name", scan->folder, file);
+        return;
+    }
+    if (scan->counting) {
+        scan->found++;
+        return;
+    }
+    read_file(scan, file);
+    progress.done++;
+    if (progress.fn != NULL) {
+        progress.fn(progress.done < progress.total ? progress.done : progress.total, progress.total, progress.arg);
+    }
 }
 
 static void sort_range(Library *lib, int from)
@@ -197,8 +222,9 @@ static void sort_range(Library *lib, int from)
     }
 }
 
-/* Reads every .RBP in `dir` as folder `folder`; returns the patches listed. */
-static int scan_folder(Library *lib, const char *dir, const char *folder)
+/* Walks the .RBP files in `dir` as folder `folder`. Counting returns the files with a valid name; otherwise it reads
+   them and returns the patches listed. */
+static int scan_folder(Library *lib, const char *dir, const char *folder, int counting)
 {
     FolderScan scan;
     static char spec[LIB_DIR_LEN + 8];
@@ -207,35 +233,38 @@ static int scan_folder(Library *lib, const char *dir, const char *folder)
     scan.lib = lib;
     scan.dir = dir;
     scan.folder = folder;
+    scan.counting = counting;
+    scan.found = 0;
     scan.full_logged = 0;
     sprintf(spec, "%s\\*" EXT_RBP, dir);
     dos_each(spec, 0, take_file, &scan);
+    if (counting) return scan.found;
     sort_range(lib, from);
     return lib->count - from;
 }
 
-static void take_pack(const char *name, void *arg)
+static void take_bank(const char *name, void *arg)
 {
     (void)arg;
-    if (pack_count == LIB_MAX_PACKS) {
-        pack_overflow = 1;
+    if (bank_count == LIB_MAX_BANKS) {
+        bank_overflow = 1;
         return;
     }
-    strncpy(pack_names[pack_count], name, sizeof pack_names[0] - 1);
-    pack_names[pack_count][sizeof pack_names[0] - 1] = '\0';
-    pack_count++;
+    strncpy(bank_names[bank_count], name, sizeof bank_names[0] - 1);
+    bank_names[bank_count][sizeof bank_names[0] - 1] = '\0';
+    bank_count++;
 }
 
-static void sort_packs(void)
+static void sort_banks(void)
 {
     char held[13];
     int i;
     int j;
 
-    for (i = 1; i < pack_count; i++) {
-        strcpy(held, pack_names[i]);
-        for (j = i - 1; j >= 0 && strcmp(pack_names[j], held) > 0; j--) strcpy(pack_names[j + 1], pack_names[j]);
-        strcpy(pack_names[j + 1], held);
+    for (i = 1; i < bank_count; i++) {
+        strcpy(held, bank_names[i]);
+        for (j = i - 1; j >= 0 && strcmp(bank_names[j], held) > 0; j--) strcpy(bank_names[j + 1], bank_names[j]);
+        strcpy(bank_names[j + 1], held);
     }
 }
 
@@ -251,69 +280,78 @@ static void mark_overrides(Library *lib)
     }
 }
 
-/* Reads FACTORY, USER and the packs into lib, whose folders are settled. */
-static void scan_all(Library *lib)
+/* Walks FACTORY, USER and the other banks of a library whose folders are settled. Counting sets factory, user, banks
+   and files to the counts and logs nothing; otherwise it reads every file into lib, sets the counts to what was
+   listed and logs what it leaves out. */
+static void scan_all(Library *lib, int counting)
 {
     static char dir[LIB_DIR_LEN + 14];
     static char spec[LIB_DIR_LEN + 8];
+    int files;
     int i;
 
     sprintf(dir, "%sFACTORY", lib->progdir);
-    lib->factory = scan_folder(lib, dir, FACTORY_FOLDER);
+    lib->factory = scan_folder(lib, dir, FACTORY_FOLDER, counting);
     sprintf(dir, "%s\\USER", lib->patchdir);
-    lib->user = scan_folder(lib, dir, USER_FOLDER);
-    mark_overrides(lib);
+    lib->user = scan_folder(lib, dir, USER_FOLDER, counting);
+    if (!counting) mark_overrides(lib);
+    files = lib->factory + lib->user;
+    lib->banks = 0;
 
-    pack_count = 0;
-    pack_overflow = 0;
+    bank_count = 0;
+    bank_overflow = 0;
     sprintf(spec, "%s\\*.*", lib->patchdir);
-    dos_each(spec, 1, take_pack, NULL);
-    if (pack_overflow) log_line("More than %d pack folders; the rest are not read", LIB_MAX_PACKS);
-    sort_packs();
-    for (i = 0; i < pack_count; i++) {
-        if (stricmp(pack_names[i], USER_FOLDER) == 0) {
+    dos_each(spec, 1, take_bank, NULL);
+    if (bank_overflow && !counting) log_line("More than %d bank folders; the rest are not read", LIB_MAX_BANKS);
+    sort_banks();
+    for (i = 0; i < bank_count; i++) {
+        if (stricmp(bank_names[i], USER_FOLDER) == 0) {
             continue;   /* USER\ was read above */
-        } else if (stricmp(pack_names[i], FACTORY_FOLDER) == 0) {
-            log_line("Folder %s inside the patches folder skipped: the name is reserved", pack_names[i]);
-        } else if (!folder_valid(pack_names[i])) {
-            log_line("Folder %s skipped: not a valid pack name", pack_names[i]);
+        } else if (stricmp(bank_names[i], FACTORY_FOLDER) == 0) {
+            if (!counting) log_line("Folder %s inside the patches folder skipped: the name is reserved", bank_names[i]);
+        } else if (!folder_valid(bank_names[i])) {
+            if (!counting) log_line("Folder %s skipped: not a valid bank name", bank_names[i]);
         } else {
-            sprintf(dir, "%s\\%s", lib->patchdir, pack_names[i]);
-            scan_folder(lib, dir, pack_names[i]);
-            lib->packs++;
+            int n;
+
+            sprintf(dir, "%s\\%s", lib->patchdir, bank_names[i]);
+            n = scan_folder(lib, dir, bank_names[i], counting);
+            if (n > 0) lib->banks++;
+            files += n;
         }
     }
+    if (counting) lib->files = files;
 }
 
-int lib_scan(Library *lib, const char *progdir, const char *patchdir)
+int lib_open(Library *lib, const char *progdir, const char *patchdir)
 {
+    int cap;
+
     lib_free(lib);
     memset(lib, 0, sizeof *lib);
-    lib->entries = (Entry __far *)_fmalloc(sizeof(Entry) * LIB_MAX);
-    if (lib->entries == NULL) return -1;
     if (strlen(progdir) < sizeof lib->progdir) strcpy(lib->progdir, progdir);
 
     resolve_patchdir(lib, patchdir);
-    scan_all(lib);
+    scan_all(lib, 1);
+    cap = lib->files + LIB_ROOM;
+    if (cap > LIB_MAX) cap = LIB_MAX;
+    lib->entries = (Entry __far *)_fmalloc(sizeof(Entry) * cap);
+    if (lib->entries == NULL) return -1;
+    lib->cap = cap;
     return 0;
 }
 
-int lib_rescan(Library *lib)
+int lib_load(Library *lib, void (*report)(int done, int total, void *arg), void *arg)
 {
-    static char progdir[sizeof lib->progdir];
-    static char patchdir[LIB_DIR_LEN];
-    int missing = lib->patches_missing;
-
-    strcpy(progdir, lib->progdir);
-    strcpy(patchdir, lib->patchdir);
-    lib_free(lib);
-    memset(lib, 0, sizeof *lib);
-    lib->entries = (Entry __far *)_fmalloc(sizeof(Entry) * LIB_MAX);
     if (lib->entries == NULL) return -1;
-    strcpy(lib->progdir, progdir);
-    strcpy(lib->patchdir, patchdir);
-    lib->patches_missing = missing;
-    scan_all(lib);
+    lib->count = 0;
+    progress.fn = report;
+    progress.arg = arg;
+    progress.done = 0;
+    progress.total = lib->files;
+    scan_all(lib, 0);
+    if (report != NULL && progress.done < progress.total) report(progress.total, progress.total, arg);
+    progress.fn = NULL;
     return 0;
 }
 
@@ -322,6 +360,7 @@ void lib_free(Library *lib)
     if (lib->entries != NULL) _ffree(lib->entries);
     lib->entries = NULL;
     lib->count = 0;
+    lib->cap = 0;
 }
 
 int lib_count(const Library *lib)
@@ -363,10 +402,198 @@ int lib_find(const Library *lib, const char *spec)
     return found >= 0 ? found : find_in(lib, FACTORY_FOLDER, spec);
 }
 
-int lib_user_path(const Library *lib, const char *name, char *path, unsigned len)
+/* Are entries a and b in the same bank? */
+static int same_bank(const Library *lib, int a, int b)
 {
-    int n = snprintf(path, len, "%s\\" USER_FOLDER "\\%s" EXT_RBP, lib->patchdir, name);
+    return _fstricmp(lib->entries[a].folder, lib->entries[b].folder) == 0;
+}
 
+/* A bank is contiguous, so "is in the bank of entry i" is true for a run of indexes and false outside it: both ends are
+   found by halving. */
+static int bank_start(const Library *lib, int i)
+{
+    int lo = 0;
+    int hi = i;
+
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+
+        if (same_bank(lib, mid, i)) hi = mid;
+        else lo = mid + 1;
+    }
+    return lo;
+}
+
+/* The index after the last entry of the bank that starts at `first`. */
+static int bank_end(const Library *lib, int first)
+{
+    int lo = first + 1;
+    int hi = lib->count;
+
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+
+        if (same_bank(lib, mid, first)) lo = mid + 1;
+        else hi = mid;
+    }
+    return lo;
+}
+
+void lib_bank(const Library *lib, int i, int *first, int *count)
+{
+    if (i < 0 || i >= lib->count) {
+        *first = 0;
+        *count = 0;
+        return;
+    }
+    *first = bank_start(lib, i);
+    *count = bank_end(lib, *first) - *first;
+}
+
+/* The place of a folder in the list: FACTORY, then USER, then the other banks by name. */
+static int folder_rank(const char *folder)
+{
+    if (stricmp(folder, FACTORY_FOLDER) == 0) return 0;
+    return stricmp(folder, USER_FOLDER) == 0 ? 1 : 2;
+}
+
+/* Does entry i's bank come before (-1), at (0) or after (1) `folder` in the list? */
+static int bank_cmp(const Library *lib, int i, const char *folder)
+{
+    char have[9];
+    int a;
+    int b;
+
+    _fstrcpy(have, lib->entries[i].folder);
+    a = folder_rank(have);
+    b = folder_rank(folder);
+    if (a != b) return a < b ? -1 : 1;
+    return a == 2 ? stricmp(have, folder) : 0;
+}
+
+static int in_factory(const Library *lib, const char *name)
+{
+    int f;
+
+    for (f = 0; f < lib->factory; f++) {
+        if (_fstrcmp(lib->entries[f].name, name) == 0) return 1;
+    }
+    return 0;
+}
+
+/* Sets the overrides mark of every USER entry named `name`. */
+static void mark_user(Library *lib, const char *name, int mark)
+{
+    int u;
+
+    for (u = lib->factory; u < lib->factory + lib->user; u++) {
+        if (_fstrcmp(lib->entries[u].name, name) == 0) lib->entries[u].overrides = (unsigned char)mark;
+    }
+}
+
+/* Makes room for LIB_ROOM more entries, never past LIB_MAX. Returns 0, or -1 when memory runs out. */
+static int grow(Library *lib)
+{
+    int cap = lib->cap + LIB_ROOM;
+    Entry __far *bigger;
+
+    if (cap > LIB_MAX) cap = LIB_MAX;
+    bigger = (Entry __far *)_frealloc(lib->entries, sizeof(Entry) * cap);
+    if (bigger == NULL) return -1;
+    lib->entries = bigger;
+    lib->cap = cap;
+    return 0;
+}
+
+int lib_put(Library *lib, const char *folder, const Patch *p)
+{
+    char up[NAME_LIMIT + 1];
+    Entry e;
+    int first = 0;
+    int end = 0;
+    int at;
+    int i = 0;
+    int found = 0;
+
+    if (strlen(folder) > NAME_LIMIT || strlen(p->name) > NAME_LIMIT) return -1;
+    strcpy(up, folder);
+    strupr(up);
+    while (i < lib->count) {
+        int cmp = bank_cmp(lib, i, up);
+
+        end = bank_end(lib, i);
+        if (cmp == 0) {
+            found = 1;
+            first = i;
+            break;
+        }
+        if (cmp > 0) break;
+        i = end;
+    }
+
+    memset(&e, 0, sizeof e);
+    if (found) _fstrcpy(e.folder, lib->entries[first].folder);
+    else strcpy(e.folder, up);
+    strcpy(e.name, p->name);
+    e.has4 = p->has4;
+    e.octave = p->octave;
+    if (strcmp(up, USER_FOLDER) == 0) e.overrides = (unsigned char)in_factory(lib, p->name);
+
+    at = found ? end : i;
+    while (found && at > first) {
+        int c = _fstrcmp(lib->entries[at - 1].name, p->name);
+
+        if (c == 0) {
+            lib->entries[at - 1] = e;
+            return at - 1;
+        }
+        if (c < 0) break;
+        at--;
+    }
+
+    if (lib->count >= LIB_MAX) return -1;
+    if (lib->count >= lib->cap && grow(lib) != 0) return -1;
+    _fmemmove(&lib->entries[at + 1], &lib->entries[at], (size_t)(lib->count - at) * sizeof(Entry));
+    lib->entries[at] = e;
+    lib->count++;
+    if (strcmp(up, FACTORY_FOLDER) == 0) {
+        lib->factory++;
+        mark_user(lib, p->name, 1);
+    } else if (strcmp(up, USER_FOLDER) == 0) {
+        lib->user++;
+    } else if (!found) {
+        lib->banks++;
+    }
+    return at;
+}
+
+int lib_drop(Library *lib, const char *folder, const char *name)
+{
+    int i = find_in(lib, folder, name);
+    int first;
+    int n;
+
+    if (i < 0) return -1;
+    lib_bank(lib, i, &first, &n);
+    _fmemmove(&lib->entries[i], &lib->entries[i + 1], (size_t)(lib->count - i - 1) * sizeof(Entry));
+    lib->count--;
+    if (stricmp(folder, FACTORY_FOLDER) == 0) {
+        lib->factory--;
+        mark_user(lib, name, 0);
+    } else if (stricmp(folder, USER_FOLDER) == 0) {
+        lib->user--;
+    } else if (n == 1) {
+        lib->banks--;
+    }
+    return 0;
+}
+
+int lib_bank_path(const Library *lib, const char *folder, const char *name, char *path, unsigned len)
+{
+    int n;
+
+    if (stricmp(folder, FACTORY_FOLDER) == 0) return -1;
+    n = snprintf(path, len, "%s\\%s\\%s" EXT_RBP, lib->patchdir, folder, name);
     return (n < 0 || (unsigned)n >= len) ? -1 : 0;
 }
 

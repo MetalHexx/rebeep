@@ -15,7 +15,7 @@ typedef struct {
     int mouse;             /* a driver answered */
     char folder[80];       /* the program folder, without a trailing backslash */
     int cfg_state;         /* 1 RBSTUDIO.CFG loaded, 0 not found, -1 unreadable */
-    int factory, user, packs;
+    int factory, user, banks;   /* the patches counted in FACTORY and USER, the other bank folders */
     int patches_ok;        /* the patch list could be read */
     int log_ok;
     char log_path[96];
@@ -29,8 +29,11 @@ void detlog_begin(const char *version);
 void detlog_line(const Detect *d, int n);
 
 /* The splash: SPLASH.ANS beside the program, then the version stamped on row 16. A missing file gives a plain splash
-   and a log line. */
+   and a log line. splash_loading then shows "Loading patches NN%" (`percent` 0 to 100) in place of the "press any key"
+   line; splash_ready draws the splash again, prompt included, without the log line. */
 void splash_draw(const char *version);
+void splash_loading(int percent);
+void splash_ready(const char *version);
 
 /* The menu. menu_draw draws the art (or a plain frame) and the selection `sel`; menu_select redraws only the item rows
    and the About box. menu_item_at gives the item whose row holds cell (x, y), or -1. */

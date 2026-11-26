@@ -5,6 +5,7 @@
 #include "screens.h"
 
 #define SAMPLE_VERSION "0.1.0"
+#define SPLASH_SAMPLE_PERCENT 45
 
 /* The patch list sample: three folders, USER\BELL selected. */
 static const struct {
@@ -43,7 +44,7 @@ void sample_detect(Detect *d)
     d->cfg_state = 0;
     d->factory = 4;
     d->user = 3;
-    d->packs = 1;
+    d->banks = 1;
     d->patches_ok = 1;
     d->log_ok = 1;
     strcpy(d->log_path, "C:\\REBEEP\\RBSTUDIO.LOG");
@@ -100,7 +101,7 @@ static void sample_list(void)
 }
 
 static const char *const SAMPLE_SCREENS[] = {
-    "detectlog", "splash", "menu", "patchlist", "synth-4op", "synth-2op", "help1-4op", "help2-4op", "help1-2op",
+    "detectlog", "splash", "splash-load", "menu", "patchlist", "synth-4op", "synth-2op", "help1-4op", "help2-4op", "help1-2op",
     "help2-2op", "save-4op", "save-2op"
 };
 
@@ -144,6 +145,9 @@ void sample_draw(const char *screen)
         for (i = 0; i < DETLOG_LINES; i++) detlog_line(&d, i);
     } else if (stricmp(screen, "splash") == 0) {
         splash_draw(SAMPLE_VERSION);
+    } else if (stricmp(screen, "splash-load") == 0) {
+        splash_draw(SAMPLE_VERSION);
+        splash_loading(SPLASH_SAMPLE_PERCENT);
     } else if (stricmp(screen, "menu") == 0) {
         menu_draw(MENU_PATCHES);
     } else if (stricmp(screen, "patchlist") == 0) {

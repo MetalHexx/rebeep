@@ -1,5 +1,5 @@
-/* Saving: Ctrl+S into the right path for a factory, pack and user patch, override removal only when the values equal the
-   factory patch and never from a pack patch, a name edit as Save As, Save As validation, Reset to factory, the save prompt
+/* Saving: Ctrl+S into the right path for a factory, bank and user patch, override removal only when the values equal the
+   factory patch and never from a bank patch, a name edit as Save As, Save As validation, Reset to factory, the save prompt
    guarding a leave, a failed write that keeps the old file, and the help table covering every non-piano binding. The tree
    is built on the DOSBox-X C: at run time. */
 #include <dos.h>
@@ -59,7 +59,14 @@ static void put_patch(const char *file, int ar)
     patch_write(file, &patch);
 }
 
-/* The tree before each case: the factory BELL and ORGAN, the USER ORGAN and BELL (overrides), and the pack HEXX with an
+/* Reads the tree on disk into `lib` from scratch. */
+static void reload(void)
+{
+    lib_open(&lib, PROG, NULL);
+    lib_load(&lib, NULL, NULL);
+}
+
+/* The tree before each case: the factory BELL and ORGAN, the USER ORGAN and BELL (overrides), and the bank HEXX with an
    ORGAN equal to the factory one and a SOLO. Files a case added are removed. */
 static void fresh(void)
 {
@@ -75,13 +82,13 @@ static void fresh(void)
     put_patch(PATCHES "USER\\ORGAN.RBP", 5);
     put_patch(PATCHES "HEXX\\ORGAN.RBP", 9);
     put_patch(PATCHES "HEXX\\SOLO.RBP", 7);
-    lib_scan(&lib, PROG, NULL);
+    reload();
 }
 
 static void with_user_bell(void)
 {
     put_patch(PATCHES "USER\\BELL.RBP", 3);
-    lib_rescan(&lib);
+    reload();
 }
 
 static void open_patch(const char *spec)
@@ -192,13 +199,13 @@ int main(void)
     t_checkl(file_ar(PATCHES "USER\\BELL.RBP"), 9, "USER\\BELL.RBP holds the newer value");
     t_check(strcmp(e.msg, "Saved") == 0, "Saved, not refused");
 
-    t_case("Ctrl+S on a pack patch writes a copy in USER; on a user patch rewrites it");
+    t_case("Ctrl+S on a bank patch writes a copy in USER; on a user patch rewrites it");
     fresh();
     open_patch("HEXX\\SOLO");
     tweak();
     act_on(ctrl_key(SC_S));
     t_checkl(file_ar(PATCHES "USER\\SOLO.RBP"), 8, "USER\\SOLO.RBP is the copy");
-    t_checkl(file_ar(PATCHES "HEXX\\SOLO.RBP"), 7, "the pack file is untouched");
+    t_checkl(file_ar(PATCHES "HEXX\\SOLO.RBP"), 7, "the bank file is untouched");
     t_check(strcmp(e.folder, "USER") == 0 && strcmp(e.file, "SOLO") == 0, "the open patch is USER\\SOLO");
     fresh();
     open_patch("USER\\ORGAN");
@@ -216,7 +223,7 @@ int main(void)
     t_checkl(file_ar(PATCHES "USER\\ORGAN.RBP"), 5, "USER\\ORGAN is untouched");
     t_check(e.dirty == 1 && strcmp(e.folder, "HEXX") == 0, "still dirty and still HEXX\\ORGAN");
 
-    t_case("a pack patch equal to the factory one never removes the user file");
+    t_case("a bank patch equal to the factory one never removes the user file");
     fresh();
     open_patch("HEXX\\ORGAN");
     editor_change(&e, 1, 0);
@@ -261,7 +268,7 @@ int main(void)
     act_on(ctrl_key(SC_S));
     t_check(!exists(PATCHES "USER\\BELL.RBP") && strcmp(e.msg, "Override removed") == 0, "saving removes it");
 
-    t_case("Reset to factory is refused on a pack patch, even one named like a factory patch");
+    t_case("Reset to factory is refused on a bank patch, even one named like a factory patch");
     fresh();
     open_patch("HEXX\\ORGAN");
     editor_change(&e, 1, 0);

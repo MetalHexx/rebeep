@@ -58,7 +58,7 @@ static int line_value(const Detect *d, int n, char *value)
             strcpy(value, "could not be read");
             return 0;
         }
-        sprintf(value, "%d factory, %d user, %d pack%s", d->factory, d->user, d->packs, d->packs == 1 ? "" : "s");
+        sprintf(value, "%d factory, %d user, %d other bank%s", d->factory, d->user, d->banks, d->banks == 1 ? "" : "s");
         return 1;
     default:
         if (d->log_ok) strcpy(value, d->log_path);

@@ -11,9 +11,9 @@ const DIR_ENTRY_BYTES = 32;
 /** `BOOT.BAT` loads a deployed target only when this file sits next to it. */
 const AUTOLOAD_FLAG = 'AUTOLOAD.FLG';
 const AUTOLOAD_BYTES = Buffer.from('autoload\r\n');
-/** Where the lab's patch set lands: packs in the studio's default patches folder. */
+/** Where the lab's patch set lands: banks in the studio's default patches folder. */
 const PATCHES_DIR = 'REBEEP/PATCHES';
-const LAB_PACK = `${PATCHES_DIR}/LAB`;
+const LAB_BANK = `${PATCHES_DIR}/LAB`;
 
 const fileNames = (dir) =>
   fs
@@ -89,14 +89,14 @@ function envFiles(repo) {
 }
 
 /**
- * The lab's patch set (`repo.labPatches`, the rebeep-dev skill's `patches/`), as packs the studio lists on
- * every VM, CRLF: every `.RBP` at its top goes to `REBEEP/PATCHES/LAB/`, and each folder in it is a pack of
+ * The lab's patch set (`repo.labPatches`, the rebeep-dev skill's `patches/`), as banks the studio lists on
+ * every VM, CRLF: every `.RBP` at its top goes to `REBEEP/PATCHES/LAB/`, and each folder in it is a bank of
  * its own name (`KQ4/` goes to `REBEEP/PATCHES/KQ4/`). A dev aid only: `release create` never reads it. No
  * folder, no files and no warning.
  */
 function labPatchFiles(repo) {
   if (!repo.labPatches || !fs.existsSync(repo.labPatches)) return [];
-  const pack = (dir, dest) =>
+  const bank = (dir, dest) =>
     fileNames(dir)
       .filter((name) => /\.rbp$/i.test(name))
       .map((name) => {
@@ -109,8 +109,8 @@ function labPatchFiles(repo) {
     .map((e) => e.name)
     .sort();
   return [
-    ...pack(repo.labPatches, LAB_PACK),
-    ...folders.flatMap((name) => pack(path.join(repo.labPatches, name), `${PATCHES_DIR}/${name.toUpperCase()}`)),
+    ...bank(repo.labPatches, LAB_BANK),
+    ...folders.flatMap((name) => bank(path.join(repo.labPatches, name), `${PATCHES_DIR}/${name.toUpperCase()}`)),
   ];
 }
 

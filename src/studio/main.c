@@ -40,7 +40,7 @@
 #define EXIT_SCREEN 4   /* /DUMP of a screen this program does not know; the screen check relies on it */
 
 static Settings settings;     /* RBSTUDIO.CFG, read once by the detection log */
-static Library patch_lib;     /* the patch list, scanned each time the Patch Editor opens */
+static Library patch_lib;     /* the patch list: counted by the checks, read on the splash, kept until exit */
 static Detect detect;         /* what the detection log found: the help names the chip and the log */
 static Editor editor;
 static char last_patch[20];   /* FOLDER\NAME of the patch opened last: the list opens on it */
@@ -120,7 +120,6 @@ static void folder_without_slash(char *out, unsigned len)
 /* The checks, each drawn and logged as it completes. */
 static void run_detection(Detect *d)
 {
-    static Library library;
     char path[100];
 
     memset(d, 0, sizeof *d);
@@ -147,11 +146,10 @@ static void run_detection(Detect *d)
     detlog_line(d, 3);
     scr_flush();
 
-    d->patches_ok = lib_scan(&library, dos_program_dir(), cfg_get(&settings, "PATCHES")) == 0;
-    d->factory = library.factory;
-    d->user = library.user;
-    d->packs = library.packs;
-    lib_free(&library);
+    d->patches_ok = lib_open(&patch_lib, dos_program_dir(), cfg_get(&settings, "PATCHES")) == 0;
+    d->factory = patch_lib.factory;
+    d->user = patch_lib.user;
+    d->banks = patch_lib.banks;
     detlog_line(d, 4);
     scr_flush();
 
@@ -159,10 +157,32 @@ static void run_detection(Detect *d)
     scr_flush();
 }
 
-/* Runs the splash: the art, the jingle, and any key to leave. */
+/* Shows the percentage of the patch library read, when it has changed, and drops the keys pressed meanwhile. */
+static void splash_progress(int done, int total, void *arg)
+{
+    int *shown = (int *)arg;
+    int percent = total > 0 ? (int)((long)done * 100L / total) : 100;
+
+    if (percent != *shown) {
+        *shown = percent;
+        splash_loading(percent);
+        scr_flush();
+    }
+    key_pressed();
+}
+
+/* Runs the splash: the art, silent, while the patch library is read behind "Loading patches NN%"; then the jingle, and
+   any key to leave. */
 static void run_splash(int chip)
 {
+    int shown = 0;
+
     splash_draw(REBEEP_VERSION);
+    splash_loading(0);
+    scr_flush();
+    if (detect.patches_ok) lib_load(&patch_lib, splash_progress, &shown);
+    key_pressed();
+    splash_ready(REBEEP_VERSION);
     scr_flush();
     if (chip != 0) {
         opl_init(chip);
@@ -330,13 +350,12 @@ static void run_patch_editor(void)
     int my;
     int found;
 
-    if (lib_scan(&patch_lib, dos_program_dir(), cfg_get(&settings, "PATCHES")) != 0) {
-        log_line("Patch Editor: out of memory reading the patch list");
+    if (!detect.patches_ok) {
+        log_line("Patch Editor: the patch list could not be read");
         return;
     }
     if (editor_init() != 0) {
         log_line("Patch Editor: out of memory for the undo history");
-        lib_free(&patch_lib);
         return;
     }
     found = last_patch[0] != '\0' ? lib_find(&patch_lib, last_patch) : -1;
@@ -416,7 +435,6 @@ static void run_patch_editor(void)
         }
     }
     editor_done();
-    lib_free(&patch_lib);
 }
 
 /* Acts on the chosen item. Returns 1 when the program should end. */
@@ -503,6 +521,7 @@ static int run_studio(int mono, int trace)
     run_splash(detect.chip);
     run_menu();
 
+    lib_free(&patch_lib);
     release_hardware();
     dos_restore();
     video_restore();
@@ -628,11 +647,33 @@ static void bench_run(char lines[BENCH_FIGURES][BENCH_LINE])
     }
 }
 
+/* The patch library read as the splash does, from the real patches folder: lib_open then lib_load. */
+static void bench_library(char *line)
+{
+    char path[100];
+    unsigned long first = bios_ticks();
+    unsigned long start;
+    unsigned long opened;
+    unsigned long loaded;
+
+    sprintf(path, "%.80sRBSTUDIO.CFG", dos_program_dir());
+    cfg_load(&settings, path);
+    while ((start = bios_ticks()) == first) {
+    }
+    lib_open(&patch_lib, dos_program_dir(), cfg_get(&settings, "PATCHES"));
+    opened = ticks_since(start);
+    lib_load(&patch_lib, NULL, NULL);
+    loaded = ticks_since(start);
+    sprintf(line, "%-20s %lu ms for %d patches (open %lu ms, load %lu ms)", "Library load", loaded * TICK_US / 1000UL,
+            lib_count(&patch_lib), opened * TICK_US / 1000UL, (loaded - opened) * TICK_US / 1000UL);
+    lib_free(&patch_lib);
+}
+
 /* /BENCH: the figures on screen, in the studio's own drawing path, then printed and written to BENCH.TXT. The OPL
    driver runs with a sink that discards its writes, so nothing sounds and the chip is not touched. */
 static int run_bench(void)
 {
-    static char lines[BENCH_FIGURES][BENCH_LINE];
+    static char lines[BENCH_FIGURES + 1][BENCH_LINE];
     char head[BENCH_LINE];
     FILE *out;
     int ok = 1;
@@ -645,6 +686,7 @@ static int run_bench(void)
     opl_sink = bench_discard;
     opl_init(3);
     sample_detect(&detect);
+    bench_library(lines[BENCH_FIGURES]);
     video_init();
     bench_run(lines);
     video_restore();
@@ -655,7 +697,7 @@ static int run_bench(void)
     out = fopen(BENCH_FILE, "w");
     printf("%s\n", head);
     if (out != NULL) ok = fprintf(out, "%s\n", head) >= 0;
-    for (i = 0; i < BENCH_FIGURES; i++) {
+    for (i = 0; i <= BENCH_FIGURES; i++) {
         printf("%s\n", lines[i]);
         if (out != NULL && ok) ok = fprintf(out, "%s\n", lines[i]) >= 0;
     }

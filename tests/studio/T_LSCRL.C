@@ -12,9 +12,9 @@
 static Library lib;
 static Entry rows[40];
 
-/* Folders FACTORY (4), USER (10), PACK (16): 30 entries on 33 lines, entry 14 the first of PACK (line 17, its heading
+/* Folders FACTORY (4), USER (10), BANK (16): 30 entries on 33 lines, entry 14 the first of BANK (line 17, its heading
    on line 16). */
-static void build(int factory, int user, int pack)
+static void build(int factory, int user, int bank)
 {
     int i = 0;
     int k;
@@ -22,7 +22,7 @@ static void build(int factory, int user, int pack)
     memset(rows, 0, sizeof rows);
     for (k = 0; k < factory; k++, i++) strcpy(rows[i].folder, "FACTORY");
     for (k = 0; k < user; k++, i++) strcpy(rows[i].folder, "USER");
-    for (k = 0; k < pack; k++, i++) strcpy(rows[i].folder, "PACK");
+    for (k = 0; k < bank; k++, i++) strcpy(rows[i].folder, "BANK");
     for (k = 0; k < i; k++) rows[k].name[0] = (char)('A' + k % 26);
     lib.entries = rows;
     lib.count = i;
@@ -68,7 +68,7 @@ int main(void)
     t_checkl(list_scroll(&lib, 5, 21), 7, "going back up puts the entry on the top line");
 
     t_case("a folder's first entry brings its heading");
-    t_checkl(list_scroll(&lib, 14, 21), 16, "PACK's heading is line 16, its first entry line 17");
+    t_checkl(list_scroll(&lib, 14, 21), 16, "BANK's heading is line 16, its first entry line 17");
     t_checkl(list_scroll(&lib, 4, 12), 5, "USER's first entry from below: heading line 5");
     t_checkl(list_scroll(&lib, 14, 16), 16, "already in view: top stays");
 
@@ -80,7 +80,7 @@ int main(void)
 
     t_case("a click's row maps to its entry");
     t_checkl(list_item_at(&lib, 16, 10, FIRST_ROW), -1, "a heading rule is no entry");
-    t_checkl(list_item_at(&lib, 16, 10, FIRST_ROW + 1), 14, "the line after the heading is PACK's first entry");
+    t_checkl(list_item_at(&lib, 16, 10, FIRST_ROW + 1), 14, "the line after the heading is BANK's first entry");
     t_checkl(list_item_at(&lib, 16, 10, FIRST_ROW + 11), 24, "the last visible line");
     t_checkl(list_item_at(&lib, 16, 10, FIRST_ROW + 12), -1, "below the body");
     t_checkl(list_item_at(&lib, 16, 10, FIRST_ROW - 1), -1, "above the body");

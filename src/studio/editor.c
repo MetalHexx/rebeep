@@ -633,7 +633,7 @@ static int user_exists(const Library *lib, const char *name)
     char spec[24];
 
     sprintf(spec, USER_FOLDER "\\%s", name);
-    return lib_find(lib, spec) >= 0 || (lib_user_path(lib, name, path, sizeof path) == 0 && dos_is_file(path));
+    return lib_find(lib, spec) >= 0 || (lib_bank_path(lib, USER_FOLDER, name, path, sizeof path) == 0 && dos_is_file(path));
 }
 
 /* Reads the FACTORY patch "name". Returns 0, or -1 when it is not listed or cannot be read. */
@@ -650,34 +650,30 @@ static int read_factory(const Library *lib, const char *name, Patch *out)
     return patch_read(path, out, err, sizeof err);
 }
 
-/* The open patch is FOLDER\name now: the list is read again and pos follows it. */
-static void reopened(Editor *e, Library *lib, const char *folder, const char *name)
+/* The open patch is FOLDER\name now, at index `at` of the list the caller has just updated (-1: not listed, pos stays). */
+static void reopened(Editor *e, const Library *lib, const char *folder, const char *name, int at)
 {
-    char spec[24];
-
     strcpy(e->folder, folder);
     strcpy(e->file, name);
     strcpy(e->nameBefore, e->p.name);
     e->dirty = 0;
     e->saveas = 0;
-    sprintf(spec, "%s\\%s", folder, name);
-    if (lib_rescan(lib) == 0) {
-        int i = lib_find(lib, spec);
-
-        if (i >= 0) e->pos = i + 1;
-    }
+    if (at >= 0) e->pos = at + 1;
     e->total = lib_count(lib);
 }
 
 static int write_user(Editor *e, Library *lib, const char *name)
 {
     static char path[LIB_DIR_LEN + 32];
+    int at;
 
-    if (lib_user_path(lib, name, path, sizeof path) != 0 || patch_write(path, &e->p) != 0) {
+    if (lib_bank_path(lib, USER_FOLDER, name, path, sizeof path) != 0 || patch_write(path, &e->p) != 0) {
         say_failed(e, "write", name);
         return -1;
     }
-    reopened(e, lib, USER_FOLDER, name);
+    at = lib_put(lib, USER_FOLDER, &e->p);
+    if (at < 0) log_line("USER\\%s is saved but not listed: the patch list is full", name);
+    reopened(e, lib, USER_FOLDER, name, at);
     editor_msg(e, "Saved", R_TEXT);
     return 0;
 }
@@ -700,6 +696,7 @@ int editor_save(Editor *e, Library *lib)
 {
     static Patch factory;
     static char path[LIB_DIR_LEN + 32];
+    char spec[24];
     int in_user = strcmp(e->folder, USER_FOLDER) == 0;
     int in_factory = strcmp(e->folder, FACTORY_FOLDER) == 0;
 
@@ -711,11 +708,13 @@ int editor_save(Editor *e, Library *lib)
             editor_msg(e, "Nothing to save", R_TEXT);
             return 0;
         }
-        if (lib_user_path(lib, e->file, path, sizeof path) != 0 || dos_remove(path) != 0) {
+        if (lib_bank_path(lib, USER_FOLDER, e->file, path, sizeof path) != 0 || dos_remove(path) != 0) {
             say_failed(e, "remove", e->file);
             return -1;
         }
-        reopened(e, lib, FACTORY_FOLDER, e->file);
+        lib_drop(lib, USER_FOLDER, e->file);
+        sprintf(spec, FACTORY_FOLDER "\\%s", e->file);
+        reopened(e, lib, FACTORY_FOLDER, e->file, lib_find(lib, spec));
         editor_msg(e, "Override removed", R_TEXT);
         return 0;
     }
