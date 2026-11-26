@@ -92,6 +92,16 @@ Its 1990 Award BIOS forgets the disks when it loads defaults, so the first boot 
 4. Set **Drive A:** to **1.44M, 3½ in.**, then **F10** to save.
 5. Once it boots, quit 86Box and `rebeep vm snapshot slow-386sx`.
 
+The EGA profile, for the studio's 14-line font, clones the same baseline and needs only the F1:
+
+```sh
+rebeep vm create ega-msdos
+rebeep vm run ega-msdos
+```
+
+Press **F1** at the CMOS message, and once it reaches the DOS prompt, quit 86Box and
+`rebeep vm snapshot ega-msdos`.
+
 ## 4. Everyday loop
 
 [ReBeep Studio](../architecture/studio.md) is C, so the build needs Open Watcom once. `tool fetch` downloads the pinned snapshot

@@ -214,24 +214,27 @@ on again when you quit.
 
 Its keys are on screen under F1. The main ones: Up and Down move between
 rows, Left and Right change a value, Z to M and Q to P play notes, F12
-rolls a random sound and F11 nudges it, Ctrl+S saves and Esc steps back.
+rolls a random sound and F11 nudges it, Ctrl+S opens the Save dialog and
+Esc steps back.
 
-Patches are .RBP text files in three kinds of folder:
+Patches are .RBP text files in banks, which are folders:
 
   FACTORY   ORGAN, FLUTE, BRASS and BELL. INSTALL replaces it on an update.
-  USER      your patches. The studio saves only here. A USER patch named
-            like a factory one overrides it for /P:name.
-  packs     any other folder in the patches folder, such as HEXX. The studio
-            reads packs and never writes them. Use them as /P:HEXX\ORGAN.
+  USER      your patches, and where the Save dialog starts. A USER patch
+            named like a factory one overrides it for /P:name.
+  banks     any other folder in the patches folder, such as HEXX. Use them
+            as /P:HEXX\ORGAN. The Save dialog can save into one, or make a
+            new one. AdLib .BNK files are not read.
 
-USER and the packs are in the PATCHES folder beside RBSTUDIO.EXE. To hear a
-patch in a game, save it in the studio, then run REBEEP /P:name before the
-game, and press Ctrl+Alt+N to switch between it and the faithful voice.
+USER and the other banks are in the PATCHES folder beside RBSTUDIO.EXE.
+To hear a patch in a game, save it in the studio, then run REBEEP /P:name
+before the game, and press Ctrl+Alt+N to switch between it and the
+faithful voice.
 
 RBSTUDIO.CFG, beside RBSTUDIO.EXE, is optional. INSTALL never creates it or
 overwrites it. SAMPLES\RBSTUDIO.CFG is a commented example to copy:
 
-  PATCHES=D:\MYSOUNDS   where USER and the packs are (default: PATCHES)
+  PATCHES=D:\MYSOUNDS   where USER and the banks are (default: PATCHES)
   PATCH=FLUTE          the patch REBEEP loads with neither /F nor /P:
 
 RBSTUDIO.LOG, beside the program, records each run and every patch file it
@@ -298,10 +301,10 @@ Messages, and what to do about each:
 
   "Patch NAME not used: ... Playing the faithful voice."
       ReBeep could not use the patch. The reason follows: "not found in USER
-      or FACTORY" means no NAME.RBP in either folder (a pack patch needs its
-      folder, /P:HEXX\ORGAN). "folder does not exist" means the PATCHES=
-      folder is missing. Anything about the file itself names a line to fix
-      in a text editor.
+      or FACTORY" means no NAME.RBP in either folder (a patch in another
+      bank needs its bank, /P:HEXX\ORGAN). "folder does not exist" means
+      the PATCHES= folder is missing. Anything about the file itself names
+      a line to fix in a text editor.
 
 Other problems:
 

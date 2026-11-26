@@ -39,8 +39,8 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
   Ctrl+Alt+N switches between the faithful voice and the loaded patch (load one with `REBEEP /P:FLUTE`).
   GPC takes over the keyboard, so the hotkeys do nothing inside it.
 - [ ] The studio: run `RBSTUDIO` from the menu to the patch list to the synth screen. Play a 2-OP patch and
-  a 4-OP one (make a 4-OP variant of a factory patch and Save As a `USER` name). Help pages 1 and 2 and the
-  save prompt look right in colour and with `RBSTUDIO /VIEW:MONO`. After Esc out, `REBEEP /S` shows the
+  a 4-OP one (make a 4-OP variant of a factory patch and save it in `USER` with the Save dialog). Help pages 1 and 2, the
+  save prompt and the Save dialog look right in colour and with `RBSTUDIO /VIEW:MONO`. After Esc out, `REBEEP /S` shows the
   traps on and RBTEST plays.
 - [ ] On the synth screen, F12 rolls a new sound and plays the last note until it is released, holding it
   never rolls again, F11 changes the sound a little, and Ctrl+Z steps back through each press.
@@ -53,6 +53,11 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
   `RBSTUDIO` starts from it. Run `INSTALL` again and press `U`: it updates the copy. Copy the
   MS-DOS samples over C:'s configs and reboot: ReBeep loads from the sample config. Then quit 86Box
   and run `rebeep vm reset mirror-msdos --yes` to put the VM back on its dev configs.
+
+**`ega-msdos`**, on the dev boot (the IBM EGA card, 640x350 text):
+
+- [ ] `RBSTUDIO`: the synth screen's envelope is smooth at 56 heights, and the patch list, the help, the
+  Save dialog and the save prompt look as on `mirror-msdos`. Quit: the DOS prompt has its own font back.
 
 **`mirror-freedos`**, with ReBeep autoloaded. GPC hangs there, so FreeDOS acceptance rests on RBTEST:
 
@@ -75,7 +80,8 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
 - [ ] `RBTEST /B` with ReBeep loaded, then after `REBEEP /OFF`. Record the numbers in
   [how-it-works.md](../architecture/how-it-works.md).
 - [ ] `RBSTUDIO /BENCH`, recorded in [how-it-works.md](../architecture/how-it-works.md#the-studio), and notes
-  played on the synth screen keep up with the keys.
+  played on the synth screen keep up with the keys. With a few hundred patches, the splash's loading
+  percentage moves and the patch list pages quickly.
 
 **The real machine**, last. The VMs stand in for it, so it decides the release:
 

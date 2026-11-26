@@ -51,7 +51,7 @@ Patch MYLEAD not used: not found in USER or FACTORY. Playing the faithful voice.
 
 | It says | What to do |
 |---|---|
-| `not found in USER or FACTORY` | No `MYLEAD.RBP` in either folder. Check the spelling, and that the file is in `USER` in the patches folder. A patch in a pack needs its folder: `/P:HEXX\ORGAN` |
+| `not found in USER or FACTORY` | No `MYLEAD.RBP` in either folder. Check the spelling, and that the file is in `USER` in the patches folder. A patch in another bank takes the bank too: `/P:HEXX\ORGAN` |
 | `not found` | There is no such file in the folder you named |
 | `folder does not exist` | The `PATCHES=` folder in `RBSTUDIO.CFG` isn't there. Fix the line or make the folder |
 | `not a valid patch name` | A name is up to 8 letters, digits, `-` and `_`, and not only digits |

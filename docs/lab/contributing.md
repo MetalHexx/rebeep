@@ -60,7 +60,8 @@ draw it. The studio's own [AGENTS.md](../../src/studio/AGENTS.md) has the drawin
 screen also means new screenshots in the docs and on the site: the
 [`update-site`](../../.claude/skills/update-site/SKILL.md) skill retakes them in 86Box.
 `RBSTUDIO /BENCH` times the synth screen (a full redraw of the 4-OP and the 2-OP screen, a piano key pressed and released,
-a value changed, the help opened), in milliseconds per call, and writes the same lines to `BENCH.TXT`.
+a value changed, the help opened), the library load, and the patch list over 2,048 entries (a draw, a click, PgDn), in
+milliseconds per call, and writes the same lines to `BENCH.TXT`.
 
 ## Seeing what a game does
 

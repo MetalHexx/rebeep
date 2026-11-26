@@ -8,7 +8,7 @@
 |---|---|
 | `P_*.BAT` | One probe each: CRLF, 8.3 name. `rebeep test run --suite vm` runs them in name order |
 | `P_FLOPPY.BAT` | Runs ReBeep and RBTEST from the release floppy mounted as A: |
-| `P_PATCH.BAT` | Patches by name: the settings file, `/P:` (USER override, exact FACTORY, a pack), the fallbacks. Builds its fixtures on D: (`ECHO`, `MD`, `COPY`), reads `REBEEP /S` output with `FIND` |
+| `P_PATCH.BAT` | Patches by name: the settings file, `/P:` (USER override, exact FACTORY, a bank), the fallbacks. Builds its fixtures on D: (`ECHO`, `MD`, `COPY`), reads `REBEEP /S` output with `FIND` |
 | `P_SAMPLE.BAT`, `S_SAMP2.BAT` | Two stages: install from the floppy, copy the FreeDOS samples over C:, `FDAPM WARMBOOT`. Stage 2 runs on the sample config, reached by a line appended to `C:\FDAUTO.BAT` |
 
 ## Rules

@@ -9,14 +9,15 @@
 | `T_*.C` | One test program each (8.3 name), compiled with `testlib.c` and every `src/studio/*.c` except `main.c`. Not listed: `T_SMOKE` (the build's smoke test), `T_UNDO`, `T_AMIS` (`rebeep.c` against a fake resident ReBeep) and `T_OPLKND` (proves the OPL2 rerun) |
 | `testlib.h` · `testlib.c` | The C mirror of `interpreter/testlib.inc`: `t_case`, `t_check`, `t_checkl`, `t_done` |
 | `T_PFILE.C` | The patch file: the staged factory files, round trips and every accepted or refused shape (the case list P05's `T_PATCH` shares) |
-| `T_PLIST.C` | The library: a tree built on C: at run time; order, counts, lookup, overrides, 4-OP marks, name and path rules |
+| `T_PLIST.C` | The library: a tree built on C: at run time; open, load and progress, order, banks, lookup, overrides, 4-OP marks, `lib_put` and `lib_drop`, the 2,048 limit, name and path rules |
 | `T_CFG.C` | `RBSTUDIO.CFG` reading, `PATCHES=` resolution, the log, and a safe save that fails on a read-only scratch file |
 | `T_VOICE.C` | The OPL driver through `opl_sink`: the factory records, the 4-OP slots and bits, KSL and OL edges, octave shift, slot stealing, shutdown, tracing; detection on the real chip |
-| `T_LSCRL.C` | The patch list's scroll window (`list_scroll`), row hit-test (`list_item_at`) and override text for an 8-character name (`list_draw`) over a synthetic library |
-| `T_SAVE.C` | Saving over a tree built at run time: the Ctrl+S rules (factory, pack and user patches, override removal only when equal and never from a pack patch, a name edit as Save As), Save As validation, Reset to factory, the save prompt guarding a leave, a failed write that keeps the old file, the help's keys, and every non-piano binding documented by a help row |
-| `T_EDIT.C` | The editor without drawing: value ranges and wrap, the Waveform limit by chip, the 4-OP variant from FM and AM, undo coalescing, the name, Random and Mutate with their held note, the piano and its releases, key events through the table, a bar's mouse values, PgUp/PgDn across folders |
+| `T_LSCRL.C` | The patch list over a synthetic library: the scroll window, row hit-test and moves in All and in a bank view, the view switcher and the view a return keeps, the override text for an 8-character name |
+| `T_SAVE.C` | The Save dialog over a tree built at run time: each line it can show and what Enter does, the starting bank and bank steps, a new bank's folder, the refusals, the mouse, a failed write that keeps the old file, Reset to factory, the save prompt guarding a leave, the help's keys, and every non-piano binding documented by a help row |
+| `T_EDIT.C` | The editor without drawing: value ranges and wrap, the Waveform limit by chip, the 4-OP variant from FM and AM, undo coalescing, the octave, Random and Mutate with their held note, the piano and its releases, key events through the table, a bar's mouse values, PgUp/PgDn and Ctrl+PgUp/PgDn across banks |
 | `T_DICE.C` | The dice: rolls stay in every range and the Waveform limit and give each carrier its floors, a seed repeats; a nudge keeps the connection, moves one to four values a small step and never takes a carrier below its floors |
-| `T_REDRW.C` | The synth screen in parts: `synth_parts` and `synth_redraw` over the old screen against a fresh `synth_draw`, for each field the drawing reads, in both variants and views; the primitives' clipping and `SCR_KEEP` |
+| `T_REDRW.C` | The synth screen in parts: `synth_parts` and `synth_redraw` over the old screen against a fresh `synth_draw`, for each field the drawing reads, in both variants and views, and the Save dialog; the primitives' clipping and `SCR_KEEP` |
+| `T_ENV.C` | The envelope band in sixteenth blocks: the pinned heights at 16 and 14 lines, the cells that carry them, the half-block fallback |
 
 ## Rules
 
@@ -27,18 +28,17 @@
   path (its `dos.h` would shadow `<dos.h>`), so a plain `"video.h"` does not resolve.
 - `t_case("name")` opens a case and closes the previous one; `t_check(ok, "what")` and `t_checkl(got, want, "what")`
   record the first failure of the case (`FAIL <case>: <what>: got N, want M`); `t_done()` prints `DONE <n>`.
-- A first line of `/* SUITE: OPL2 */` runs the program a second time as an OPL2 card with the argument `/OPL2`; the
-  first run uses DOSBox-X's default OPL3. The program reads `argv` for `/OPL2`. The suite passes DOSBox-X
-  `-set "sblaster oplmode=opl2"` as one argument; `T_OPLKND.C` fails if that stops taking effect.
+- A first line of `/* SUITE: OPL2 */` runs the program a second time as an OPL2 card with the argument `/OPL2` (the first run
+  is DOSBox-X's default OPL3); `T_OPLKND.C` fails if the suite's `-set "sblaster oplmode=opl2"` stops taking effect.
 - The shipped `REBEEP/FACTORY` data files are staged as `FACTORY\` beside the program, so a test reads the real patches.
-- **Reference screens** are `tests/screens/<screen>.<view>.scr`, view `vga` or `mono`: one per screen, state and view. The
-  format (UTF-8, LF): line 1 `# ReBeep reference screen: <screen>, <view>`, line 2 `# <sample state>`, `glyphs` and 25 rows
-  of 80 characters (a CP437 byte as the character the VGA font draws, byte 0 a space), `fg` and 25 rows of 80 upper-case hex
-  digits, `bg` and 25 more (8-F are the iCE bright backgrounds). Two cells match when the glyph and background are the same,
-  and the foreground too unless the glyph is a space. The files are byte-for-byte copies of the project's exports; the
-  exporters stay outside the repo, so a screen change edits its `.scr` first (see [src/studio/AGENTS.md](../../src/studio/AGENTS.md)).
-  **The one version exception:** the reference screens and `SAMPLE_VERSION` in `sample.c` hold a fixed sample version, so a version bump
-  never changes them (`version check` skips only those); the shipped program takes `REBEEP_VERSION` from `package.json`.
+- **Reference screens** are `tests/screens/<screen>.<view>.scr`, view `vga` or `mono`: one per screen, state and view, among
+  them `splash-load`, `patchlist-bank` and `savedlg-4op`. The format (UTF-8, LF): line 1 `# ReBeep reference screen: <screen>, <view>`,
+  line 2 `# <sample state>`, `glyphs` and 25 rows of 80 characters (a CP437 byte as the character the VGA font draws, byte 0 a
+  space), `fg` and 25 rows of 80 upper-case hex digits, `bg` and 25 more (8-F are the iCE bright backgrounds). Two cells match
+  when the glyph and background are the same, and the foreground too unless the glyph is a space. The files are byte-for-byte
+  copies of the project's exports, which stay outside the repo, so a screen change edits its `.scr` first (see
+  [src/studio/AGENTS.md](../../src/studio/AGENTS.md)). **The one version exception:** the reference screens and `SAMPLE_VERSION`
+  in `sample.c` hold a fixed sample version, so a bump never changes them (`version check` skips only those).
 - **The screen check** is the last step of the studio suite: it compiles `RBSTUDIO.EXE` into `build/studio-tests/`, stages the
   data files deployed under `REBEEP` beside it, runs one `DUMPS.BAT` (`RBSTUDIO /DUMP:<screen> [/VIEW:MONO] /O:Dnn.DMP` per
   reference) in one DOSBox-X start, and compares each 4000-byte dump (`tools/lib/screens.mjs`) with its `.scr`, failing with

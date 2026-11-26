@@ -92,7 +92,7 @@ emulated Pentium MMX and a 386SX/16, backed by automated checks that run in DOS 
 | [Set up on a real PC](docs/guide/real-pc.md) | Jemm, installing, a boot menu entry, checking it, undoing it |
 | [Set up in 86Box](docs/guide/86box.md) | The VM's settings, getting the files in, then the same steps |
 | [Playing](docs/guide/playing.md) | Voices, volume, muting, hotkeys, turning it off |
-| [ReBeep Studio](docs/guide/studio.md) | A tour, then making and saving your own patches, folders and packs, the settings file |
+| [ReBeep Studio](docs/guide/studio.md) | A tour, then making and saving your own patches, banks, the settings file |
 | [Troubleshooting](docs/guide/troubleshooting.md) | By symptom, then every message |
 | [Compatibility](docs/guide/compatibility.md) | Tested games and machines, settings per game, known conflicts |
 | [Reference](docs/guide/reference.md) | Every option, hotkey, exit code, and the RBSTUDIO and RBTEST commands |

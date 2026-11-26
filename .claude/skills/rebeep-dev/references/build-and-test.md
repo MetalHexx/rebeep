@@ -19,7 +19,7 @@ Re-run `P_BENCH` when the trap code changes and update the numbers in `docs/arch
 A `/* SUITE: OPL2 */` first line makes a studio test run again as an OPL2 card.
 
 A C target (`RBSTUDIO.EXE`) needs the compiler: `rebeep tool fetch open-watcom` once (about 150 MB), or `REBEEP_WATCOM`.
-`RBSTUDIO /BENCH` writes `BENCH.TXT`: the synth screen's redraw, key press, value change and help in ms per call, run on `slow-386sx` for the number that matters.
+`RBSTUDIO /BENCH` writes `BENCH.TXT`: the synth screen's redraw, key press, value change and help, the library load, and the patch list over 2,048 entries (draw, click, PgDn), in ms per call, run on `slow-386sx` for the number that matters.
 
 The loop: edit `src/` → `rebeep build run --deploy` → boot the VM (the dev entry autoloads the build)
 → `D:\REBEEP\RBTEST /A /R`.

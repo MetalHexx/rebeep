@@ -35,7 +35,7 @@ REBEEP /P:FLUTE
 
 A patch is an FM voice kept in a small file. Those four come with ReBeep, and `/P:` takes the name
 of any other you have, such as one you made in [ReBeep Studio](studio.md). `REBEEP /P:name` looks
-in `USER` first, then `FACTORY`; a patch from a pack needs its folder, `/P:HEXX\ORGAN`. If ReBeep
+in `USER` first, then `FACTORY`; a patch from another bank takes the bank too, `/P:HEXX\ORGAN`. If ReBeep
 can't use a patch it says why and plays the faithful voice ([why](troubleshooting.md#a-patch-was-not-used)).
 
 On a card with only an OPL2, such as an AdLib, `/F` is an FM copy of the square wave. It hasn't

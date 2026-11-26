@@ -12,7 +12,7 @@
 | `guide/playing.md` | Guide | Everyday use: RBPLAY, voices, muting, hotkeys, `/OFF`, unload |
 | `guide/troubleshooting.md` | Guide | By symptom, then every message |
 | `guide/compatibility.md` | Guide | Tested games (with game notes) and machines, conflicts with the command to run |
-| `guide/studio.md` | Guide | ReBeep Studio for players: a showcase on top (the animated synth screen, a gallery of every screen), then the screens, keys, patch folders and packs, saving, the settings file |
+| `guide/studio.md` | Guide | ReBeep Studio for players: a showcase on top (the animated synth screen, a gallery of every screen), then the screens, keys, banks, the Save dialog, the settings file |
 | `guide/reference.md` | Guide | Options, hotkeys, exit codes, RBSTUDIO, RBTEST. `release/README.TXT` and `REBEEP /?` mirror it |
 | `architecture/how-it-works.md` | Architecture | The design, and the `P_BENCH` numbers |
 | `architecture/studio.md` | Architecture | ReBeep Studio's modules and design; `src/studio/AGENTS.md` links it |
@@ -22,7 +22,7 @@
 | `lab/contributing.md` | Lab | Workflow and checks, the studio suite and its screens, commits, PR and payload rules |
 | `lab/releasing.md` | Lab | The release procedure and the checks by a person |
 | `roadmap.md` | — | Where ReBeep is headed, and how to help. The only page with plans |
-| `images/` | — | Pictures. `rebeep-logo.png` is the README's logo, on a transparent background. `studio/`: ReBeep Studio's screens from 86Box, 4:3, for the README and the studio guide; retake them and the site's copies when a screen changes ([update-site](../.claude/skills/update-site/references/studio-shots.md)) |
+| `images/` | — | Pictures. `rebeep-logo.png` is the README's logo, on a transparent background. `studio/`: ReBeep Studio's screens from 86Box (`checks`, `splash`, `menu`, `patch-list`, `synth-2op`, `synth-4op`, `help-1`, `help-2`, `save-prompt`, `save-dialog`, and `synth.gif`), 4:3, for the README and the studio guide; retake them and the site's copies when a screen changes ([update-site](../.claude/skills/update-site/references/studio-shots.md)) |
 
 ## Rules
 

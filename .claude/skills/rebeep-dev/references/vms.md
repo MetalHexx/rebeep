@@ -5,6 +5,7 @@
 | `mirror-msdos` | Blank; you install MS-DOS 6.22 by hand |
 | `mirror-freedos` | Built by script from the FreeDOS 1.4 packages |
 | `slow-386sx` | Cloned from the `mirror-msdos` baseline |
+| `ega-msdos` | Cloned from the `mirror-msdos` baseline; IBM EGA card, for the studio's 14-line font |
 
 | Goal | Command |
 |---|---|

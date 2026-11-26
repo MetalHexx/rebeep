@@ -1,0 +1,22 @@
+; ReBeep patch. Edit it in ReBeep Studio or by hand.
+; OPn= AR DR SL RR OL KSL MULT WAVE TREM VIB SUS KSR, decimal, one space apart.
+; SL and OL: bigger is louder. OCTAVE 4 is the game's pitch.
+[PATCH]
+FORMAT=1
+OCTAVE=4
+
+[2OP]
+; CONNECTION: FM or AM. FEEDBACK 0..7.
+CONNECTION=AM
+FEEDBACK=0
+OP1=15 0 15 12 39 0 2 0 0 0 1 0
+OP2=15 0 15 12 55 0 1 0 0 0 1 0
+
+[4OP]
+; CONNECTION: FM-FM, AM-FM, FM-AM or AM-AM. FEEDBACK 0..7.
+CONNECTION=FM-AM
+FEEDBACK=3
+OP1=13 9 3 15 52 0 12 4 1 0 1 1
+OP2=14 4 14 11 63 2 1 3 0 1 1 1
+OP3=3 13 5 10 20 0 2 0 1 1 1 0
+OP4=7 4 15 9 50 0 1 0 0 0 0 0

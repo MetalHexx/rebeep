@@ -105,8 +105,8 @@ reads, and both refuse a file that breaks its rules, with the reason.
 **The startup loader.** ReBeep reads a patch once, at load, so nothing resident touches a file.
 The name comes from `/P:`, or from `PATCH=` in `RBSTUDIO.CFG` when there is neither `/F` nor `/P:`.
 A bare `NAME` is looked up as `USER\NAME`, then `FACTORY\NAME`, and the first file that exists
-decides. `FOLDER\NAME` is that file alone. `FACTORY` sits beside the program; `USER` and the packs
-sit in the patches folder, `PATCHES=` in the settings file or else `PATCHES` beside the program.
+decides. `BANK\NAME` is that file alone: a bank is a folder of patches. `FACTORY` sits beside the program; `USER` and the
+other banks sit in the patches folder, `PATCHES=` in the settings file or else `PATCHES` beside the program.
 The loader parses the file into a record, then the startup part is freed. A patch it can't use is
 a message and the faithful voice, never an exit code.
 
@@ -188,12 +188,25 @@ until then: a call per cell, and every key event a full redraw.
 
 | Figure, per call | Before | After |
 |---|---|---|
-| Full redraw, 4-OP screen | 176 ms | 118 ms |
+| Full redraw, 4-OP screen | 176 ms | 119 ms |
 | Full redraw, 2-OP screen | 163 ms | 109 ms |
-| A piano key pressed and released | 352 ms | 17 ms |
-| A value changed (voice reprogrammed, undo step) | 361 ms | 111 ms |
-| Help page 1 opened over the screen | 406 ms | 348 ms |
+| A piano key pressed and released | 352 ms | 18 ms |
+| A value changed (voice reprogrammed, undo step) | 361 ms | 112 ms |
+| Help page 1 opened over the screen | 406 ms | 352 ms |
 
 A piano key now redraws the bottom bar alone, and a modifier or a held key's repeat draws nothing. A
 value change still redraws the whole parameter grid and the band. The help's own drawing, about
-230 ms of its figure, was not changed.
+230 ms of its figure, was not changed. The envelope's sixteenth blocks cost nothing measurable: the same
+bench before and after them differs by noise.
+
+**The library.** The studio reads every patch once per run. Measured on 1,151 patches (the 1,000 of a
+test bank plus the lab set), the file reads dominating at about 60 ms a file on this machine:
+
+| Figure | Before | After |
+|---|---|---|
+| One read of the library | 70 s | 70 s: a count of 1.4 s on the checks screen, then 69 s once on the splash |
+| Waiting before the first edit | about 140 s: the checks screen, then entering the Patch Editor | 70 s, all on the splash behind a percentage; 0 s entering the Patch Editor |
+
+The saving is the second pass and the wait on the checks screen, not the reads. **The patch list** over
+2,048 patches in 34 banks, All view, selection at the end, costs by the number of banks, not of
+patches: a draw 55 ms, a click on the bottom row 16 ms, PgDn 32 ms.
