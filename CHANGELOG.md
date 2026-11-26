@@ -27,6 +27,11 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
   ReBeep reports a bad option and doesn't load
   ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
 
+### Known issues
+
+- **OPL2 cards** such as an AdLib: the faithful voice hasn't been checked by ear. If it sounds wrong, pick a patch,
+  such as `REBEEP /P:ORGAN` ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
+
 ## [0.1.0] - 2026-11-21
 
 ### Added

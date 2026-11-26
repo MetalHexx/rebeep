@@ -67,7 +67,7 @@ body:
     id: options
     attributes:
       label: "ReBeep options"
-      placeholder: "REBEEP /P:1 /R:0"
+      placeholder: "REBEEP /P:ORGAN /R:0"
   - type: textarea
     id: notes
     attributes:
