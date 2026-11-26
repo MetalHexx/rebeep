@@ -1,5 +1,4 @@
 /* ReBeep Studio. SPDX-License-Identifier: MIT */
-#include <conio.h>
 #include <dos.h>
 #include <i86.h>
 #include <malloc.h>
@@ -89,7 +88,7 @@ static void release_hardware(void)
     rebeep_resume();
 }
 
-/* Does the studio have a key press (a make) waiting? Empties the key queue and the BIOS buffer either way. */
+/* Does the studio have a key press (a make) waiting? Empties the key queue either way. */
 static int key_pressed(void)
 {
     unsigned event;
@@ -98,7 +97,6 @@ static int key_pressed(void)
     while (kbd_next(&event)) {
         if (!(event & KBD_BREAK)) any = 1;
     }
-    while (kbhit()) getch();
     return any;
 }
 
@@ -211,7 +209,6 @@ static void run_soon(int item)
         while (kbd_next(&event)) {
             if (key_lookup(K_MENU, event, key_mods()) == KID_ESC) back = 1;
         }
-        while (kbhit()) getch();
     }
 }
 
@@ -311,7 +308,6 @@ static void run_synth(Editor *ed, Library *lib)
         int down;
 
         while (kbd_next(&event) && !back) back = synth_action(ed, lib, editor_event(ed, event), &full);
-        while (kbhit()) getch();
 
         down = mouse_read(&mx, &my) & 1;
         if (down && !was_down && !back && (ed->help != 0 || ed->prompt || ed->dialog)) {
@@ -432,7 +428,6 @@ static void run_patch_editor(void)
                 break;
             }
         }
-        while (kbhit()) getch();
 
         down = mouse_read(&mx, &my) & 1;
         if (down && !was_down && !open && !back) {
@@ -529,7 +524,6 @@ static void run_menu(void)
                 break;
             }
         }
-        while (kbhit()) getch();
 
         down = mouse_read(&mx, &my) & 1;
         if (down && !was_down && !quit) {

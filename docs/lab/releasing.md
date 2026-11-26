@@ -40,8 +40,8 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
   GPC takes over the keyboard, so the hotkeys do nothing inside it.
 - [ ] The studio: run `RBSTUDIO` from the menu to the patch list to the synth screen. Play a 2-OP patch and
   a 4-OP one (make a 4-OP variant of a factory patch and save it in `USER` with the Save dialog). Help pages 1 and 2, the
-  save prompt and the Save dialog look right in colour and with `RBSTUDIO /VIEW:MONO`. After Esc out, `REBEEP /S` shows the
-  traps on and RBTEST plays.
+  save prompt and the Save dialog look right in colour and with `RBSTUDIO /VIEW:MONO`. Ctrl+S opens the Save dialog at
+  once, with no further key (DOSBox-X can't show a DOS pause). After Esc out, `REBEEP /S` shows the traps on and RBTEST plays.
 - [ ] On the synth screen, F12 rolls a new sound and plays the last note until it is released, holding it
   never rolls again, F11 changes the sound a little, and Ctrl+Z steps back through each press.
 - [ ] The studio's splash and checks screens show the version, so retake the studio screenshots for the docs

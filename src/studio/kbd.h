@@ -1,5 +1,5 @@
-/* ReBeep Studio: the keyboard. An INT 09h handler tracks make and break codes, then chains to the
-   old handler so INT 16h still delivers characters. SPDX-License-Identifier: MIT */
+/* ReBeep Studio: the keyboard. An INT 09h handler tracks make and break codes, calls the old handler for the
+   BIOS's own work, then empties the BIOS buffer: no key reaches DOS or INT 16h. SPDX-License-Identifier: MIT */
 #ifndef RBSTUDIO_KBD_H
 #define RBSTUDIO_KBD_H
 

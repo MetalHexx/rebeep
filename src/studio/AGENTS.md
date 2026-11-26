@@ -17,7 +17,7 @@ Every module and its functions: [docs/architecture/studio.md](../../docs/archite
   history) are `_fmalloc`ed; path and I/O buffers are static, because the stack is 2 KB.
 - **Every vector goes through `dos_hook()`**, and `dos_restore()` puts them back at `atexit` and on exit: a vector left pointing into a freed program hangs the next key press.
 - **An interrupt handler** is `__interrupt __far`, calls nothing in the C library, sits inside `#pragma off (check_stack)` (it runs
-  on the interrupted program's stack), and ends with `_chain_intr(old)`. Port reads in it are inline (`#pragma aux`), not `inp`. It
+  on the interrupted program's stack), and hands on to the old handler (`_chain_intr`, or a call when work follows, as in `kbd.c`). Port reads in it are inline (`#pragma aux`), not `inp`. It
   shares data with `main` only through `volatile` bytes and the single-producer queue.
 - **Ctrl+Break and Ctrl+C do nothing; a critical error fails the call** (`INT 24h` returns `AL = 3`), never "Abort, Retry, Fail".
 - **The screen goes through `video_*`** into the back buffer, then one `video_flush`. Blink is off while running (bit 7 of an
@@ -43,7 +43,7 @@ Every module and its functions: [docs/architecture/studio.md](../../docs/archite
 
 - **Never add this folder to the compiler's include path.** `dos.h` here would shadow `<dos.h>`; `"dos.h"` is found beside
   the including file, and `<dos.h>` still reaches Open Watcom's.
-- The BIOS still sees every key, so `main` empties its buffer, or a full one beeps. The editor reads names from scan codes (US layout, like the piano).
+- **No key may reach DOS,** which pauses on Ctrl+S (DOSBox-X doesn't): `kbd.c` empties the BIOS buffer after every key, so `getch`, `kbhit` and `INT 16h` see none. Names come from scan codes (US layout, like the piano).
 
 ## Run / test
 

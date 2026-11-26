@@ -6,7 +6,7 @@
 
 | Path | Role |
 |---|---|
-| `T_*.C` | One test program each (8.3 name), compiled with `testlib.c` and every `src/studio/*.c` except `main.c`. Not listed: `T_SMOKE` (the build's smoke test), `T_UNDO`, `T_AMIS` (`rebeep.c` against a fake resident ReBeep) and `T_OPLKND` (proves the OPL2 rerun) |
+| `T_*.C` | One test program each (8.3 name), compiled with `testlib.c` and every `src/studio/*.c` except `main.c`. Not listed: `T_SMOKE` (the build's smoke test), `T_UNDO`, `T_AMIS` (`rebeep.c` against a fake resident ReBeep), `T_KBD` (the keyboard hook leaves the BIOS buffer empty) and `T_OPLKND` (proves the OPL2 rerun) |
 | `testlib.h` · `testlib.c` | The C mirror of `interpreter/testlib.inc`: `t_case`, `t_check`, `t_checkl`, `t_done` |
 | `T_PFILE.C` | The patch file: the staged factory files, round trips and every accepted or refused shape (the case list P05's `T_PATCH` shares) |
 | `T_PLIST.C` | The library: a tree built on C: at run time; open, load and progress, order, banks, lookup, overrides, 4-OP marks, `lib_put` and `lib_drop`, the 2,048 limit, name and path rules |

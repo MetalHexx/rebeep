@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include <dos.h>
+#include <i86.h>
 
 #include "dos.h"
 #include "kbd.h"
@@ -7,6 +8,12 @@
 #define QUEUE_SIZE 32
 #define QUEUE_MASK (QUEUE_SIZE - 1)
 #define EXT_STATE 0x80
+
+/* The BIOS keyboard buffer's head and tail, in its data segment; it is empty when they match. A macro, so the
+   handler calls nothing but the old one. */
+#define BIOS_KEY_HEAD (*(volatile unsigned __far *)MK_FP(0x40, 0x1A))
+#define BIOS_KEY_TAIL (*(volatile unsigned __far *)MK_FP(0x40, 0x1C))
+#define EMPTY_BIOS_BUFFER() (BIOS_KEY_HEAD = BIOS_KEY_TAIL)
 
 static volatile unsigned char state[256];
 static volatile unsigned events[QUEUE_SIZE];
@@ -21,8 +28,9 @@ unsigned char read_scan_code(void);
 #pragma aux read_scan_code = "in al, 60h" value [al] modify exact [al];
 
 /* The handler runs on whatever stack the interrupted code had, which the stack checker's limit does
-   not describe: so no stack check, and no C library calls. It chains last, so the BIOS still sees
-   the key. */
+   not describe: so no stack check, and no C library calls. It calls the old handler last, so the BIOS
+   still handles every key (shift state, lock lights, Ctrl+Alt+Del), then empties the BIOS buffer: DOS
+   must never find a key there, because it takes Ctrl+S as "pause". */
 #pragma off (check_stack)
 static void __interrupt __far on_key(void)
 {
@@ -50,13 +58,17 @@ static void __interrupt __far on_key(void)
             }
         }
     }
-    _chain_intr(old_int09);
+    old_int09();
+    EMPTY_BIOS_BUFFER();
 }
 #pragma on (check_stack)
 
 void kbd_init(void)
 {
     dos_hook(0x09, (isr_t)on_key, &old_int09);
+    _disable();
+    EMPTY_BIOS_BUFFER();   /* keys typed while the program loaded */
+    _enable();
 }
 
 int kbd_next(unsigned *event)
