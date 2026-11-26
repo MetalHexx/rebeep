@@ -4,6 +4,8 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-26
+
 ### Added
 
 - **ReBeep Studio**, a patch editor that comes in the package: shape your own FM sounds, play them on the keyboard,
