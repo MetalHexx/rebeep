@@ -725,7 +725,7 @@ static int dialog_differs(const SaveDlg *a, const SaveDlg *b)
     int i;
 
     if (a->field != b->field || a->bank != b->bank || a->banks != b->banks || a->ok != b->ok || a->nsay != b->nsay ||
-        strcmp(a->name, b->name) != 0 || strcmp(a->folder, b->folder) != 0 || strcmp(a->pack, b->pack) != 0) {
+        strcmp(a->name, b->name) != 0 || strcmp(a->folder, b->folder) != 0 || strcmp(a->newbank, b->newbank) != 0) {
         return 1;
     }
     for (i = 0; i < b->nsay; i++) {

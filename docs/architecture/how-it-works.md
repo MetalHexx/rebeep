@@ -199,14 +199,17 @@ value change still redraws the whole parameter grid and the band. The help's own
 230 ms of its figure, was not changed. The envelope's sixteenth blocks cost nothing measurable: the same
 bench before and after them differs by noise.
 
-**The library.** The studio reads every patch once per run. Measured on 1,151 patches (the 1,000 of a
-test bank plus the lab set), the file reads dominating at about 60 ms a file on this machine:
+**The library.** The studio reads every patch once per run. Measured on `slow-386sx` on 1,151 patches (the
+1,000 of a test bank plus the lab set), the file reads dominating at about 60 ms a file:
 
 | Figure | Before | After |
 |---|---|---|
 | One read of the library | 70 s | 70 s: a count of 1.4 s on the checks screen, then 69 s once on the splash |
 | Waiting before the first edit | about 140 s: the checks screen, then entering the Patch Editor | 70 s, all on the splash behind a percentage; 0 s entering the Patch Editor |
+| Library block (computed from the 21-byte entry, not measured) | about 43 KB, one entry for each of the 2,048 the library could hold | about 25 KB, sized to the files |
+| `MEM` largest executable program, taken at boot | 620K | 620K: a boot figure, before the studio ran |
 
-The saving is the second pass and the wait on the checks screen, not the reads. **The patch list** over
-2,048 patches in 34 banks, All view, selection at the end, costs by the number of banks, not of
-patches: a draw 55 ms, a click on the bottom row 16 ms, PgDn 32 ms.
+The saving is the second pass and the wait on the checks screen, not the reads. Free memory with the library
+loaded was not measured: `MEM` was read at boot only. **The patch list**, measured on `slow-386sx` over 2,048
+patches in 34 banks, All view, selection at the end, costs by the number of banks, not of patches: a draw
+55 ms, a click on the bottom row 16 ms, PgDn 32 ms. There is no "before": the list had no banks to switch.

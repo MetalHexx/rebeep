@@ -164,6 +164,12 @@ if (args.includes('T_ALPHA.EXE > RESULT.TXT')) {
   process.exit(0);
 }
 const machine = args.find((a) => a.startsWith('dosbox machine='));
+const beta = args.find((a) => a.startsWith('T_BETA.EXE ') && a.endsWith(' > RESULT.TXT'));
+if (beta) {
+  fs.appendFileSync(path.join(dir, 'BETA.LOG'), beta.split(' ')[1] + ' on ' + machine.slice('dosbox machine='.length) + String.fromCharCode(10));
+  fs.writeFileSync(path.join(dir, 'RESULT.TXT'), 'PASS one' + String.fromCharCode(10) + 'DONE 1' + String.fromCharCode(10));
+  process.exit(0);
+}
 fs.appendFileSync(path.join(dir, 'MACHINES.LOG'), (machine ? machine.slice('dosbox machine='.length) : 'default') + String.fromCharCode(10));
 const behaviour = JSON.parse(process.env.FAKE_DUMPS);
 const batch = fs.readFileSync(path.join(dir, 'DUMPS.BAT'), 'utf8').split(String.fromCharCode(10)).map((l) => l.trim());
@@ -195,6 +201,7 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
       fs.writeFileSync(path.join(fakes, 'fake-dosbox.mjs'), FAKE_DOSBOX);
       put('package.json', JSON.stringify({ name: 'x', version: '0.1.0' }));
       put('tests/studio/T_ALPHA.C', 'int main(void) { return 0; }\n');
+      put('tests/studio/T_BETA.C', '/* SUITE: MACHINES */\nint main(void) { return 0; }\n');
       put('tests/studio/testlib.c', '/* library */\n');
       put('src/studio/main.c', '/* module */\n');
       put('src/studio/video.c', '/* module */\n');
@@ -219,6 +226,7 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
         staged: fs.existsSync(path.join(out, 'SPLASH.ANS')),
         batch: fs.readFileSync(path.join(out, 'DUMPS.BAT'), 'utf8'),
         machines: fs.readFileSync(path.join(out, 'MACHINES.LOG'), 'utf8').split('\n').filter(Boolean),
+        beta: fs.readFileSync(path.join(out, 'BETA.LOG'), 'utf8').split('\n').filter(Boolean),
       };
     } finally {
       removeDir(fakes);
@@ -240,6 +248,15 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
     assert.ok(staged, 'SPLASH.ANS sits beside RBSTUDIO.EXE');
     assert.match(batch, /RBSTUDIO \/DUMP:demo \/VIEW:MONO \/O:D00\.DMP/);
     assert.match(batch, /RBSTUDIO \/DUMP:demo \/O:D01\.DMP/);
+  });
+
+  test('a program marked SUITE: MACHINES runs once under each display machine with its name, and not under the default', () => {
+    const { result, beta } = run({ demo: 'match', later: 'match' });
+    assert.equal(result.code, 0, result.stderr);
+    const parsed = JSON.parse(result.stdout);
+    const names = (parsed.data ?? parsed.error?.data).suites[0].programs.map((p) => p.program).filter((n) => n.startsWith('T_BETA'));
+    assert.deepEqual(names, ['T_BETA (cga)', 'T_BETA (ega)', 'T_BETA (vgaonly)']);
+    assert.deepEqual(beta, ['cga on cga', 'ega on ega', 'vgaonly on vgaonly']);
   });
 
   test('a differing cell fails the run and names the cell', () => {

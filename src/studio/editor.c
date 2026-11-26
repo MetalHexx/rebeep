@@ -405,7 +405,7 @@ static int prompt_key(Editor *e, unsigned event)
 static int dialog_key(Editor *e, unsigned event)
 {
     SaveDlg *d = &e->dlg;
-    char *text = d->field == 0 ? d->name : d->pack;
+    char *text = d->field == 0 ? d->name : d->newbank;
     int typing = d->field == 0 || d->bank == d->banks + 1;
     size_t len = strlen(text);
     char ch;
@@ -751,29 +751,29 @@ static int dialog_remove(Editor *e, Library *lib, const char *name)
 }
 
 /* The refusal of the new bank's name typed in the Bank field, as a line under the fields. Returns 1 when it is refused. */
-static int pack_refused(Editor *e, const Library *lib)
+static int bank_refused(Editor *e, const Library *lib)
 {
     SaveDlg *d = &e->dlg;
     char text[40];
     char other[9];
     int k;
 
-    if (d->pack[0] == '\0') {
+    if (d->newbank[0] == '\0') {
         say(d, 0, "Bank name:", "type it in Bank");
         return 1;
     }
-    if (!folder_valid(d->pack)) {
+    if (!folder_valid(d->newbank)) {
         say(d, 1, "Bank name:", "up to 8 letters, digits, - and _");
         return 1;
     }
-    if (stricmp(d->pack, FACTORY_FOLDER) == 0 || stricmp(d->pack, USER_FOLDER) == 0) {
+    if (stricmp(d->newbank, FACTORY_FOLDER) == 0 || stricmp(d->newbank, USER_FOLDER) == 0) {
         say(d, 1, "Bank name:", "FACTORY and USER are taken");
         return 1;
     }
     for (k = 1; k <= d->banks; k++) {
         dialog_bank(lib, k, other);
-        if (stricmp(d->pack, other) == 0) {
-            sprintf(text, "%s exists, choose it with \x11 \x10", d->pack);
+        if (stricmp(d->newbank, other) == 0) {
+            sprintf(text, "%s exists, choose it with \x11 \x10", d->newbank);
             say(d, 1, "Bank name:", text);
             return 1;
         }
@@ -789,7 +789,7 @@ static int dialog_plan(Editor *e, Library *lib, int enter)
     SaveDlg *d = &e->dlg;
     const char *name = d->name;
     int is_new = d->bank == d->banks + 1;
-    const char *bank = is_new ? d->pack : d->folder;
+    const char *bank = is_new ? d->newbank : d->folder;
     int in_user = d->bank == 0;
     int exists;
     int removing = 0;
@@ -803,7 +803,7 @@ static int dialog_plan(Editor *e, Library *lib, int enter)
         say(d, 1, "Name:", "up to 8 letters, digits, - and _");
         return 0;
     }
-    if (is_new && pack_refused(e, lib)) return 0;
+    if (is_new && bank_refused(e, lib)) return 0;
 
     sprintf(file, "%s\\%s" RBP_EXT, bank, name);
     sprintf(spec, "%s\\%s", bank, name);

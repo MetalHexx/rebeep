@@ -109,7 +109,13 @@ the [studio guide](../guide/studio.md); the hard rules for changing the code are
   (63 on a VGA, 55 on an EGA) instead of half blocks. The reserved codes are `C7 CA CB CC CE CF D0` to `D8`
   (`VIDEO_BLOCK`): a screen must not draw them. `video_restore` puts the ROM font of that height back (`AX=1104h` or
   `1101h`) at exit, which replaces a code-page font `DISPLAY.SYS` had loaded.
-- **The fallback.** Any other card or cell height (CGA, MDA, an 8-line mode) keeps the half blocks with a lit rim.
+- **The read-back.** The BIOS answering is not the font holding the blocks, so after the load `video_init` reads the fifteen
+  glyphs back from the font in plane 2 (`A000:0000`, 32 bytes a code) and compares them with what it wrote. An EGA's
+  sequencer and graphics controller are write-only, so the read sets the registers it needs, with interrupts off, and puts
+  back the values the BIOS programs for text mode 3. It does not check that block 0 is the font on show. `T_FONT` runs under
+  each DOSBox-X machine and pins 0 lines on a `cga`, 14 on an `ega` and 16 on a `vgaonly`, and that a ROM font put back
+  reads as missing (`video_blocks_in_font`).
+- **The fallback.** Any other card or cell height (CGA, MDA, an 8-line mode) keeps the half blocks with a lit rim, and so does a card where the read-back fails.
   `video_set_block_lines` chooses the path whatever the card.
 - **The dump rule.** `/DUMP` draws the 16-line path on every card, so one set of reference screens holds for all of them;
   the half-block path is checked by `T_ENV`, not by a reference screen.

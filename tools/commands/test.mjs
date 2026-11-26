@@ -14,6 +14,8 @@ const DOSBOX_TIME_LIMIT_S = 60;
 const DOSBOX_TIMEOUT_MS = 120_000;
 const ANSI = /\x1b\[[0-9;]*[A-Za-z]/g;
 const OPL2_MARKER = /^\s*\/\*\s*SUITE:\s*OPL2\s*\*\//;
+/** A first line of `SUITE: MACHINES` runs the program once under each of `DISPLAY_MACHINES` (its argument is the machine's name), and not under the default machine. */
+const MACHINES_MARKER = /^\s*\/\*\s*SUITE:\s*MACHINES\s*\*\//;
 /** The data-file folder that studio tests can read as FACTORY\, staged beside the programs. */
 const FACTORY_DEPLOY = 'REBEEP/FACTORY';
 /** The data-file folder whose files sit beside RBSTUDIO.EXE, as they do beside the installed program. */
@@ -100,10 +102,10 @@ function runDosbox(ctx, dosbox, dir, command, { opl2 = false, machine = null } =
 }
 
 /** Runs `command` with its output redirected to RESULT.TXT, and judges that. */
-async function runDosProgram(ctx, dosbox, dir, name, command, { opl2 = false } = {}) {
+async function runDosProgram(ctx, dosbox, dir, name, command, { opl2 = false, machine = null } = {}) {
   const resultFile = path.join(dir, RESULT_FILE);
   fs.rmSync(resultFile, { force: true });
-  const run = await runDosbox(ctx, dosbox, dir, `${command} > ${RESULT_FILE}`, { opl2 });
+  const run = await runDosbox(ctx, dosbox, dir, `${command} > ${RESULT_FILE}`, { opl2, machine });
 
   const result = programResult(name, run, resultFile);
   for (const failure of result.failed) {
@@ -318,9 +320,16 @@ async function runStudio(ctx, repo) {
       ctx.log.warn(`wcl (${name}): ${line.trim()}`);
     }
 
+    const [firstLine] = fs.readFileSync(path.join(dir, file), 'utf8').split(/\r?\n/, 1);
+    if (MACHINES_MARKER.test(firstLine)) {
+      for (const machine of DISPLAY_MACHINES) {
+        ctx.log.step(`Running ${name}.EXE ${machine} in DOSBox-X (machine ${machine})`);
+        results.push(await runDosProgram(ctx, dosbox, out, `${name} (${machine})`, `${name}.EXE ${machine}`, { machine }));
+      }
+      continue;
+    }
     ctx.log.step(`Running ${name}.EXE in DOSBox-X`);
     results.push(await runDosProgram(ctx, dosbox, out, name, `${name}.EXE`));
-    const [firstLine] = fs.readFileSync(path.join(dir, file), 'utf8').split(/\r?\n/, 1);
     if (OPL2_MARKER.test(firstLine)) {
       ctx.log.step(`Running ${name}.EXE /OPL2 in DOSBox-X`);
       results.push(await runDosProgram(ctx, dosbox, out, `${name} (OPL2)`, `${name}.EXE /OPL2`, { opl2: true }));

@@ -28,44 +28,6 @@
 #define C_DIM 8
 #define C_TEXT 7
 
-/* Do entries a and b share a bank? The rule of lib_bank (folder names equal without regard to case). Folders are
-   stored zero-padded, so equal words settle it at once: on a 386SX the compares are what a walk over the banks costs. */
-static int same_bank(const Library *lib, int a, int b)
-{
-    const Entry __far *x = &lib->entries[a];
-    const Entry __far *y = &lib->entries[b];
-    const unsigned __far *p = (const unsigned __far *)x->folder;
-    const unsigned __far *q = (const unsigned __far *)y->folder;
-    int i;
-
-    if (p[0] == q[0] && p[1] == q[1] && p[2] == q[2] && p[3] == q[3] && x->folder[8] == y->folder[8]) return 1;
-    for (i = 0; i < (int)sizeof x->folder; i++) {
-        char ca = x->folder[i];
-        char cb = y->folder[i];
-
-        if (ca >= 'a' && ca <= 'z') ca = (char)(ca - 32);
-        if (cb >= 'a' && cb <= 'z') cb = (char)(cb - 32);
-        if (ca != cb) return 0;
-        if (ca == '\0') return 1;
-    }
-    return 1;
-}
-
-/* A bank is contiguous: the index after the last entry of the bank that starts at `first`, found by halving. */
-static int bank_end(const Library *lib, int first)
-{
-    int lo = first + 1;
-    int hi = lib_count(lib);
-
-    while (lo < hi) {
-        int mid = lo + (hi - lo) / 2;
-
-        if (same_bank(lib, mid, first)) lo = mid + 1;
-        else hi = mid;
-    }
-    return lo;
-}
-
 /* The entries `view` lists, [*first, *first + *count). A view the list does not have is All. Returns the view that
    applies: 0 for All, else the bank's number from 1. Walking to a bank costs a halving per bank before it. */
 static int view_range(const Library *lib, int view, int *first, int *count)
@@ -75,7 +37,7 @@ static int view_range(const Library *lib, int view, int *first, int *count)
     int k;
 
     for (k = 1; view > 0 && f < n; k++) {
-        int end = bank_end(lib, f);
+        int end = lib_bank_end(lib, f);
 
         if (k == view) {
             *first = f;
@@ -98,7 +60,7 @@ static void all_geometry(const Library *lib, int e, int *before, int *banks)
     *before = 0;
     *banks = 0;
     while (f < n) {
-        int end = bank_end(lib, f);
+        int end = lib_bank_end(lib, f);
 
         if (end <= e) (*before)++;
         (*banks)++;
@@ -132,7 +94,7 @@ static int all_entry_at_line(const Library *lib, int line)
 
     if (line < 0) line = 0;
     while (f < n) {
-        int end = bank_end(lib, f);
+        int end = lib_bank_end(lib, f);
 
         if (line <= at + end - f) return line == at ? f : f + line - at - 1;
         at += end - f + 1;
@@ -226,7 +188,7 @@ int list_scroll(const Library *lib, int view, int sel, int top)
     if (sel >= first + count) sel = first + count - 1;
     line = entry_line(lib, v, first, count, sel, &total);
     head = line;
-    if (v == 0 && (sel == 0 || !same_bank(lib, sel - 1, sel))) head = line - 1;
+    if (v == 0 && (sel == 0 || !lib_same_bank(lib, sel - 1, sel))) head = line - 1;
     if (head < top) top = head;
     if (line >= top + LIST_ROWS) top = line - LIST_ROWS + 1;
     if (top > total - LIST_ROWS) top = total - LIST_ROWS;
@@ -246,7 +208,7 @@ int list_item_at(const Library *lib, int view, int top, int x, int y)
     if (x < LEFT || x >= LEFT + INNER_W || y < BODY_Y || y >= BODY_Y + LIST_ROWS) return -1;
     if (view_range(lib, view, &first, &count) > 0) return want < count ? first + want : -1;
     while (f < n) {
-        int end = bank_end(lib, f);
+        int end = lib_bank_end(lib, f);
 
         if (want == at) return -1;
         if (want <= at + end - f) return f + want - at - 1;
@@ -269,7 +231,7 @@ static int all_start(const Library *lib, int top, int *f, int *c, int *off)
     *c = 0;
     *off = 0;
     while (next < n) {
-        int end = bank_end(lib, next);
+        int end = lib_bank_end(lib, next);
 
         if (*c == 0 && top <= at + end - next) {
             *f = next;
@@ -461,7 +423,7 @@ void list_draw(const Library *lib, int view, int sel, int top, const char *msg)
         }
         if (v > 0 || f + c >= n) break;
         f += c;
-        c = bank_end(lib, f) - f;
+        c = lib_bank_end(lib, f) - f;
         off = 0;
     }
 

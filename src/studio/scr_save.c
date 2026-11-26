@@ -140,7 +140,7 @@ void dialog_draw(const Editor *e)
     field_draw(DLG_NAME_ROW, d->name, d->field == 0, 1);
     scr_put(DLG_LABEL_X, DLG_BANK_ROW, "Bank", role(R_WINDOWTEXT), SCR_KEEP);
     scr_put(DLG_BANK_PREV_X, DLG_BANK_ROW, "\x11", role(R_WINDOWACCENT), SCR_KEEP);
-    field_draw(DLG_BANK_ROW, is_new ? d->pack : d->folder, d->field == 1, is_new);
+    field_draw(DLG_BANK_ROW, is_new ? d->newbank : d->folder, d->field == 1, is_new);
     scr_put(DLG_BANK_NEXT_X, DLG_BANK_ROW, "\x10", role(R_WINDOWACCENT), SCR_KEEP);
     scr_put(DLG_HINT_X, DLG_BANK_ROW, hint, role(R_WINDOWTEXT), SCR_KEEP);
 

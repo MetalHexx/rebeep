@@ -402,10 +402,27 @@ int lib_find(const Library *lib, const char *spec)
     return found >= 0 ? found : find_in(lib, FACTORY_FOLDER, spec);
 }
 
-/* Are entries a and b in the same bank? */
-static int same_bank(const Library *lib, int a, int b)
+/* Folders are stored zero-padded, so equal words settle it at once: on a 386SX the compares are what a walk over the banks
+   costs. */
+int lib_same_bank(const Library *lib, int a, int b)
 {
-    return _fstricmp(lib->entries[a].folder, lib->entries[b].folder) == 0;
+    const Entry __far *x = &lib->entries[a];
+    const Entry __far *y = &lib->entries[b];
+    const unsigned __far *p = (const unsigned __far *)x->folder;
+    const unsigned __far *q = (const unsigned __far *)y->folder;
+    int i;
+
+    if (p[0] == q[0] && p[1] == q[1] && p[2] == q[2] && p[3] == q[3] && x->folder[8] == y->folder[8]) return 1;
+    for (i = 0; i < (int)sizeof x->folder; i++) {
+        char ca = x->folder[i];
+        char cb = y->folder[i];
+
+        if (ca >= 'a' && ca <= 'z') ca = (char)(ca - 32);
+        if (cb >= 'a' && cb <= 'z') cb = (char)(cb - 32);
+        if (ca != cb) return 0;
+        if (ca == '\0') return 1;
+    }
+    return 1;
 }
 
 /* A bank is contiguous, so "is in the bank of entry i" is true for a run of indexes and false outside it: both ends are
@@ -418,14 +435,13 @@ static int bank_start(const Library *lib, int i)
     while (lo < hi) {
         int mid = lo + (hi - lo) / 2;
 
-        if (same_bank(lib, mid, i)) hi = mid;
+        if (lib_same_bank(lib, mid, i)) hi = mid;
         else lo = mid + 1;
     }
     return lo;
 }
 
-/* The index after the last entry of the bank that starts at `first`. */
-static int bank_end(const Library *lib, int first)
+int lib_bank_end(const Library *lib, int first)
 {
     int lo = first + 1;
     int hi = lib->count;
@@ -433,7 +449,7 @@ static int bank_end(const Library *lib, int first)
     while (lo < hi) {
         int mid = lo + (hi - lo) / 2;
 
-        if (same_bank(lib, mid, first)) lo = mid + 1;
+        if (lib_same_bank(lib, mid, first)) lo = mid + 1;
         else hi = mid;
     }
     return lo;
@@ -447,7 +463,7 @@ void lib_bank(const Library *lib, int i, int *first, int *count)
         return;
     }
     *first = bank_start(lib, i);
-    *count = bank_end(lib, *first) - *first;
+    *count = lib_bank_end(lib, *first) - *first;
 }
 
 /* The place of a folder in the list: FACTORY, then USER, then the other banks by name. */
@@ -521,7 +537,7 @@ int lib_put(Library *lib, const char *folder, const Patch *p)
     while (i < lib->count) {
         int cmp = bank_cmp(lib, i, up);
 
-        end = bank_end(lib, i);
+        end = lib_bank_end(lib, i);
         if (cmp == 0) {
             found = 1;
             first = i;

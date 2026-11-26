@@ -52,6 +52,12 @@ int lib_drop(Library *lib, const char *folder, const char *name);
 /* The bank of entry i: its first entry and its patch count (a bank's entries are contiguous). 0 and 0 out of range. */
 void lib_bank(const Library *lib, int i, int *first, int *count);
 
+/* Do entries a and b share a bank? The one rule of a bank: folder names equal without regard to case. */
+int lib_same_bank(const Library *lib, int a, int b);
+
+/* The index after the last entry of the bank that starts at `first`, found by halving. */
+int lib_bank_end(const Library *lib, int first);
+
 /* Releases the entries. */
 void lib_free(Library *lib);
 

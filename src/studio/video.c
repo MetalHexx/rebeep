@@ -13,6 +13,13 @@
 #define CGA_MODE_PORT 0x3D8
 #define BLINK_BIT 0x20
 #define CURSOR_HIDDEN 0x2000
+#define FONT_PLANE_SEG 0xA000
+#define SEQ_INDEX 0x3C4
+#define SEQ_MEMORY_MODE 4
+#define GC_INDEX 0x3CE
+#define GC_READ_MAP 4
+#define GC_MODE 5
+#define GC_MISC 6
 
 static unsigned short back[VIDEO_ROWS * VIDEO_COLS];
 static unsigned short __far *screen;
@@ -114,10 +121,12 @@ static void load_rom_font(int height)
 }
 
 /* The sixteenth blocks: glyph k (1 to 15) fills the bottom min(k, height) scanlines, `height` bytes each, one after
-   another. Three loads, one per run of codes. */
+   another. */
+static unsigned char glyphs[15 * 16];
+
+/* Loads them in three calls, one per run of codes. */
 static void load_blocks(int height)
 {
-    static unsigned char glyphs[15 * 16];
     int k;
     int line;
 
@@ -127,6 +136,49 @@ static void load_blocks(int height)
     load_glyphs(glyphs, 1, height, 0xC7);
     load_glyphs(glyphs + 1 * height, 3, height, 0xCA);
     load_glyphs(glyphs + 4 * height, 11, height, 0xCE);
+}
+
+static void seq_write(unsigned char index, unsigned char value)
+{
+    outp(SEQ_INDEX, index);
+    outp(SEQ_INDEX + 1, value);
+}
+
+static void gc_write(unsigned char index, unsigned char value)
+{
+    outp(GC_INDEX, index);
+    outp(GC_INDEX + 1, value);
+}
+
+/* Reads the 15 glyphs back from the font in plane 2 (32 bytes a code) and compares them with what load_blocks wrote.
+   An EGA's sequencer and graphics controller are write-only, so their values are not saved: the read sets the registers
+   it needs and puts back the ones the BIOS programs for text mode 3. */
+static int blocks_match(int height)
+{
+    int k;
+    int line;
+    int same = 1;
+    unsigned char __far *plane = (unsigned char __far *)MK_FP(FONT_PLANE_SEG, 0);
+
+    _disable();
+    seq_write(SEQ_MEMORY_MODE, 0x07);
+    gc_write(GC_READ_MAP, 0x02);
+    gc_write(GC_MODE, 0x00);
+    gc_write(GC_MISC, 0x04);
+    for (k = 0; k < 15 && same; k++) {
+        for (line = 0; line < height; line++) {
+            if (plane[VIDEO_BLOCK[k] * 32 + line] != glyphs[k * height + line]) {
+                same = 0;
+                break;
+            }
+        }
+    }
+    seq_write(SEQ_MEMORY_MODE, 0x03);
+    gc_write(GC_READ_MAP, 0x00);
+    gc_write(GC_MODE, 0x10);
+    gc_write(GC_MISC, 0x0E);
+    _enable();
+    return same;
 }
 
 /* Blink off means bit 7 of an attribute selects a bright background. EGA and VGA have a BIOS call
@@ -200,7 +252,7 @@ void video_init(void)
         if (height == 14 || height == 16) {
             load_blocks(height);
             font_lines = height;
-            block_lines = height;
+            if (blocks_match(height)) block_lines = height;
         }
     }
     video_fill(0, 0, VIDEO_COLS, VIDEO_ROWS, ' ', 0x07);
@@ -209,6 +261,11 @@ void video_init(void)
 int video_block_lines(void)
 {
     return block_lines;
+}
+
+int video_blocks_in_font(void)
+{
+    return font_lines != 0 && blocks_match(font_lines);
 }
 
 void video_set_block_lines(int lines)

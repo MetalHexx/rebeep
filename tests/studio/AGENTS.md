@@ -17,7 +17,7 @@
 | `T_EDIT.C` | The editor without drawing: value ranges and wrap, the Waveform limit by chip, the 4-OP variant from FM and AM, undo coalescing, the octave, Random and Mutate with their held note, the piano and its releases, key events through the table, a bar's mouse values, PgUp/PgDn and Ctrl+PgUp/PgDn across banks |
 | `T_DICE.C` | The dice: rolls stay in every range and the Waveform limit and give each carrier its floors, a seed repeats; a nudge keeps the connection, moves one to four values a small step and never takes a carrier below its floors |
 | `T_REDRW.C` | The synth screen in parts: `synth_parts` and `synth_redraw` over the old screen against a fresh `synth_draw`, for each field the drawing reads, in both variants and views, and the Save dialog; the primitives' clipping and `SCR_KEEP` |
-| `T_ENV.C` | The envelope band in sixteenth blocks: the pinned heights at 16 and 14 lines, the cells that carry them, the half-block fallback |
+| `T_ENV.C` | The envelope band in sixteenth blocks: the pinned heights at 16 and 14 lines, the cells that carry them, the half-block fallback. `T_FONT.C` is the font read-back under `cga`, `ega` and `vgaonly` (a first line `/* SUITE: MACHINES */`: one run each, the machine's name as the argument) |
 
 ## Rules
 

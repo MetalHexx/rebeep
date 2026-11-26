@@ -17,8 +17,14 @@ void video_restore(void);
    puts the ROM font back. */
 extern const unsigned char VIDEO_BLOCK[15];   /* C7 CA CB CC CE CF D0 D1 D2 D3 D4 D5 D6 D7 D8 */
 
-/* The scanlines a cell has while the blocks are loaded (16 VGA, 14 EGA); 0 when they are not: draw half blocks. */
+/* The scanlines a cell has while the blocks are loaded and read back from the font (16 VGA, 14 EGA); 0 when they are
+   not: draw half blocks. */
 int video_block_lines(void);
+
+/* Reads the 15 loaded glyphs back from the font and returns 1 when all are there; 0 when none were loaded or the font
+   does not hold them. video_init does it once after the load and keeps the half blocks when it fails, so a BIOS that
+   ignores the load never shows its line-drawing glyphs under the reserved codes. */
+int video_blocks_in_font(void);
 
 /* Chooses the drawing path regardless of the card: 16, 14 or 0. For /DUMP, which draws one set of reference screens on
    every card, and for tests. Call after video_init, which sets it from the card. */

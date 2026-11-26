@@ -26,7 +26,7 @@ typedef struct {
     char name[9];
     int bank, banks;     /* the bank chosen: 0 is USER, 1 to `banks` are the other banks in list order, `banks` + 1 a new bank */
     char folder[9];      /* the chosen bank's folder; "" for a new bank */
-    char pack[9];        /* the new bank's name, typed in the Bank field */
+    char newbank[9];     /* the new bank's name, typed in the Bank field */
     int nsay;            /* lines in use */
     SayLine say[SAY_LINES];
     int ok;              /* Enter would save */
