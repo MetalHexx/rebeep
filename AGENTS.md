@@ -11,8 +11,8 @@ and `61h` through JEMM's QPIEMU module, so it needs a 386+ running JEMM. Players
 FM patches in ReBeep Studio (`RBSTUDIO.EXE`), a C program built with Open Watcom.
 
 The repo is also a starter kit. A cross-platform Node CLI, `rebeep`, fetches pinned tools, builds
-86Box VMs (MS-DOS 6.22, FreeDOS, a slow 386SX, an EGA PC), deploys builds to a delivery disk, and resets
-everything to vanilla.
+86Box VMs (MS-DOS 6.22, FreeDOS, a slow 386SX, an EGA PC, a Hercules PC), deploys builds to a delivery disk,
+and resets everything to vanilla.
 
 ## 2. Repo map
 

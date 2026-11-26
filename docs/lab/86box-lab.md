@@ -29,14 +29,15 @@ Override the home with `REBEEP_HOME=<path>` or `--home <path>`.
 | `mirror-freedos` | same | same | same | same | FreeDOS 1.4, built by script |
 | `slow-386sx` | `awardsx` (Award 386SX) | 386SX/16 | 4 MB | same | a clone of the `mirror-msdos` baseline |
 | `ega-msdos` | same as `mirror-msdos` | same | same | same | a clone of the `mirror-msdos` baseline, with IBM's EGA card |
+| `hercules-msdos` | same as `mirror-msdos` | same | same | same | a clone of the `mirror-msdos` baseline, with a Hercules mono card |
 
 - **The rig.** The mirrors stand in for the real test rig, a FIC PA-2010 board (VIA VP1). 86Box has
   no VP1 board, so they use FIC's next board, the PA-2012. For ReBeep, the timer, port `61h`, the
   ISA Sound Blaster and the CPU speed matter far more than the chipset.
 - **Sound.** The card is non-PnP, at `A220 I5 D1 H5`, with OPL3 at `388h`. The PC speaker is always
   emulated.
-- **Video.** Tseng ET4000AX (ISA VGA), except on `ega-msdos`: IBM's EGA card on an Enhanced Color Display, 640x350 text,
-  for the studio's 14-line font.
+- **Video.** Tseng ET4000AX (ISA VGA), except on `ega-msdos` (IBM's EGA card on an Enhanced Color Display, 640x350 text,
+  for the studio's 14-line font) and `hercules-msdos` (a Hercules card in mono text mode, for the studio's mono view).
 - **The slow profile's timing is indicative only.** An emulator's timing is not a real 386SX.
 
 Each profile is two files in `env/86box/profiles/<vm>/`:
@@ -143,7 +144,7 @@ All of these refuse while that VM is running. Add `--preview` to see what would 
 
 With no baseline:
 
-- `mirror-freedos`, `slow-386sx` and `ega-msdos` are rebuilt.
+- `mirror-freedos`, `slow-386sx`, `ega-msdos` and `hercules-msdos` are rebuilt.
 - `mirror-msdos` refuses unless you pass `--rebuild`, so a hand-done install is never wiped by
   accident.
 

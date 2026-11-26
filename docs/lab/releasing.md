@@ -59,6 +59,11 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
 - [ ] `RBSTUDIO`: the synth screen's envelope is smooth at 56 heights, and the patch list, the help, the
   Save dialog and the save prompt look as on `mirror-msdos`. Quit: the DOS prompt has its own font back.
 
+**`hercules-msdos`**, on the dev boot (a Hercules card, mono text):
+
+- [ ] `RBSTUDIO` starts in its mono view by itself: the selected value, the menu row, the dialog buttons,
+  held piano keys and the envelope can all be told apart. Quit: the DOS prompt and its cursor look normal.
+
 **`mirror-freedos`**, with ReBeep autoloaded. GPC hangs there, so FreeDOS acceptance rests on RBTEST:
 
 - [ ] RBTEST cases 0 to 9 by ear (`RBTEST /C:n`), in faithful mode and in one patch: nothing clicks

@@ -12,6 +12,7 @@ export const ROMS = [
   'machines/ficpa2012/113jb16.awd',
   'video/et4000/ET4000.BIN',
   'video/ega/ibm_6277356_ega_card_u44_27128.bin',
+  'video/mda/mda.rom',
   'machines/awardsx/Unknown 386SX OPTi291 - Award (original).BIN',
 ];
 const JEMM_FILES = ['JEMMEX.EXE', 'JEMM386.EXE', 'JLOAD.EXE', 'QPIEMU.DLL'];

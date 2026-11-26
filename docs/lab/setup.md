@@ -92,15 +92,18 @@ Its 1990 Award BIOS forgets the disks when it loads defaults, so the first boot 
 4. Set **Drive A:** to **1.44M, 3½ in.**, then **F10** to save.
 5. Once it boots, quit 86Box and `rebeep vm snapshot slow-386sx`.
 
-The EGA profile, for the studio's 14-line font, clones the same baseline and needs only the F1:
+The EGA profile, for the studio's 14-line font, and the Hercules profile, for its mono view, clone
+the same baseline and need only the F1:
 
 ```sh
 rebeep vm create ega-msdos
 rebeep vm run ega-msdos
+rebeep vm create hercules-msdos
+rebeep vm run hercules-msdos
 ```
 
-Press **F1** at the CMOS message, and once it reaches the DOS prompt, quit 86Box and
-`rebeep vm snapshot ega-msdos`.
+On each, press **F1** at the CMOS message, and once it reaches the DOS prompt, quit 86Box and
+`rebeep vm snapshot <vm>`.
 
 ## 4. Everyday loop
 

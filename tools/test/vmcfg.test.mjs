@@ -46,7 +46,7 @@ describe('the real profile templates', () => {
   const names = listProfiles(repo);
 
   test('all profiles are found and load', () => {
-    assert.deepEqual(names, ['ega-msdos', 'mirror-freedos', 'mirror-msdos', 'slow-386sx']);
+    assert.deepEqual(names, ['ega-msdos', 'hercules-msdos', 'mirror-freedos', 'mirror-msdos', 'slow-386sx']);
     for (const name of names) assert.equal(loadProfile(repo, name).name, name);
   });
 

@@ -6,6 +6,7 @@
 | `mirror-freedos` | Built by script from the FreeDOS 1.4 packages |
 | `slow-386sx` | Cloned from the `mirror-msdos` baseline |
 | `ega-msdos` | Cloned from the `mirror-msdos` baseline; IBM EGA card, for the studio's 14-line font |
+| `hercules-msdos` | Cloned from the `mirror-msdos` baseline; Hercules card, for the studio's mono view |
 
 | Goal | Command |
 |---|---|

@@ -1,6 +1,6 @@
 ---
 name: rebeep-dev
-description: Work in the ReBeep repo's dev environment through the rebeep CLI (tools/rebeep.mjs). Use to set up, check, reset or clean the 86Box environment; add MS-DOS or game media; create, install, run, snapshot or reset the VMs (mirror-msdos, mirror-freedos, slow-386sx, ega-msdos); build ReBeep and deploy it to the VMs' D: disk; see, fetch or add files on a VM's D: (logs, results); log what a game makes ReBeep do with the REBEEPD trace build; run the tests; or add a command to the CLI.
+description: Work in the ReBeep repo's dev environment through the rebeep CLI (tools/rebeep.mjs). Use to set up, check, reset or clean the 86Box environment; add MS-DOS or game media; create, install, run, snapshot or reset the VMs (mirror-msdos, mirror-freedos, slow-386sx, ega-msdos, hercules-msdos); build ReBeep and deploy it to the VMs' D: disk; see, fetch or add files on a VM's D: (logs, results); log what a game makes ReBeep do with the REBEEPD trace build; run the tests; or add a command to the CLI.
 ---
 
 # rebeep-dev
