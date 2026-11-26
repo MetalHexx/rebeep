@@ -1,0 +1,14 @@
+; ReBeep patch. Edit it in ReBeep Studio or by hand.
+; OPn= AR DR SL RR OL KSL MULT WAVE TREM VIB SUS KSR, decimal, one space apart.
+; SL and OL: bigger is louder. OCTAVE 4 is the game's pitch.
+; FROG candidate for the splash jingle. Beep: square-like, made with FM (odd harmonics), so it sounds the same on an OPL2. OPL2 and OPL3.
+[PATCH]
+FORMAT=1
+OCTAVE=5
+
+[2OP]
+; CONNECTION: FM or AM. FEEDBACK 0..7.
+CONNECTION=FM
+FEEDBACK=0
+OP1=15 0 15 12 34 0 2 0 0 0 1 0
+OP2=15 0 15 12 60 0 1 0 0 0 1 0

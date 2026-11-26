@@ -69,7 +69,7 @@ D:\GAMES\<NAME>\             your games
 D:\REBEEP\                   REBEEP.COM, RBTEST.COM, RBSTUDIO.EXE, SPLASH.ANS, MENU.ANS,
                              FACTORY\*.RBP and AUTOLOAD.FLG, the latest build, and
                              REBEEPD.COM, the dev-only trace build
-D:\REBEEP\PATCHES\LAB\       the lab's patch set (and KQ4\, SQ1\): banks, never shipped
+D:\REBEEP\PATCHES\LAB\       the lab's patch set (and KQ4\, SQ1\, FROG\): banks, never shipped
 ```
 
 D: is written by the CLI's own FAT16 writer, straight from the repo, the tool archives and your
