@@ -1,7 +1,8 @@
 /* The synth screen in parts: after a change, drawing only synth_parts(before, after) over the screen of the old state
    gives every cell a fresh synth_draw of the new state gives, for both variants and both views. The changes come through
-   the editor (key events, clicks, bars, undo, the name, the piano, Random and Mutate) and, for what a save, the rescan or
-   the prompt would change, straight into the fields. Also the drawing primitives: clipping and SCR_KEEP. */
+   the editor (key events, clicks, bars, undo, the octave, the piano, Random and Mutate, the Save dialog) and, for what a
+   save, the rescan or the prompt would change, straight into the fields. Also the drawing primitives: clipping and
+   SCR_KEEP. */
 #include <stdio.h>
 #include <string.h>
 
@@ -14,20 +15,21 @@
 #include "../../src/studio/video.h"
 
 #define CELLS (VIDEO_COLS * VIDEO_ROWS)
-#define NAV_ROWS (F_FB - F_NAME + 1 + P_COUNT)   /* name, variant, octave, connection, feedback, then the parameters */
+#define NAV_ROWS (F_FB - F_VARIANT + 1 + P_COUNT)   /* variant, octave, connection, feedback, then the parameters */
 
+#define SC_UP (0x48 | KBD_EXT)
 #define SC_DOWN (0x50 | KBD_EXT)
 #define SC_LEFT (0x4B | KBD_EXT)
 #define SC_RIGHT (0x4D | KBD_EXT)
 #define SC_TAB 0x0F
 #define SC_ESC 0x01
 #define SC_BACK 0x0E
+#define SC_S 0x1F
 #define SC_ENTER 0x1C
 #define SC_SHIFT 0x2A
 #define SC_CTRL 0x1D
 #define SC_ALT 0x38
 #define SC_1 0x02
-#define SC_MINUS 0x0C
 #define SC_Y 0x15
 #define SC_F11 0x57
 #define SC_F12 0x58
@@ -36,7 +38,13 @@
 #define SC_C 0x2E   /* piano key 4 */
 #define SC_A 0x1E
 #define SC_B 0x30
+#define SC_W 0x11
+#define HELD_X 33       /* the bottom bar's cells for the names of the notes held */
+#define HELD_CELLS 11
 
+static Library lib;     /* the library the Save dialog reads: FACTORY BRASS and ORGAN, USER BRASS, the bank HEXX */
+static Entry lib_rows[4];
+static char err[80];
 static Editor ed;      /* the editor the test drives */
 static Editor shown;   /* the editor `screen` was drawn for */
 static Editor other;   /* a second state to compare with, when nothing is drawn */
@@ -165,6 +173,28 @@ static void blank(void)
     video_fill(0, 0, VIDEO_COLS, VIDEO_ROWS, 'k', 0x1E);
 }
 
+static void add_row(int i, const char *folder, const char *name)
+{
+    strcpy(lib_rows[i].folder, folder);
+    strcpy(lib_rows[i].name, name);
+}
+
+/* FACTORY BRASS and ORGAN, USER BRASS, and the bank HEXX with one patch: enough for the dialog to step through banks. */
+static void make_library(void)
+{
+    add_row(0, "FACTORY", "BRASS");
+    add_row(1, "FACTORY", "ORGAN");
+    add_row(2, "USER", "BRASS");
+    add_row(3, "HEXX", "ORGAN");
+    lib.entries = lib_rows;
+    lib.count = 4;
+    lib.cap = 4;
+    lib.factory = 2;
+    lib.user = 1;
+    lib.banks = 1;
+    strcpy(lib.patchdir, "NOPATCH");
+}
+
 static void primitives(void)
 {
     t_case("a fill is clipped at each edge");
@@ -290,7 +320,7 @@ static void piano(int variant, int thorough)
     release(SC_X, "the second up, not the last");
     release(SC_Z, "the first up");
     release(SC_C, "the third up");
-    editor_msg(&ed, "USER\\SLAPBASS exists: use Save As", R_WARNING);
+    editor_msg(&ed, "Can't write HEXX\\ELEC_GTR.RBP", R_WARNING);
     step("a long message");
     press(SC_Z, "a key down: the message has less room");
     release(SC_Z, "the key up: the message has room again");
@@ -327,15 +357,15 @@ static void rows(int variant, int thorough)
     kase(variant, "focus and values on every kind of row");
     restart(variant);
     if (thorough) {
-        editor_focus(&ed, F_NAME);
-        step("focus on the name");
+        editor_focus(&ed, F_VARIANT);
+        step("focus on Variant");
         for (i = 0; i < NAV_ROWS / 2; i++) {
             tap(SC_DOWN);
             tap(SC_DOWN);
             step("Down through the rows");
         }
     } else {
-        for (i = F_NAME; i <= F_FB; i += 2) {
+        for (i = F_VARIANT; i <= F_FB; i += 2) {
             editor_focus(&ed, i);
             step("focus on a row beyond the parameters");
         }
@@ -407,24 +437,87 @@ static void dice(int variant, int thorough)
     release(SC_Z, "the piano key up");
 }
 
-static void name_row(int variant)
+/* The notes held, as the bottom bar names them. */
+static void held_names(char *out)
 {
-    kase(variant, "the name row");
+    int x;
+
+    for (x = 0; x < HELD_CELLS; x++) out[x] = (char)(scr_cell(HELD_X + x, 24) & 0xFF);
+    out[HELD_CELLS] = '\0';
+    for (x = HELD_CELLS - 1; x >= 0 && out[x] == ' '; x--) out[x] = '\0';
+}
+
+/* The held notes are named by the pitch you hear: the patch's octave shifts the piano's, and 4 is no shift. */
+static void octave_names(void)
+{
+    char names[HELD_CELLS + 1];
+    int i;
+
+    t_case("the held notes are named by the pitch you hear");
+    restart(4);
+    held_names(names);
+    t_check(strcmp(names, "C4 G4") == 0, "octave 4: C4 and G4");
+    chord(SC_CTRL, SC_UP);
+    t_checkl(step("Ctrl+Up with notes held"), SD_TOP | SD_BOTTOM, "the octave and the names are redrawn");
+    held_names(names);
+    t_check(strcmp(names, "C5 G5") == 0, "octave 5: a note higher");
+    for (i = 0; i < 2; i++) chord(SC_CTRL, SC_UP);
+    step("up to the top");
+    held_names(names);
+    t_check(strcmp(names, "C7 G7") == 0, "octave 7");
+    for (i = 0; i < 7; i++) chord(SC_CTRL, SC_DOWN);
+    step("down to the bottom");
+    held_names(names);
+    t_check(strcmp(names, "C0 G0") == 0, "octave 0");
+}
+
+/* A key meant for the Save dialog, with what the editor asks of the main loop done. */
+static void dialog_key(unsigned code)
+{
+    editor_act(&ed, &lib, editor_event(&ed, code), err, sizeof err);
+    editor_event(&ed, code | KBD_BREAK);
+}
+
+/* What the dialog's last key changed: the dialog redraws the whole screen or nothing. It is then the state shown. */
+static void dialog_parts(unsigned want, const char *what)
+{
+    t_checkl(synth_parts(&shown, &ed), want, what);
+    shown = ed;
+}
+
+static void dialog_fields(int variant)
+{
+    kase(variant, "the Save dialog");
     restart(variant);
-    editor_focus(&ed, F_NAME);
-    step("focus on the name");
-    tap(SC_BACK);
-    step("Backspace");
-    key(SC_SHIFT);
-    tap(SC_MINUS);
-    key(SC_SHIFT | KBD_BREAK);
-    tap(SC_A);
-    step("two letters");
-    tap(SC_ESC);
-    step("Esc restores the name");
-    tap(SC_B);
-    tap(SC_ENTER);
-    step("Enter ends the edit");
+    key(SC_CTRL);
+    dialog_key(SC_S);
+    key(SC_CTRL | KBD_BREAK);
+    t_checkl(ed.dialog, 1, "Ctrl+S opens the dialog");
+    dialog_parts(SD_ALL, "opens: every part");
+    dialog_key(SC_W);
+    dialog_parts(SD_ALL, "a character typed in Name");
+    dialog_key(SC_BACK);
+    dialog_parts(SD_ALL, "Backspace");
+    dialog_key(SC_RIGHT);
+    dialog_parts(SD_ALL, "Right steps the bank, and the lines say another thing");
+    dialog_key(SC_TAB);
+    dialog_parts(SD_ALL, "Tab moves to the Bank field");
+    dialog_key(SC_RIGHT);
+    dialog_parts(SD_ALL, "Right again: a new bank");
+    dialog_key(SC_W);
+    dialog_parts(SD_ALL, "its name typed in the Bank field");
+    dialog_key(SC_BACK);
+    dialog_parts(SD_ALL, "and deleted again");
+    dialog_key(SC_BACK);
+    dialog_parts(0, "Backspace on an empty name changes nothing");
+    dialog_key(SC_ENTER);
+    dialog_parts(0, "Enter while the lines refuse changes nothing");
+    t_checkl(ed.dialog, 1, "the dialog stays");
+    dialog_key(SC_LEFT);
+    dialog_parts(SD_ALL, "Left steps back");
+    dialog_key(SC_ESC);
+    t_checkl(ed.dialog, 0, "Esc closes the dialog");
+    dialog_parts(SD_ALL, "closes: every part");
 }
 
 /* A press on each kind of control, then bars pressed and dragged. */
@@ -457,8 +550,8 @@ static void clicks(int variant, int thorough)
     editor_bar(&ed, 1, P_OL, 30, 8, 34, 1);
     step("a press on a bar and a drag");
     editor_bar(&ed, 0, F_FB, 63, 7, 66, 1);
-    editor_kb_octave(&ed, 1);
-    step("a drag over the Feedback bar and the keyboard octave up with notes held");
+    chord(SC_CTRL, SC_UP);
+    step("a drag over the Feedback bar and the patch's octave up with notes held");
 }
 
 /* Changes in the Editor that a save, the rescan after it, a reset or the prompt make, set straight into the fields. */
@@ -473,30 +566,32 @@ static void direct(int variant, int thorough)
         ed.dirty = 0;
         t_checkl(step("clean"), SD_TOP, "the marker is the top bar's");
     }
-    ed.pos = 100;
-    ed.total = 120;
+    ed.bpos = 100;
+    ed.btotal = 120;
     v->fb = 7;
     strcpy(ed.msg, "Saved");
     v->op[ed.cur].v[P_MULT] = 5;
     v->op[ed.cur].v[P_AR] = 3;
-    t_checkl(step("a place in the list, Feedback, a message, a multiplier and an attack rate"),
+    t_checkl(step("a place in its bank, Feedback, a message, a multiplier and an attack rate"),
              SD_TOP | SD_VOICE | SD_GRID | SD_BAND | SD_BOTTOM, "each shows in its own part");
+    strcpy(ed.folder, "HEXX");
+    t_checkl(step("another bank"), SD_TOP, "the bank's name is the top bar's");
     ed.p.octave = 7;
     ed.held[0] = 0;
     ed.held[1] = 28;
     ed.nheld = 2;
     step("octave 7 and the lowest and highest keys held");
     strcpy(ed.p.name, "ABCDEFGH");
+    strcpy(ed.folder, "ABCDEFGH");
     ed.msgRole = R_WARNING;
     v->conn = 1;
-    step("an eight-character name, a message role and another connection");
+    step("eight-character names, a message role and another connection");
     ed.chip = 2;
     v->op[0].v[P_WAVE] = 6;
     v->op[1].v[P_WAVE] = 5;
     step("an OPL2: the Waveform limit and the 4-OP warning");
     ed.chip = 3;
-    ed.kbOct = KB_LOW + 1;
-    step("an OPL3 again and the keyboard octave");
+    step("an OPL3 again");
 }
 
 /* What the overlays read is every part; no draw is needed to know. */
@@ -514,13 +609,39 @@ static void overlays(void)
     other.pend = EL_NEXT + 1;
     t_checkl(synth_parts(&ed, &other), SD_ALL, "the prompt opens");
     ed = other;
-    other.btn = 3;
+    other.btn = 2;
     t_checkl(synth_parts(&ed, &other), SD_ALL, "its focused button moves");
     other.btn = 0;
     other.pend = EL_LIST + 1;
-    t_checkl(synth_parts(&ed, &other), SD_ALL, "its question changes");
+    t_checkl(synth_parts(&ed, &other), SD_ALL, "the leave it guards changes");
     other.prompt = 0;
     t_checkl(synth_parts(&ed, &other), SD_ALL, "the prompt closes");
+    other = ed;
+    other.prompt = 0;
+    other.dialog = 1;
+    t_checkl(synth_parts(&ed, &other), SD_ALL, "the Save dialog opens");
+    ed = other;
+    other.dlg.field = 1;
+    t_checkl(synth_parts(&ed, &other), SD_ALL, "its focused field moves");
+    other = ed;
+    strcpy(other.dlg.name, "BRASS");
+    t_checkl(synth_parts(&ed, &other), SD_ALL, "its name changes");
+    other = ed;
+    other.dlg.ok = 1;
+    t_checkl(synth_parts(&ed, &other), SD_ALL, "Save lights");
+    other = ed;
+    other.dlg.nsay = 1;
+    t_checkl(synth_parts(&ed, &other), SD_ALL, "a line is added");
+    ed = other;
+    other.dlg.say[0].mark = '!';
+    t_checkl(synth_parts(&ed, &other), SD_ALL, "a line gets its mark");
+    other = ed;
+    strcpy(other.dlg.say[0].value, "USER");
+    t_checkl(synth_parts(&ed, &other), SD_ALL, "a line's value changes");
+    other = ed;
+    t_checkl(synth_parts(&ed, &other), 0, "an open dialog that did not change is no part");
+    other.dialog = 0;
+    t_checkl(synth_parts(&ed, &other), SD_ALL, "the dialog closes");
 }
 
 /* The parts that must not be drawn as well as the ones that must. */
@@ -549,7 +670,7 @@ static void selective(void)
     editor_focus(&ed, F_OCTAVE);
     step("focus on Octave");
     tap(SC_RIGHT);
-    t_checkl(step("Octave"), SD_TOP, "Octave is the top bar alone");
+    t_checkl(step("Octave"), SD_TOP | SD_BOTTOM, "Octave is the top bar and the names of the notes held");
 }
 
 int main(void)
@@ -558,6 +679,7 @@ int main(void)
     t_checkl(editor_init(), 0, "the undo history allocates");
     opl_sink = sink;
     opl_init(3);
+    make_library();
 
     primitives();
     selective();
@@ -569,11 +691,13 @@ int main(void)
     operators(4, 1);
     undo_redo(4);
     dice(4, 1);
-    name_row(4);
+    octave_names();
+    dialog_fields(4);
     clicks(4, 1);
     direct(4, 1);
 
     piano(2, 0);
+    dialog_fields(2);
     rows(2, 0);
     operators(2, 0);
     dice(2, 0);

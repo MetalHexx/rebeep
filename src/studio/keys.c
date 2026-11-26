@@ -11,7 +11,6 @@
 #define SCAN_Y 0x15
 #define SCAN_ENTER 0x1C
 #define SCAN_CTRL 0x1D
-#define SCAN_A 0x1E
 #define SCAN_S 0x1F
 #define SCAN_D 0x20
 #define SCAN_C 0x2E
@@ -47,9 +46,10 @@ const KeyBinding key_table[] = {
     {KID_BTAB, K_SYNTH, SCAN_TAB, MOD_SHIFT},
     {KID_PGUP, K_SYNTH, SCAN_PGUP, 0},
     {KID_PGDN, K_SYNTH, SCAN_PGDN, 0},
+    {KID_BANK_PREV, K_SYNTH, SCAN_PGUP, MOD_CTRL},
+    {KID_BANK_NEXT, K_SYNTH, SCAN_PGDN, MOD_CTRL},
     {KID_HELP, K_SYNTH, SCAN_F1, 0},
     {KID_SAVE, K_SYNTH, SCAN_S, MOD_CTRL},
-    {KID_SAVEAS, K_SYNTH, SCAN_A, MOD_CTRL},
     {KID_RESET, K_SYNTH, SCAN_R, MOD_CTRL},
     {KID_UNDO, K_SYNTH, SCAN_Z, MOD_CTRL},
     {KID_REDO, K_SYNTH, SCAN_Y, MOD_CTRL},
@@ -68,11 +68,17 @@ const KeyBinding key_table[] = {
     {KID_ENTER, K_PROMPT, SCAN_ENTER, 0},
     {KID_ESC, K_PROMPT, SCAN_ESC, 0},
     {KID_PICK1, K_PROMPT, SCAN_S, 0},
-    {KID_PICK2, K_PROMPT, SCAN_A, 0},
-    {KID_PICK3, K_PROMPT, SCAN_D, 0},
-    {KID_PICK4, K_PROMPT, SCAN_C, 0},
-    {KID_ENTER, K_NAME, SCAN_ENTER, 0},
-    {KID_BACK, K_NAME, SCAN_BACKSPACE, 0}
+    {KID_PICK2, K_PROMPT, SCAN_D, 0},
+    {KID_PICK3, K_PROMPT, SCAN_C, 0},
+    {KID_UP, K_SAVE, SCAN_UP, 0},
+    {KID_DOWN, K_SAVE, SCAN_DOWN, 0},
+    {KID_TAB, K_SAVE, SCAN_TAB, 0},
+    {KID_BTAB, K_SAVE, SCAN_TAB, MOD_SHIFT},
+    {KID_LEFT, K_SAVE, SCAN_LEFT, 0},
+    {KID_RIGHT, K_SAVE, SCAN_RIGHT, 0},
+    {KID_ENTER, K_SAVE, SCAN_ENTER, 0},
+    {KID_ESC, K_SAVE, SCAN_ESC, 0},
+    {KID_BACK, K_SAVE, SCAN_BACKSPACE, 0}
 };
 
 const int key_count = sizeof key_table / sizeof key_table[0];
@@ -84,50 +90,45 @@ static const unsigned char IDS_TAB[] = {KID_TAB, 0};
 static const unsigned char IDS_BTAB[] = {KID_BTAB, 0};
 static const unsigned char IDS_OCT[] = {KID_OCT_UP, KID_OCT_DOWN, 0};
 static const unsigned char IDS_SAVE[] = {KID_SAVE, 0};
-static const unsigned char IDS_SAVEAS[] = {KID_SAVEAS, 0};
 static const unsigned char IDS_RESET[] = {KID_RESET, 0};
 static const unsigned char IDS_UNDO[] = {KID_UNDO, 0};
 static const unsigned char IDS_REDO[] = {KID_REDO, 0};
 static const unsigned char IDS_RANDOM[] = {KID_RANDOM, 0};
 static const unsigned char IDS_MUTATE[] = {KID_MUTATE, 0};
 static const unsigned char IDS_PAGES[] = {KID_PGUP, KID_PGDN, 0};
+static const unsigned char IDS_BANKS[] = {KID_BANK_PREV, KID_BANK_NEXT, 0};
 static const unsigned char IDS_ESC[] = {KID_ESC, 0};
 static const unsigned char IDS_HELP[] = {KID_HELP, 0};
 
 const HelpRow HELP_ROWS[] = {
     {0, HR_HEADING, "MOVING AND EDITING", "", 0},
-    {0, HR_KEYS, "Up Down", "parameter rows", IDS_UPDOWN},
-    {0, HR_KEYS, "Left Right", "change the value", IDS_LEFTRIGHT},
+    {0, HR_KEYS, "Up Down", "previous / next row", IDS_UPDOWN},
+    {0, HR_KEYS, "Left Right", "value down / up", IDS_LEFTRIGHT},
     {0, HR_KEYS, "Alt+1 to 4", "operator 1 to 4", IDS_OPS},
     {0, HR_KEYS, "Tab", "next operator", IDS_TAB},
     {0, HR_KEYS, "Shift+Tab", "previous operator", IDS_BTAB},
-    {0, HR_INFO, "Mouse", "click to focus; click", 0},
-    {0, HR_INFO, "", "a bar to set it", 0},
+    {0, HR_INFO, "Mouse", "click to focus or set", 0},
+    {0, HR_INFO, "", "", 0},
     {0, HR_HEADING, "PLAYING", "", 0},
-    {0, HR_INFO, "Z to M", "lower row, from C3", 0},
-    {0, HR_INFO, "Q to P", "upper row, from C4", 0},
-    {0, HR_INFO, "Digits", "upper row's sharps", 0},
-    {0, HR_KEYS, "Ctrl+Up Dn", "keys up or down an octave", IDS_OCT},
+    {0, HR_INFO, "Z to M", "lower white keys", 0},
+    {0, HR_INFO, "S D G H J", "lower black keys", 0},
+    {0, HR_INFO, "Q to P", "upper white keys", 0},
+    {0, HR_INFO, "Digits", "upper black keys", 0},
     {1, HR_HEADING, "PATCH", "", 0},
-    {1, HR_KEYS, "Ctrl+S", "Save", IDS_SAVE},
-    {1, HR_KEYS, "Ctrl+A", "Save As", IDS_SAVEAS},
-    {1, HR_KEYS, "Ctrl+R", "Reset to factory", IDS_RESET},
-    {1, HR_KEYS, "F12", "Random sound", IDS_RANDOM},
-    {1, HR_KEYS, "F11", "Mutate the sound", IDS_MUTATE},
-    {1, HR_KEYS, "Ctrl+Z", "Undo", IDS_UNDO},
-    {1, HR_KEYS, "Ctrl+Y", "Redo", IDS_REDO},
+    {1, HR_KEYS, "Ctrl+S", "save, or save a copy", IDS_SAVE},
+    {1, HR_KEYS, "Ctrl+Up Down", "octave up / down", IDS_OCT},
+    {1, HR_KEYS, "Ctrl+R", "reset to factory", IDS_RESET},
+    {1, HR_KEYS, "F12", "random sound", IDS_RANDOM},
+    {1, HR_KEYS, "F11", "mutate sound", IDS_MUTATE},
+    {1, HR_KEYS, "Ctrl+Z", "undo", IDS_UNDO},
+    {1, HR_KEYS, "Ctrl+Y", "redo", IDS_REDO},
     {1, HR_KEYS, "PgUp PgDn", "previous / next patch", IDS_PAGES},
+    {1, HR_KEYS, "Ctrl+PgUp Dn", "previous / next bank", IDS_BANKS},
     {1, HR_KEYS, "Esc", "back one level", IDS_ESC},
     {1, HR_KEYS, "F1", "this help", IDS_HELP}
 };
 
 const int HELP_ROW_COUNT = sizeof HELP_ROWS / sizeof HELP_ROWS[0];
-
-const char *const HELP_NOTES[HELP_NOTE_COUNT] = {
-    "Reset to factory loads the factory values and leaves the patch unsaved.",
-    "Holding a key on a bar counts as one undo step.",
-    "Esc steps back: help or a pop-up first, then patch list, then menu."
-};
 
 static const unsigned char PIANO_SCAN[KEY_PIANO_KEYS] = {
     0x2C, 0x1F, 0x2D, 0x20, 0x2E, 0x2F, 0x22, 0x30, 0x23, 0x31, 0x24, 0x32,

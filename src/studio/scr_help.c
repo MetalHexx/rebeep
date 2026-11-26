@@ -14,9 +14,8 @@
 #define WIN_Y1 22
 #define KEYS_X 4        /* a column's key text; the right column starts at RIGHT_X */
 #define RIGHT_X 41
-#define TEXT_DX 12      /* the key text is this wide before the description */
+#define TEXT_DX 13      /* the key text is this wide before the description (Ctrl+PgUp Dn is 12) */
 #define FIRST_ROW 3
-#define NOTES_ROW 17
 #define RULE_ROW 20
 #define DETECTED_ROW 21
 #define DETECTED_W 34
@@ -99,7 +98,7 @@ void help_detected(char *out, unsigned len, int chip, const char *card)
     out[len - 1] = '\0';
 }
 
-/* Page 1: the key table, in two columns, the three notes, and the Detected and Log line. */
+/* Page 1: the key table, in two columns, and the Detected and Log line. */
 static void keys_page(const char *detected, const char *log_path)
 {
     int text = role(R_WINDOWTEXT);
@@ -121,7 +120,6 @@ static void keys_page(const char *detected, const char *log_path)
             scr_put(x + TEXT_DX, y, r->text, text, SCR_KEEP);
         }
     }
-    for (i = 0; i < HELP_NOTE_COUNT; i++) scr_put(KEYS_X, NOTES_ROW + i, HELP_NOTES[i], text, SCR_KEEP);
     scr_fill(WIN_X0 + 1, RULE_ROW, WIN_X1 - WIN_X0 - 1, 1, H_LINE, role(R_WINDOWFRAME), SCR_KEEP);
 
     sprintf(clip, "%.*s", DETECTED_W, detected);

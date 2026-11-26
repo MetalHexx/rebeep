@@ -50,8 +50,8 @@ void sample_detect(Detect *d)
     strcpy(d->log_path, "C:\\REBEEP\\RBSTUDIO.LOG");
 }
 
-/* Patch 12 of 40, BRASS with operator 2's Attack Rate edited (so the * shows), operator 2's Attack Rate in focus, an
-   OPL3, C4 and G4 held, no message. */
+/* FACTORY\BRASS, 2 of 4 in its bank and 2 of 9 in the list, with operator 2's Attack Rate edited (so the * shows),
+   operator 2's Attack Rate in focus, an OPL3, C4 and G4 held, no message. */
 void sample_editor(Editor *e, int variant)
 {
     int k;
@@ -73,12 +73,15 @@ void sample_editor(Editor *e, int variant)
     e->cur = 1;
     e->lastP = P_AR;
     e->dirty = 1;
-    e->pos = 12;
-    e->total = 40;
+    strcpy(e->folder, "FACTORY");
+    strcpy(e->file, "BRASS");
+    e->pos = 2;
+    e->total = LIST_SAMPLE_ROWS;
+    e->bpos = 2;
+    e->btotal = 4;
     e->held[0] = 12;
     e->held[1] = 19;
     e->nheld = 2;
-    e->kbOct = KB_LOW;
     e->msgRole = R_TEXT;
 }
 
@@ -102,7 +105,7 @@ static void sample_list(void)
 
 static const char *const SAMPLE_SCREENS[] = {
     "detectlog", "splash", "splash-load", "menu", "patchlist", "synth-4op", "synth-2op", "help1-4op", "help2-4op", "help1-2op",
-    "help2-2op", "save-4op", "save-2op"
+    "help2-2op", "save-4op", "save-2op", "savedlg-4op"
 };
 
 int sample_known(const char *screen)
@@ -115,7 +118,29 @@ int sample_known(const char *screen)
     return 0;
 }
 
-/* A help or save screen name is "<what>[page]-<variant>": the page digit and the variant's operator count. */
+/* The Save dialog's first state for FACTORY\BRASS: the name, the bank USER, and the three lines it works out. */
+static void sample_dialog(Editor *e)
+{
+    SaveDlg *d = &e->dlg;
+
+    e->dialog = 1;
+    strcpy(d->name, "BRASS");
+    strcpy(d->folder, "USER");
+    d->banks = 1;
+    d->nsay = 3;
+    d->ok = 1;
+    d->say[0].mark = ' ';
+    strcpy(d->say[0].label, "New patch:");
+    strcpy(d->say[0].value, "USER\\BRASS.RBP");
+    d->say[1].mark = '!';
+    strcpy(d->say[1].label, "Overrides:");
+    strcpy(d->say[1].value, "FACTORY\\BRASS");
+    d->say[2].mark = ' ';
+    strcpy(d->say[2].label, "In games:");
+    strcpy(d->say[2].value, "/P:BRASS");
+}
+
+/* A help, save or Save dialog screen name is "<what>[page]-<variant>": the page digit and the variant's operator count. */
 static void sample_overlay(const char *screen)
 {
     Editor e;
@@ -124,7 +149,10 @@ static void sample_overlay(const char *screen)
 
     sample_editor(&e, variant);
     synth_draw(&e);
-    if (strnicmp(screen, "save", 4) == 0) {
+    if (strnicmp(screen, "savedlg", 7) == 0) {
+        sample_dialog(&e);
+        dialog_draw(&e);
+    } else if (strnicmp(screen, "save", 4) == 0) {
         e.prompt = 1;
         e.pend = EL_NEXT + 1;
         save_draw(&e);

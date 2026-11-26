@@ -1,6 +1,7 @@
 /* The editor's logic without drawing: value ranges and wrap, the Waveform limit by chip, the 4-OP variant made from a
-   2-OP voice, undo coalescing, the name, Random and Mutate with the note they play, the piano and its releases, the keys
-   through the key table, a bar's mouse values and PgUp/PgDn across folders. */
+   2-OP voice, undo coalescing, Random and Mutate with the note they play, the piano and its releases, the patch's octave
+   on Ctrl+Up and Ctrl+Down, the keys through the key table, a bar's mouse values, and PgUp/PgDn and Ctrl+PgUp/PgDn
+   across banks. */
 #include <stdio.h>
 #include <string.h>
 
@@ -117,6 +118,10 @@ static int is_silent(const Op *o, const Op *like)
 #define SC_CTRL 0x1D
 #define SC_Z 0x2C
 #define SC_V 0x2F   /* piano key 5 */
+#define KEY_UP (0x48 | KBD_EXT)
+#define KEY_DOWN (0x50 | KBD_EXT)
+#define KEY_PGUP (0x49 | KBD_EXT)
+#define KEY_PGDN (0x51 | KBD_EXT)
 
 /* The same patch with its 4-OP variant (FM-AM, operators 3 and 4 copies of 1 and 2), the 4-OP shown. */
 static void open_base4(void)
@@ -128,6 +133,18 @@ static void open_base4(void)
     base.v4.op[3] = base.v2.op[1];
     base.has4 = 1;
     editor_open(&e, &base, 3, 1, 3);
+}
+
+/* A key with Ctrl held, make and break: returns what the make said. */
+static int ctrl_key(unsigned event)
+{
+    int act;
+
+    editor_event(&e, SC_CTRL);
+    act = editor_event(&e, event);
+    editor_event(&e, event | KBD_BREAK);
+    editor_event(&e, SC_CTRL | KBD_BREAK);
+    return act;
 }
 
 /* F12 (Random) goes down, or F11 (Mutate) when `mutate` is set. */
@@ -288,8 +305,7 @@ static void dice_cases(void)
     dice_up(0);
     t_checkl(e.nheld, 0, "until F12 is up too");
     dice_down(0);
-    editor_kb_octave(&e, 1);
-    editor_kb_octave(&e, -1);
+    editor_release(&e);
     dice_down(1);
     dice_up(0);
     t_checkl(e.nheld, 1, "a note F11 started after a release is kept while F11 is down");
@@ -317,21 +333,17 @@ static void dice_cases(void)
     t_check(e.nheld == 1 && keyoffs == 0, "and F12 up leaves it when the piano took it again");
     editor_event(&e, SC_V | KBD_BREAK);
 
-    t_case("the name row and the help ignore both keys");
+    t_case("the Save dialog and the help ignore both keys");
     open_base(3, 0);
-    editor_focus(&e, F_NAME);
+    e.dialog = 1;
     editor_msg(&e, "keep", R_TEXT);
     was = e.p;
     dice_down(0);
     dice_up(0);
     dice_down(1);
     dice_up(1);
-    t_check(memcmp(&e.p, &was, sizeof was) == 0 && e.nheld == 0 && e.dirty == 0, "the name row: nothing happens");
+    t_check(memcmp(&e.p, &was, sizeof was) == 0 && e.nheld == 0 && e.dirty == 0, "the dialog: nothing happens");
     t_check(strcmp(e.msg, "keep") == 0, "and the message stays");
-    editor_saveas_begin(&e);
-    dice_down(0);
-    dice_up(0);
-    t_check(memcmp(&e.p, &was, sizeof was) == 0 && strcmp(e.msg, "Save As: type a name") == 0, "a Save As name too");
     open_base(3, 0);
     editor_help(&e, 1);
     dice_down(0);
@@ -530,11 +542,9 @@ int main(void)
 
     t_case("Up and Down walk the rows in order");
     open_base(3, 0);
-    e.fk = F_NAME;
+    e.fk = F_VARIANT;
     editor_move(&e, 1);
-    t_checkl(e.fk, F_VARIANT, "name, then variant");
-    editor_move(&e, 1);
-    t_checkl(e.fk, F_OCTAVE, "octave");
+    t_checkl(e.fk, F_OCTAVE, "variant, then octave");
     editor_move(&e, 1);
     t_checkl(e.fk, F_CONN, "connection");
     editor_move(&e, 1);
@@ -544,7 +554,9 @@ int main(void)
     for (i = 0; i < 20; i++) editor_move(&e, 1);
     t_checkl(e.fk, P_KSR, "the last parameter row is the end");
     for (i = 0; i < 30; i++) editor_move(&e, -1);
-    t_checkl(e.fk, F_NAME, "the name row is the top");
+    t_checkl(e.fk, F_VARIANT, "Variant is the top");
+    editor_event(&e, 0x48 | KBD_EXT);
+    t_checkl(e.fk, F_VARIANT, "and Up from it stops there");
 
     t_case("operators: Alt digits, Tab and the 2-OP limit");
     open_base(3, 0);
@@ -555,41 +567,6 @@ int main(void)
     e.fk = F_FB;
     editor_op(&e, 0);
     t_checkl(e.fk, e.lastP, "a non-parameter focus moves to the last parameter row");
-
-    t_case("the name: characters, folding, length, Backspace, Esc and Enter");
-    open_base(3, 0);
-    e.p.name[0] = '\0';
-    editor_name_add(&e, 'a');
-    t_checkl(e.p.name[0], 0, "ignored while the name row is not focused");
-    editor_focus(&e, F_NAME);
-    editor_name_add(&e, 'a');
-    editor_name_add(&e, 'z');
-    editor_name_add(&e, '9');
-    editor_name_add(&e, '_');
-    editor_name_add(&e, '-');
-    editor_name_add(&e, ' ');
-    editor_name_add(&e, '.');
-    editor_name_add(&e, '\\');
-    t_check(strcmp(e.p.name, "AZ9_-") == 0, "lower case folded, others refused");
-    editor_name_add(&e, 'b');
-    editor_name_add(&e, 'c');
-    editor_name_add(&e, 'd');
-    editor_name_add(&e, 'e');
-    t_check(strcmp(e.p.name, "AZ9_-BCD") == 0, "eight characters at most");
-    editor_name_back(&e);
-    t_check(strcmp(e.p.name, "AZ9_-BC") == 0, "Backspace deletes");
-    t_checkl(e.dirty, 1, "typing marks the patch dirty");
-    t_check(editor_name_esc(&e) == 1 && e.p.name[0] == '\0', "Esc restores the old name (empty here)");
-    t_checkl(editor_name_esc(&e), 0, "Esc on an untouched name is left to the screen");
-    editor_name_add(&e, 'q');
-    editor_name_enter(&e);
-    t_checkl(e.fk, F_VARIANT, "Enter ends editing");
-    t_check(strcmp(e.p.name, "Q") == 0, "and keeps the name");
-    editor_focus(&e, F_NAME);
-    editor_name_add(&e, 'r');
-    editor_name_add(&e, 's');
-    editor_undo(&e);
-    t_check(strcmp(e.p.name, "Q") == 0, "a typed run is one undo step");
 
     dice_cases();
 
@@ -610,28 +587,59 @@ int main(void)
     editor_key_up(&e, 7);
     t_checkl(keyoffs, 1, "a break for a key not down does nothing");
 
-    t_case("every held note is released on the name, on a switch of focus to it, and on a pop-up");
-    keyoffs = 0;
-    editor_focus(&e, F_NAME);
-    t_checkl(e.nheld, 0, "focus on the name clears the lit keys");
-    t_check(keyoffs >= 1, "and keys the notes off");
-    editor_key_down(&e, 3);
-    t_checkl(e.nheld, 0, "the piano is silent while the name is focused");
-    editor_focus(&e, P_AR);
+    t_case("every held note is released on a pop-up");
     editor_key_down(&e, 3);
     editor_key_down(&e, 4);
     keyoffs = 0;
     editor_release(&e);
     t_check(e.nheld == 0 && keyoffs >= 2, "release stops every note");
 
-    t_case("the keyboard octave moves within the range and releases the notes");
-    editor_key_down(&e, 3);
-    editor_kb_octave(&e, 1);
-    t_check(e.kbOct == KB_LOW + 1 && e.nheld == 0, "up one octave");
-    for (i = 0; i < 10; i++) editor_kb_octave(&e, 1);
-    t_checkl(e.kbOct, KB_MAX, "stops at the top");
-    for (i = 0; i < 10; i++) editor_kb_octave(&e, -1);
-    t_checkl(e.kbOct, 0, "and at the bottom");
+    t_case("Ctrl+Up and Ctrl+Down change the patch's octave: an edit, one undo step, clamped");
+    fresh_chip(3);
+    open_base(3, 0);
+    e.fk = P_DR;
+    e.mods = 0;
+    t_checkl(ctrl_key(KEY_UP), EA_NONE, "Ctrl+Up asks nothing of the main loop");
+    t_checkl(e.p.octave, 5, "Ctrl+Up raises the octave");
+    t_check(e.dirty == 1 && strcmp(e.msg, "Octave 5") == 0, "an unsaved edit, and the message says Octave 5");
+    t_checkl(e.fk, P_DR, "the focus stays where it was");
+    ctrl_key(KEY_DOWN);
+    ctrl_key(KEY_DOWN);
+    t_check(e.p.octave == 3 && strcmp(e.msg, "Octave 3") == 0, "Ctrl+Down lowers it");
+    editor_undo(&e);
+    t_checkl(e.p.octave, 4, "each press is an undo step");
+    editor_undo(&e);
+    t_checkl(e.p.octave, 5, "two presses, two steps");
+    for (i = 0; i < 10; i++) ctrl_key(KEY_UP);
+    t_checkl(e.p.octave, 7, "it stops at 7");
+    for (i = 0; i < 10; i++) ctrl_key(KEY_DOWN);
+    t_check(e.p.octave == 0 && strcmp(e.msg, "Octave 0") == 0, "and at 0");
+
+    t_case("a held Ctrl+Up is one undo step, and the prompt guards leaving");
+    open_base(3, 0);
+    editor_event(&e, SC_CTRL);
+    editor_event(&e, KEY_UP);
+    editor_event(&e, KEY_UP);
+    editor_event(&e, KEY_UP);
+    editor_event(&e, KEY_UP | KBD_BREAK);
+    editor_event(&e, SC_CTRL | KBD_BREAK);
+    t_checkl(e.p.octave, 7, "three makes of the key: octave 7");
+    editor_undo(&e);
+    t_checkl(e.p.octave, 4, "one undo returns the whole run");
+    editor_redo(&e);
+    t_checkl(editor_leave(&e, &lib, EL_NEXT, err, sizeof err), 0, "an octave change is unsaved: leaving asks");
+    t_checkl(e.prompt, 1, "the prompt is open");
+
+    t_case("the piano always plays from KB_LOW, the patch's octave shifts the voice");
+    fresh_chip(3);
+    open_base(3, 0);
+    editor_key_down(&e, 12);
+    t_check(e.nheld == 1 && e.held[0] == 12, "key 12 is held");
+    editor_release(&e);
+    ctrl_key(KEY_UP);
+    editor_key_down(&e, 12);
+    t_check(e.nheld == 1 && e.held[0] == 12, "and still key 12 at another octave");
+    editor_release(&e);
 
     t_case("no chip: the editor edits, the piano says it cannot play");
     open_base(0, 0);
@@ -652,7 +660,7 @@ int main(void)
     t_checkl(e.nheld, 0, "Z up releases it");
     editor_event(&e, 0x1D);
     editor_event(&e, 0x48 | KBD_EXT);
-    t_checkl(e.kbOct, KB_LOW + 1, "Ctrl+Up raises the keyboard octave");
+    t_checkl(e.p.octave, 5, "Ctrl+Up raises the patch's octave");
     editor_event(&e, 0x2C);
     t_checkl(e.nheld, 0, "a piano letter with Ctrl held plays nothing");
     editor_event(&e, 0x1D | KBD_BREAK);
@@ -668,15 +676,6 @@ int main(void)
     t_check(strcmp(e.msg, "Undo") == 0, "Ctrl+Z undoes");
     editor_event(&e, 0x1D | KBD_BREAK);
     editor_event(&e, 0x2C | KBD_BREAK);
-    editor_focus(&e, F_NAME);
-    e.p.name[0] = '\0';
-    editor_event(&e, 0x1E);
-    editor_event(&e, 0x1E | KBD_BREAK);
-    editor_event(&e, 0x2A);
-    editor_event(&e, 0x0C);
-    editor_event(&e, 0x0C | KBD_BREAK);
-    editor_event(&e, 0x2A | KBD_BREAK);
-    t_check(strcmp(e.p.name, "A_") == 0, "typing in the name row: A, then Shift+minus");
 
     t_case("a click on a bar sets the value from the position");
     open_base(3, 0);
@@ -735,17 +734,20 @@ int main(void)
     synth_hit(&e, 74, 24, &hit);
     t_checkl(hit.kind, SH_HELP, "F1 Help");
 
-    t_case("PgUp and PgDn walk the list order across folders and wrap");
+    t_case("PgUp and PgDn walk the list order across banks and wrap");
     put_patch("EDTREE\\PROG\\FACTORY\\AAA.RBP", 0);
     put_patch("EDTREE\\PROG\\FACTORY\\BBB.RBP", 1);
     put_patch("EDTREE\\PROG\\PATCHES\\USER\\CCC.RBP", 0);
     put_patch("EDTREE\\PROG\\PATCHES\\BANK\\DDD.RBP", 1);
+    put_patch("EDTREE\\PROG\\PATCHES\\BANK\\EEE.RBP", 0);
+    put_patch("EDTREE\\PROG\\PATCHES\\ZETA\\FFF.RBP", 1);
     log_open("EDTREE.LOG");
     memset(&lib, 0, sizeof lib);
     t_checkl(lib_open(&lib, PROG, NULL), 0, "open");
     t_checkl(lib_load(&lib, NULL, NULL), 0, "load");
     t_checkl(editor_load(&e, &lib, 0, err, sizeof err), 0, "load the first patch");
-    t_check(strcmp(e.p.name, "AAA") == 0 && e.pos == 1 && e.total == 4, "AAA is 1 of 4");
+    t_check(strcmp(e.p.name, "AAA") == 0 && e.pos == 1 && e.total == 6, "AAA is 1 of 6");
+    t_check(strcmp(e.folder, "FACTORY") == 0 && e.bpos == 1 && e.btotal == 2, "and 1 of 2 in FACTORY");
     editor_key_down(&e, 5);
     e.fk = P_AR;
     editor_change(&e, -1, 0);
@@ -753,20 +755,70 @@ int main(void)
     keyoffs = 0;
     t_checkl(editor_leave(&e, &lib, EL_NEXT, err, sizeof err), 0, "PgDn on a dirty patch asks first");
     t_check(e.prompt == 1 && strcmp(e.p.name, "AAA") == 0, "the prompt is open over AAA");
-    t_checkl(editor_act(&e, &lib, EA_PICK + 2, err, sizeof err), 0, "Discard goes on to the next patch");
+    t_checkl(editor_act(&e, &lib, EA_PICK + 1, err, sizeof err), 0, "Discard goes on to the next patch");
     t_check(strcmp(e.p.name, "BBB") == 0 && e.pos == 2, "FACTORY\\BBB");
     t_check(e.nheld == 0 && keyoffs >= 1, "the held note was released");
     t_checkl(e.dirty, 0, "the new patch is clean");
     editor_undo(&e);
     t_check(strcmp(e.msg, "Nothing to undo") == 0, "switching patch cleared undo");
     editor_leave(&e, &lib, EL_NEXT, err, sizeof err);
-    t_check(strcmp(e.p.name, "CCC") == 0, "then the USER folder");
+    t_check(strcmp(e.p.name, "CCC") == 0 && strcmp(e.folder, "USER") == 0, "PgDn at a bank's end goes on into USER");
+    t_check(e.bpos == 1 && e.btotal == 1, "1 of 1 in USER");
     editor_leave(&e, &lib, EL_NEXT, err, sizeof err);
-    t_check(strcmp(e.p.name, "DDD") == 0, "then the bank");
+    t_check(strcmp(e.p.name, "DDD") == 0 && strcmp(e.folder, "BANK") == 0 && e.bpos == 1 && e.btotal == 2, "then BANK");
+    editor_leave(&e, &lib, EL_NEXT, err, sizeof err);
+    t_check(strcmp(e.p.name, "EEE") == 0 && e.bpos == 2 && e.btotal == 2, "2 of 2 in BANK");
+    editor_leave(&e, &lib, EL_NEXT, err, sizeof err);
     editor_leave(&e, &lib, EL_NEXT, err, sizeof err);
     t_check(strcmp(e.p.name, "AAA") == 0 && e.pos == 1, "PgDn from the last wraps to the first");
     editor_leave(&e, &lib, EL_PREV, err, sizeof err);
-    t_check(strcmp(e.p.name, "DDD") == 0 && e.pos == 4, "PgUp from the first wraps to the last");
+    t_check(strcmp(e.p.name, "FFF") == 0 && e.pos == 6, "PgUp from the first wraps to the last");
+
+    t_case("Ctrl+PgUp and Ctrl+PgDn go to the first patch of the previous or next bank, wrapping");
+    editor_load(&e, &lib, 1, err, sizeof err);
+    t_checkl(ctrl_key(KEY_PGDN), EA_BNEXT, "Ctrl+PgDn asks for the next bank");
+    t_checkl(ctrl_key(KEY_PGUP), EA_BPREV, "Ctrl+PgUp asks for the previous bank");
+    t_checkl(key_lookup(K_SYNTH, KEY_PGDN, 0), KID_PGDN, "PgDn alone is still the next patch");
+    editor_act(&e, &lib, EA_BNEXT, err, sizeof err);
+    t_check(strcmp(e.p.name, "CCC") == 0, "from BBB, the first patch of USER");
+    editor_act(&e, &lib, EA_BNEXT, err, sizeof err);
+    t_check(strcmp(e.p.name, "DDD") == 0 && e.bpos == 1, "then of BANK");
+    editor_load(&e, &lib, 4, err, sizeof err);
+    editor_act(&e, &lib, EA_BNEXT, err, sizeof err);
+    t_check(strcmp(e.p.name, "FFF") == 0, "from the last patch of BANK, the first of ZETA");
+    editor_act(&e, &lib, EA_BNEXT, err, sizeof err);
+    t_check(strcmp(e.p.name, "AAA") == 0 && e.pos == 1, "from the last bank, wrapping to the first of FACTORY");
+    editor_act(&e, &lib, EA_BPREV, err, sizeof err);
+    t_check(strcmp(e.p.name, "FFF") == 0, "Ctrl+PgUp from the first bank wraps to the last");
+    editor_act(&e, &lib, EA_BPREV, err, sizeof err);
+    t_check(strcmp(e.p.name, "DDD") == 0, "and goes to the first patch of BANK, not its last");
+    editor_load(&e, &lib, 1, err, sizeof err);
+    editor_act(&e, &lib, EA_BPREV, err, sizeof err);
+    t_check(strcmp(e.p.name, "FFF") == 0, "from the second patch of FACTORY, the previous bank is the last one");
+    editor_load(&e, &lib, 2, err, sizeof err);
+    editor_act(&e, &lib, EA_BPREV, err, sizeof err);
+    t_check(strcmp(e.p.name, "AAA") == 0, "and from USER, the first patch of FACTORY");
+
+    t_case("the top row's four arrows, and a dirty patch asks first");
+    editor_load(&e, &lib, 0, err, sizeof err);
+    synth_hit(&e, 6, 0, &hit);
+    t_checkl(editor_press(&e, &hit, 6), EA_BPREV, "the Bank arrow on the left");
+    synth_hit(&e, 17, 0, &hit);
+    t_checkl(editor_press(&e, &hit, 17), EA_BNEXT, "the Bank arrow on the right");
+    synth_hit(&e, 27, 0, &hit);
+    t_checkl(editor_press(&e, &hit, 27), EA_PREV, "the Patch arrow on the left");
+    synth_hit(&e, 38, 0, &hit);
+    t_checkl(editor_press(&e, &hit, 38), EA_NEXT, "the Patch arrow on the right");
+    synth_hit(&e, 10, 0, &hit);
+    t_checkl(hit.kind, SH_NONE, "the bank's name is not a control");
+    synth_hit(&e, 32, 0, &hit);
+    t_checkl(hit.kind, SH_NONE, "nor is the patch's");
+    e.fk = P_AR;
+    editor_change(&e, -1, 0);
+    t_checkl(editor_act(&e, &lib, EA_BNEXT, err, sizeof err), 0, "Ctrl+PgDn on a dirty patch asks first");
+    t_check(e.prompt == 1 && e.pend == EL_BNEXT + 1 && strcmp(e.p.name, "AAA") == 0, "the prompt guards the bank jump");
+    editor_act(&e, &lib, EA_PICK + 1, err, sizeof err);
+    t_check(strcmp(e.p.name, "CCC") == 0 && e.dirty == 0, "Discard goes on to the next bank");
     t_checkl(editor_leave(&e, &lib, EL_LIST, err, sizeof err), 1, "leaving for the list");
     lib_free(&lib);
     log_close();

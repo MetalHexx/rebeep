@@ -73,12 +73,12 @@ void synth_draw(const Editor *e);
 void synth_redraw(const Editor *e, unsigned parts);
 
 /* The parts whose drawing reads a field that differs between the two states, by comparing the fields the drawing reads
-   (not `mods`, `last_make` and the like): 0 means the screen is the same. SD_ALL when the variant, the help, the save
-   prompt or what the prompt shows differs. */
+   (not `mods`, `last_make` and the like): 0 means the screen is the same. SD_ALL when the variant, the help, the
+   unsaved-changes prompt, the Save dialog or what either shows differs. */
 unsigned synth_parts(const Editor *before, const Editor *after);
 
-/* What the cell (x, y) of the synth screen is, for a click: the control, the operator, the row, the bar with its extent.
-   It follows the layout synth_draw uses at the current variant. */
+/* What the cell (x, y) of the synth screen is, for a click: the control (the top row's four arrows included), the
+   operator, the row, the bar with its extent. It follows the layout synth_draw uses at the current variant. */
 void synth_hit(const Editor *e, int x, int y, SynthHit *h);
 
 /* A pill: an operator's number `label` on the colour `col` between half blocks, at (x, y). Returns the column after it. */
@@ -99,20 +99,26 @@ void help_draw(int page, const char *detected, const char *log_path);
 int help_hit(int x, int y);
 void help_detected(char *out, unsigned len, int chip, const char *card);
 
-/* The save prompt over the screen as it is, for the editor's pending leave: the patch name, the question, the four
-   buttons with the focus on `e->btn`. save_hit gives the button (0 to 3) under the cell (x, y), 4 for the rest of the
-   window, or -1 outside it. */
+/* The unsaved-changes prompt over the screen as it is: "NAME" is not saved, and the three buttons (Save, Discard, Cancel)
+   with the focus on `e->btn`. save_hit gives the button (0 to 2) under the cell (x, y), 3 for the rest of the window, or
+   -1 outside it. */
 void save_draw(const Editor *e);
 int save_hit(int x, int y);
 
+/* The Save dialog over the screen as it is: the Name and Bank fields, the lines of `e->dlg` and the buttons (Save lit
+   when Enter would save). dialog_hit gives the DH_* of the cell (x, y). */
+void dialog_draw(const Editor *e);
+int dialog_hit(int x, int y);
+
 /* Sample state for the reference screens: the fixed sample version, the sample detection, a log path of
-   C:\REBEEP\RBSTUDIO.LOG, the sample patch list, patch 12 of 40 BRASS: the data that makes a dump comparable. sample_known says
-   whether `screen` is one of the reference names this program can draw; sample_draw draws it into the back buffer. */
+   C:\REBEEP\RBSTUDIO.LOG, the sample patch list, FACTORY\BRASS, 2 of 4 in its bank: the data that makes a dump
+   comparable. sample_known says whether `screen` is one of the reference names this program can draw; sample_draw draws
+   it into the back buffer. */
 const char *sample_version(void);
 void sample_detect(Detect *d);
 
-/* The editor the synth-4op and synth-2op reference screens show (`variant` 4 or 2): patch 12 of 40 BRASS, edited, an
-   OPL3, C4 and G4 held. */
+/* The editor the synth-4op and synth-2op reference screens show (`variant` 4 or 2): FACTORY\BRASS, 2 of 4 in its
+   bank, edited, an OPL3, C4 and G4 held. */
 void sample_editor(Editor *e, int variant);
 int sample_known(const char *screen);
 void sample_draw(const char *screen);

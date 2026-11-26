@@ -221,14 +221,14 @@ static void remember_patch(const Library *lib, int pos)
 }
 
 /* What the editor asked of the main loop. Returns 1 when the synth screen is left for the list. `*full` is set when
-   the action can switch patch, so the whole screen is drawn again. */
+   the action can switch patch or open or close the prompt or the Save dialog, so the whole screen is drawn again. */
 static int synth_action(Editor *ed, Library *lib, int act, int *full)
 {
     char err[80];
     int back;
 
     if (act == EA_NONE) return 0;
-    if (act == EA_PREV || act == EA_NEXT || act >= EA_PICK) *full = 1;
+    if (act >= EA_PREV) *full = 1;
     back = editor_act(ed, lib, act, err, sizeof err);
     if (err[0] != '\0') {
         log_line("Cannot open that patch: %s", err);
@@ -239,8 +239,8 @@ static int synth_action(Editor *ed, Library *lib, int act, int *full)
     return back;
 }
 
-/* The `parts` of the synth screen, with the help or the save prompt over it when one is open. An overlay is drawn
-   over the whole screen, so `parts` is SD_ALL then. */
+/* The `parts` of the synth screen, with the help, the unsaved-changes prompt or the Save dialog over it when one is open.
+   An overlay is drawn over the whole screen, so `parts` is SD_ALL then. */
 static void synth_show(const Editor *ed, unsigned parts)
 {
     char what[48];
@@ -251,6 +251,7 @@ static void synth_show(const Editor *ed, unsigned parts)
         help_draw(ed->help, what, detect.log_path);
     }
     if (ed->prompt) save_draw(ed);
+    if (ed->dialog) dialog_draw(ed);
 }
 
 static Editor drawn;   /* the Editor as the synth screen last showed it */
@@ -262,28 +263,29 @@ static void synth_refresh(const Editor *ed, int full)
     unsigned parts = full ? SD_ALL : synth_parts(&drawn, ed);
 
     if (parts == 0) return;
-    if (ed->help != 0 || ed->prompt) parts = SD_ALL;
+    if (ed->help != 0 || ed->prompt || ed->dialog) parts = SD_ALL;
     synth_show(ed, parts);
     scr_flush();
     drawn = *ed;
 }
 
-/* A click while the help or the save prompt is open. Returns the action for editor_act. */
+/* A click while the help, the unsaved-changes prompt or the Save dialog is open. Returns the action for editor_act. */
 static int overlay_press(Editor *ed, int mx, int my)
 {
     if (ed->prompt) {
         int hit = save_hit(mx, my);
 
-        if (hit >= 0 && hit < 4) return EA_PICK + hit;
-        return hit < 0 ? EA_PICK + 3 : EA_NONE;
+        if (hit >= 0 && hit < 3) return EA_PICK + hit;
+        return hit < 0 ? EA_PICK + 2 : EA_NONE;
     }
+    if (ed->dialog) return editor_dialog_press(ed, dialog_hit(mx, my));
     editor_help(ed, help_hit(mx, my) ? 3 - ed->help : 0);
     return EA_NONE;
 }
 
-/* The synth screen of the patch in `ed`: the keys and the mouse edit and play it, PgUp and PgDn switch patch, Esc goes
-   back to the list. Every queued key and mouse change is taken first, then only the parts of the screen that show
-   something different are drawn. */
+/* The synth screen of the patch in `ed`: the keys and the mouse edit and play it, PgUp and PgDn switch patch (with Ctrl,
+   bank), Ctrl+S saves, Esc goes back to the list. Every queued key and mouse change is taken first, then only the parts
+   of the screen that show something different are drawn. */
 static void run_synth(Editor *ed, Library *lib)
 {
     int back = 0;
@@ -307,7 +309,7 @@ static void run_synth(Editor *ed, Library *lib)
         while (kbhit()) getch();
 
         down = mouse_read(&mx, &my) & 1;
-        if (down && !was_down && !back && (ed->help != 0 || ed->prompt)) {
+        if (down && !was_down && !back && (ed->help != 0 || ed->prompt || ed->dialog)) {
             back = synth_action(ed, lib, overlay_press(ed, mx, my), &full);
         } else if (down && !was_down && !back) {
             SynthHit hit;

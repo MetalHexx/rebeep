@@ -193,63 +193,53 @@ static void value_text(int x, int y, const char *t, int focused, int colour)
     if (focused) scr_put(x + 3, y, " ", SCR_KEEP, role(R_FOCUS));
 }
 
-/* Where the top bar's items fall. The previous/next control starts at column 27; Variant and Octave share the rest of
-   columns 27 to 78, the free cells split between the gaps before them. Returns Variant's first column; *pos_len is the
-   width of "12 of 40" and *oct_x Octave's first column. */
-static int top_layout(const Editor *e, int *pos_len, int *oct_x)
-{
-    char pos[24];
-    char oct[4];
-    int free_cells;
-    int x;
-
-    sprintf(pos, "%d of %d", e->pos, e->total);
-    sprintf(oct, "%d", e->p.octave);
-    *pos_len = (int)strlen(pos);
-    free_cells = 78 - 27 + 1 - ((16 + *pos_len) + 12 + (7 + (int)strlen(oct)));
-    x = 27 + 16 + *pos_len + (free_cells + 1) / 2;
-    *oct_x = x + 12 + free_cells / 2;
-    return x;
-}
+/* The top row's fixed columns: Bank and Patch selectors, the unsaved mark, the patch's place in its bank, Variant, Octave.
+   The names have 8 cells each, so the arrows never move. */
+#define TB_BANK 1
+#define TB_BANK_PREV 6
+#define TB_BANK_NAME 8
+#define TB_BANK_NEXT 17
+#define TB_PATCH 21
+#define TB_PREV 27
+#define TB_NAME 29
+#define TB_NEXT 38
+#define TB_DIRTY 40
+#define TB_POS 43
+#define TB_VARIANT 57
+#define TB_OCTAVE 71
+#define TB_NAME_W 8
 
 static void top_bar(const Editor *e)
 {
-    int name_focus = e->fk == F_NAME;
     int variant_focus = e->fk == F_VARIANT;
     int octave_focus = e->fk == F_OCTAVE;
-    char name[25];
+    char name[TB_NAME_W + 1];
     char pos[24];
     char oct[4];
-    int len = (int)strlen(e->p.name);
-    int pos_len;
-    int oct_x;
-    int var_x = top_layout(e, &pos_len, &oct_x);
-    int x;
 
-    memset(name, ' ', 24);
-    name[24] = '\0';
-    memcpy(name, e->p.name, len > 24 ? 24 : (unsigned)len);
-    scr_put(1, 0, name, role(name_focus ? R_FOCUSTEXT : R_VALUE), role(name_focus ? R_FOCUS : R_DIM));
-    if (name_focus && len < 24) scr_put(1 + len, 0, "_", role(R_FOCUSTEXT), SCR_KEEP);
-    scr_put(25, 0, e->dirty ? "*" : " ", role(R_WARNING), SCR_KEEP);
-
-    sprintf(pos, "%d of %d", e->pos, e->total);
     sprintf(oct, "%d", e->p.octave);
+    scr_put(TB_BANK, 0, "Bank", role(R_TEXT), SCR_KEEP);
+    scr_put(TB_BANK_PREV, 0, "\x11", role(R_ACCENT), SCR_KEEP);
+    sprintf(name, "%-*.*s", TB_NAME_W, TB_NAME_W, e->folder);
+    scr_put(TB_BANK_NAME, 0, name, role(R_VALUE), SCR_KEEP);
+    scr_put(TB_BANK_NEXT, 0, "\x10", role(R_ACCENT), SCR_KEEP);
 
-    x = 27;
-    scr_put(x, 0, "\x11", role(R_ACCENT), SCR_KEEP);
-    scr_put(x + 1, 0, " PgUp  ", role(R_TEXT), SCR_KEEP);
-    scr_put(x + 8, 0, pos, role(R_TEXT), SCR_KEEP);
-    x += 8 + pos_len;
-    scr_put(x, 0, "  PgDn ", role(R_TEXT), SCR_KEEP);
-    scr_put(x + 7, 0, "\x10", role(R_ACCENT), SCR_KEEP);
+    scr_put(TB_PATCH, 0, "Patch", role(R_TEXT), SCR_KEEP);
+    scr_put(TB_PREV, 0, "\x11", role(R_ACCENT), SCR_KEEP);
+    sprintf(name, "%-*.*s", TB_NAME_W, TB_NAME_W, e->p.name);
+    scr_put(TB_NAME, 0, name, role(R_VALUE), SCR_KEEP);
+    scr_put(TB_NEXT, 0, "\x10", role(R_ACCENT), SCR_KEEP);
+    scr_put(TB_DIRTY, 0, e->dirty ? "*" : " ", role(R_WARNING), SCR_KEEP);
 
-    scr_put(var_x, 0, "Variant ", role(R_TEXT), SCR_KEEP);
-    scr_put(var_x + 8, 0, e->n == 4 ? "4-OP" : "2-OP", role(variant_focus ? R_FOCUSTEXT : R_VALUE),
+    sprintf(pos, "%d of %d", e->bpos, e->btotal);
+    scr_put(TB_POS, 0, pos, role(R_TEXT), SCR_KEEP);
+
+    scr_put(TB_VARIANT, 0, "Variant ", role(R_TEXT), SCR_KEEP);
+    scr_put(TB_VARIANT + 8, 0, e->n == 4 ? "4-OP" : "2-OP", role(variant_focus ? R_FOCUSTEXT : R_VALUE),
             variant_focus ? role(R_FOCUS) : SCR_KEEP);
 
-    scr_put(oct_x, 0, "Octave ", role(R_TEXT), SCR_KEEP);
-    scr_put(oct_x + 7, 0, oct, role(octave_focus ? R_FOCUSTEXT : R_VALUE), octave_focus ? role(R_FOCUS) : SCR_KEEP);
+    scr_put(TB_OCTAVE, 0, "Octave ", role(R_TEXT), SCR_KEEP);
+    scr_put(TB_OCTAVE + 7, 0, oct, role(octave_focus ? R_FOCUSTEXT : R_VALUE), octave_focus ? role(R_FOCUS) : SCR_KEEP);
 }
 
 static int is_held(const Editor *e, int key)
@@ -262,7 +252,8 @@ static int is_held(const Editor *e, int key)
     return 0;
 }
 
-/* The held notes in HELD_W cells, whole names only; what does not fit is counted as +n. */
+/* The held notes in HELD_W cells, named by the pitch you hear (the patch's octave shifts the piano's, 4 being no shift),
+   whole names only; what does not fit is counted as +n. */
 static void held_text(const Editor *e, char *out)
 {
     int left = e->nheld;
@@ -273,7 +264,8 @@ static void held_text(const Editor *e, char *out)
         char name[10];
         int more = left - 1 > 0 ? 2 : 0;
 
-        sprintf(name, "%s%s%d", out[0] != '\0' ? " " : "", NOTE_NAME[e->held[j] % 12], e->kbOct + e->held[j] / 12);
+        sprintf(name, "%s%s%d", out[0] != '\0' ? " " : "", NOTE_NAME[e->held[j] % 12],
+                KB_LOW + e->held[j] / 12 + e->p.octave - 4);
         if ((int)(strlen(out) + strlen(name)) + more > HELD_W) break;
         strcat(out, name);
         left--;
@@ -727,6 +719,24 @@ static int param_focus(const Editor *e)
     return e->fk < P_COUNT ? e->fk : -1;
 }
 
+/* Does anything the Save dialog draws differ: the fields, the bank and the lines. */
+static int dialog_differs(const SaveDlg *a, const SaveDlg *b)
+{
+    int i;
+
+    if (a->field != b->field || a->bank != b->bank || a->banks != b->banks || a->ok != b->ok || a->nsay != b->nsay ||
+        strcmp(a->name, b->name) != 0 || strcmp(a->folder, b->folder) != 0 || strcmp(a->pack, b->pack) != 0) {
+        return 1;
+    }
+    for (i = 0; i < b->nsay; i++) {
+        if (a->say[i].mark != b->say[i].mark || strcmp(a->say[i].label, b->say[i].label) != 0 ||
+            strcmp(a->say[i].value, b->say[i].value) != 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 unsigned synth_parts(const Editor *before, const Editor *after)
 {
     const Voice *a = voice_of(before);
@@ -735,15 +745,19 @@ unsigned synth_parts(const Editor *before, const Editor *after)
     int n = after->n;
     unsigned i;
 
-    if (before->n != n || before->help != after->help || before->prompt != after->prompt) return SD_ALL;
+    if (before->n != n || before->help != after->help || before->prompt != after->prompt ||
+        before->dialog != after->dialog) {
+        return SD_ALL;
+    }
     if (after->prompt && (before->btn != after->btn || before->pend != after->pend ||
                           strcmp(before->p.name, after->p.name) != 0)) {
         return SD_ALL;
     }
+    if (after->dialog && dialog_differs(&before->dlg, &after->dlg)) return SD_ALL;
 
-    if (strcmp(before->p.name, after->p.name) != 0 || before->p.octave != after->p.octave ||
-        before->dirty != after->dirty || before->pos != after->pos || before->total != after->total ||
-        (before->fk == F_NAME) != (after->fk == F_NAME) || (before->fk == F_VARIANT) != (after->fk == F_VARIANT) ||
+    if (strcmp(before->p.name, after->p.name) != 0 || strcmp(before->folder, after->folder) != 0 ||
+        before->p.octave != after->p.octave || before->dirty != after->dirty || before->bpos != after->bpos ||
+        before->btotal != after->btotal || (before->fk == F_VARIANT) != (after->fk == F_VARIANT) ||
         (before->fk == F_OCTAVE) != (after->fk == F_OCTAVE)) {
         parts |= SD_TOP;
     }
@@ -767,7 +781,7 @@ unsigned synth_parts(const Editor *before, const Editor *after)
     }
 
     if (before->nheld != after->nheld || memcmp(before->held, after->held, (unsigned)after->nheld) != 0 ||
-        before->kbOct != after->kbOct || before->chip != after->chip || before->msgRole != after->msgRole ||
+        before->p.octave != after->p.octave || before->chip != after->chip || before->msgRole != after->msgRole ||
         strcmp(before->msg, after->msg) != 0) {
         parts |= SD_BOTTOM;
     }
@@ -793,9 +807,6 @@ void synth_hit(const Editor *e, int x, int y, SynthHit *h)
     int n = e->n;
     int z = 4 / n;
     int slot = 14 * z;
-    int pos_len;
-    int oct_x;
-    int var_x = top_layout(e, &pos_len, &oct_x);
     int k;
 
     hit_set(h, SH_NONE, 0, 0, 0, 0);
@@ -803,11 +814,12 @@ void synth_hit(const Editor *e, int x, int y, SynthHit *h)
         char oct[4];
 
         sprintf(oct, "%d", e->p.octave);
-        if (x >= 1 && x <= 25) hit_set(h, SH_NAME, 0, 0, 0, 0);
-        else if (x >= 27 && x <= 32) hit_set(h, SH_PREV, 0, 0, 0, 0);
-        else if (x >= 27 + 8 + pos_len + 2 && x <= 27 + 8 + pos_len + 7) hit_set(h, SH_NEXT, 0, 0, 0, 0);
-        else if (x >= var_x && x < var_x + 12) hit_set(h, SH_VARIANT, 0, 0, 0, 0);
-        else if (x >= oct_x && x < oct_x + 7 + (int)strlen(oct)) hit_set(h, SH_OCTAVE, 0, 0, 0, 0);
+        if (x == TB_BANK_PREV) hit_set(h, SH_BPREV, 0, 0, 0, 0);
+        else if (x == TB_BANK_NEXT) hit_set(h, SH_BNEXT, 0, 0, 0, 0);
+        else if (x == TB_PREV) hit_set(h, SH_PREV, 0, 0, 0, 0);
+        else if (x == TB_NEXT) hit_set(h, SH_NEXT, 0, 0, 0, 0);
+        else if (x >= TB_VARIANT && x < TB_VARIANT + 12) hit_set(h, SH_VARIANT, 0, 0, 0, 0);
+        else if (x >= TB_OCTAVE && x < TB_OCTAVE + 7 + (int)strlen(oct)) hit_set(h, SH_OCTAVE, 0, 0, 0, 0);
     } else if (y == 24) {
         if (x >= KB_X && x < KB_X + ED_KEYS) hit_set(h, SH_PIANO, 0, x - KB_X, 0, 0);
         else if (x >= 72 && x <= 78) hit_set(h, SH_HELP, 0, 0, 0, 0);
