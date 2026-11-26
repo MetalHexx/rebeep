@@ -37,7 +37,7 @@ typedef struct {
     int chip;                     /* 0, 2, 3 */
     int fk;                       /* focused row: F_VARIANT, F_OCTAVE, F_CONN, F_FB, or a P_* row */
     int cur, lastP;               /* operator in focus; last parameter row */
-    int dirty;                    /* the * marker */
+    int dirty;                    /* the * marker: unsaved changes */
     int pos, total;               /* the patch's place in the whole list, 1-based */
     int bpos, btotal;             /* its place in its own bank, 1-based: "2 of 4" */
     unsigned char held[29]; int nheld;   /* piano keys lit, ascending */
@@ -121,6 +121,8 @@ void editor_key_up(Editor *e, int key);
 /* Releases every held note: on a patch switch, on opening a pop-up and at exit. */
 void editor_release(Editor *e);
 
+/* Step back or forward through the changes. Arriving at the patch as opened or last saved (its values and name) clears
+   `dirty`; arriving anywhere else sets it. */
 void editor_undo(Editor *e);
 void editor_redo(Editor *e);
 

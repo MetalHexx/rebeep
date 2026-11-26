@@ -504,8 +504,22 @@ int main(void)
     editor_undo(&e);
     t_checkl(e.p.has4, 0, "undo removes the variant");
     t_checkl(e.n, 2, "and shows 2-OP");
+    t_checkl(e.dirty, 0, "and the patch is clean again");
     editor_redo(&e);
     t_check(e.p.has4 == 1 && e.p.v4.conn == 3, "redo brings it back");
+    t_checkl(e.dirty, 1, "unsaved");
+
+    t_case("undo back to the opened patch clears the unsaved mark");
+    open_base(3, 0);
+    e.fk = P_DR;
+    editor_change(&e, 1, 0);
+    editor_change(&e, 1, 0);
+    editor_undo(&e);
+    t_checkl(e.dirty, 1, "one of two changes undone: still unsaved");
+    editor_undo(&e);
+    t_checkl(e.dirty, 0, "undo to the opened patch is clean");
+    editor_redo(&e);
+    t_checkl(e.dirty, 1, "redo is unsaved again");
 
     t_case("a held key is one undo step, separate presses are separate steps");
     open_base(3, 0);

@@ -23,6 +23,7 @@
 #define PROMPT_BTNS 3   /* the unsaved-changes prompt's buttons: Save, Discard, Cancel */
 
 static Undo history;
+static Patch saved;   /* the open patch as opened or last saved: undo and redo are clean only on it */
 static int last_key = DEFAULT_KEY;   /* the piano key last started, 0 to 28: what Random and Mutate play; kept across editor_open */
 
 static int is_switch(int row)
@@ -91,6 +92,7 @@ void editor_open(Editor *e, const Patch *p, int chip, int pos, int total)
     e->msgRole = R_TEXT;
     e->mods = key_mods();
     strcpy(e->file, p->name);
+    saved = *p;
     undo_clear(&history);
     editor_apply(e);
 }
@@ -160,8 +162,8 @@ static int same_patch(const Patch *a, const Patch *b)
     return patch_equal(a, b) && strcmp(a->name, b->name) == 0;
 }
 
-/* Records `before` as an undo step when the patch is no longer the same, marks it dirty and reprograms the voice.
-   Returns 1 when it changed. */
+/* Records `before` as an undo step when the patch is no longer the same, marks it dirty (even when a change lands on the
+   saved values again) and reprograms the voice. Returns 1 when it changed. */
 static int commit(Editor *e, const Patch *before, int row, int repeat)
 {
     if (same_patch(before, &e->p)) return 0;
@@ -328,12 +330,13 @@ static void octave_step(Editor *e, int d, int repeat)
     editor_msg(e, text, R_TEXT);
 }
 
-/* After a snapshot came back: the variant shown must exist, the operator must be on screen, the chip hears it. */
+/* After a snapshot came back: the variant shown must exist, the operator must be on screen, the patch is clean only when
+   it is the opened or saved one (name included), the chip hears it. */
 static void restored(Editor *e)
 {
     if (e->n == 4 && !e->p.has4) e->n = 2;
     if (e->cur >= e->n) e->cur = e->n - 1;
-    e->dirty = 1;
+    e->dirty = !same_patch(&saved, &e->p);
     editor_apply(e);
 }
 
@@ -624,11 +627,14 @@ static int read_factory(const Library *lib, const char *name, Patch *out)
     return patch_read(path, out, err, sizeof err);
 }
 
-/* The open patch is FOLDER\name now, at index `at` of the list the caller has just updated (-1: not listed, pos stays). */
+/* The open patch is saved as FOLDER\name now, at index `at` of the list the caller has just updated (-1: not listed, pos
+   stays). The next edit starts a new undo step, so undo can get back to what was saved. */
 static void reopened(Editor *e, const Library *lib, const char *folder, const char *name, int at)
 {
     strcpy(e->folder, folder);
     strcpy(e->file, name);
+    saved = e->p;
+    undo_break(&history);
     e->dirty = 0;
     if (at >= 0) e->pos = at + 1;
     e->total = lib_count(lib);

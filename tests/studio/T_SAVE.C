@@ -276,6 +276,10 @@ int main(void)
     t_check(!exists(PATCHES "USER\\BELL.RBP"), "nothing written yet");
     t_checkl(press(SC_ESC), 0, "Esc cancels");
     t_check(e.dialog == 0 && e.dirty == 1 && !exists(PATCHES "USER\\BELL.RBP"), "closed, still unsaved, nothing written");
+    editor_undo(&e);
+    t_checkl(e.dirty, 0, "undo after the cancel is clean");
+    editor_redo(&e);
+    t_checkl(e.dirty, 1, "and redo is unsaved");
 
     t_case("Enter at once saves a factory patch as its USER override");
     open_dialog();
@@ -397,12 +401,12 @@ int main(void)
     open_patch("FACTORY\\BELL");
     tweak();
     editor_undo(&e);
-    t_checkl(e.dirty, 1, "unsaved, but equal to the factory patch");
+    t_checkl(e.dirty, 0, "undone back to the factory patch: clean");
     open_dialog();
     t_check(e.dlg.nsay == 2 && says(0, ' ', "Matches:", "FACTORY\\BELL") && says(1, ' ', "Nothing to save", ""), "Matches, Nothing to save");
     t_checkl(e.dlg.ok, 0, "Enter would not save");
     t_checkl(press(SC_ENTER), 0, "Enter");
-    t_check(e.dialog == 1 && !exists(PATCHES "USER\\BELL.RBP") && e.dirty == 1, "nothing written, the dialog stays");
+    t_check(e.dialog == 1 && !exists(PATCHES "USER\\BELL.RBP") && e.dirty == 0, "nothing written, the dialog stays");
     bank_step(1);
     t_check(says(0, ' ', "New patch:", "HEXX\\BELL.RBP") && e.dlg.ok == 1, "only USER matches: in another bank it is a copy");
     press(SC_ESC);
@@ -588,6 +592,10 @@ int main(void)
     t_check(strcmp(e.msg, "Can't write USER\\ORGAN.RBP") == 0, "the message names the file");
     t_checkl(file_ar(PATCHES "USER\\ORGAN.RBP"), 5, "the old file is intact");
     t_check(e.dialog == 0 && e.dirty == 1 && strcmp(e.folder, "USER") == 0 && e.pend == 0, "closed, still dirty, still open");
+    editor_undo(&e);
+    t_checkl(e.dirty, 0, "undo after the failed write is clean");
+    editor_redo(&e);
+    t_checkl(e.dirty, 1, "the values that were not written are unsaved");
     _dos_setfileattr(PATCHES "USER\\ORGAN.$$$", _A_NORMAL);
     remove(PATCHES "USER\\ORGAN.$$$");
     open_dialog();
@@ -653,6 +661,53 @@ int main(void)
     open_patch("HEXX\\SOLO");
     act_on(ctrl_key(SC_R));
     t_check(strcmp(e.msg, "No factory version") == 0, "no factory SOLO either");
+
+    t_case("after a save, only the saved patch is clean");
+    fresh();
+    open_patch("HEXX\\SOLO");
+    tweak();
+    open_dialog();
+    press(SC_ENTER);
+    editor_change(&e, 1, 1);   /* a typematic repeat after the save is a step of its own */
+    editor_undo(&e);
+    t_check(e.p.v2.op[0].v[P_AR] == 8 && e.dirty == 0, "undo to the saved values is clean");
+    editor_undo(&e);
+    t_check(e.p.v2.op[0].v[P_AR] == 7 && e.dirty == 1, "past them, to the opened values, is unsaved");
+    editor_redo(&e);
+    t_checkl(e.dirty, 0, "redo back to the saved values is clean");
+    editor_redo(&e);
+    t_checkl(e.dirty, 1, "and past them is unsaved");
+
+    t_case("after a Save as, the old name is unsaved");
+    fresh();
+    open_patch("FACTORY\\BELL");
+    tweak();
+    editor_change(&e, -1, 0);
+    open_dialog();
+    name_is("BELL2");
+    press(SC_ENTER);
+    tweak();
+    editor_undo(&e);
+    t_check(strcmp(e.p.name, "BELL2") == 0 && e.dirty == 0, "undo to the saved BELL2 is clean");
+    editor_undo(&e);
+    editor_undo(&e);
+    t_check(strcmp(e.p.name, "BELL") == 0 && e.p.v2.op[0].v[P_AR] == 7 && e.dirty == 1, "BELL with the saved values is unsaved");
+    editor_redo(&e);
+    editor_redo(&e);
+    t_check(strcmp(e.p.name, "BELL2") == 0 && e.dirty == 0, "redo back to BELL2 is clean");
+
+    t_case("after a removed override, undo back is clean");
+    fresh();
+    with_user_bell();
+    open_patch("USER\\BELL");
+    act_on(ctrl_key(SC_R));
+    open_dialog();
+    press(SC_ENTER);
+    tweak();
+    editor_undo(&e);
+    t_check(e.p.v2.op[0].v[P_AR] == 7 && e.dirty == 0, "clean on the factory values");
+    editor_undo(&e);
+    t_check(e.p.v2.op[0].v[P_AR] == 3 && e.dirty == 1, "the removed override's values are unsaved");
 
     t_case("leaving a dirty patch asks first, with three buttons");
     fresh();

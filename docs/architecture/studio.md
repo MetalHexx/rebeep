@@ -52,10 +52,12 @@ the [studio guide](../guide/studio.md); the hard rules for changing the code are
 
 - **The editor draws nothing and owns the history.** `editor.c` holds the one `Undo`; `editor_open` clears it, silences every
   note and programs the voice. A change records its undo step after the fact (`undo_edit(before)`) only when the patch
-  differs, with the key (row, operator) and `repeat` for a typematic repeat or a drag. Modifier state comes from the event
-  stream (`Editor.mods`), not from `kbd_down`, so a Ctrl released before its key is read still counts. The piano plays from
-  make codes: a key already lit is ignored (typematic). Every note is released on a patch switch, on a pop-up
-  (`editor_release`) and at exit, so a missed break code never hangs a note.
+  differs, with the key (row, operator) and `repeat` for a typematic repeat or a drag, and marks it `dirty`. The editor
+  also keeps the patch as opened or last saved: undo and redo clear `dirty` when they arrive at those values and that name
+  (a change by hand back to them does not). Modifier state comes from the event stream (`Editor.mods`), not from
+  `kbd_down`, so a Ctrl released before its key is read still counts. The piano plays from make codes: a key already lit is
+  ignored (typematic). Every note is released on a patch switch, on a pop-up (`editor_release`) and at exit, so a missed
+  break code never hangs a note.
 - **One octave.** The patch's own octave is the only one: the piano's keys follow it (the Z row from C3 at octave 4) and
   Ctrl+Up and Ctrl+Down step it as an edit, like the octave row. Held notes are named from it.
 - **Random and Mutate are one ordinary edit.** `editor_dice` rolls or nudges the variant shown, between two `undo_break`s,
@@ -80,8 +82,8 @@ the [studio guide](../guide/studio.md); the hard rules for changing the code are
     first (`dos_make_dir`). A file already there is replaced, and the line says so with a `!`.
 
   A refusal leaves the dialog open and Enter does nothing. A write goes through `dos_save_file`, then `lib_put`, and the
-  open patch becomes the saved one. A failed write keeps the old file, closes the dialog, and `dos_write_why` picks the
-  message (`Disk full`, `Read-only disk`, `Can't write <path>`).
+  open patch becomes the saved one, which starts a new undo step so undo can get back to it. A failed write keeps the old
+  file, closes the dialog, and `dos_write_why` picks the message (`Disk full`, `Read-only disk`, `Can't write <path>`).
 - **The save prompt guards a leave.** `editor_leave` on a dirty patch opens it (`Editor.prompt`, `pend`) instead of leaving.
   Save opens the dialog for the same leave; the leave goes on only after a successful save or a Discard. Esc, Cancel, a click
   outside and a failed write drop it. The help, the prompt and the dialog take every key while open (`K_HELP`, `K_PROMPT`,

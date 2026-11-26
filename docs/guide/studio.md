@@ -111,7 +111,8 @@ and `_`, with Backspace to delete.
 
 1. Choose a patch in the list and press Enter. The factory patches are a good start.
 2. Play notes on the keyboard while you change values. Every change is heard at once.
-3. A star next to the patch's name means unsaved changes. Ctrl+Z undoes them.
+3. A star next to the patch's name means unsaved changes. Ctrl+Z undoes them, and the star goes when
+   undo or redo gets back to the patch as you opened or last saved it.
 4. Press Ctrl+S to [save](#saving-and-overrides).
 
 **The top row** shows where the patch is. **Bank** and **Patch** name its bank and the patch, with its
