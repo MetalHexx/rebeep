@@ -65,7 +65,7 @@ INSTALL
 
 A menu appears. Press `I` to install ReBeep into `C:\REBEEP`. You should see the files copied, then
 `ReBeep x.y.z is in C:\REBEEP` and the lines to add to your boot files. `INSTALL` copies the files
-and changes nothing else.
+and changes nothing else. If ReBeep is already loaded, reboot to load the new copy.
 
 | To | Type |
 |---|---|

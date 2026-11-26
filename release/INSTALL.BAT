@@ -72,6 +72,8 @@ ECHO   LH REBEEP
 ECHO.
 ECHO README.TXT section 3 shows how to add them as a boot menu entry, and
 ECHO ready-made configs are in the SAMPLES folder next to INSTALL.BAT.
+ECHO.
+ECHO If ReBeep is already loaded, reboot to load the new copy.
 GOTO DONE
 :UPDATED
 ECHO ReBeep in %RBDIR% is now version @VERSION@. Your boot files need
