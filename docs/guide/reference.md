@@ -66,7 +66,7 @@ RBSTUDIO [/VIEW:MONO] [/TRACE] [/?]
 
 | Option | Does |
 |---|---|
-| `/VIEW:MONO` | Draw for a monochrome display |
+| `/VIEW:MONO` | Force the mono view; a monochrome display is noticed without it |
 | `/TRACE` | Log every FM chip write and key press to `RBSTUDIO.LOG` |
 | `/?` | Help |
 

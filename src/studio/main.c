@@ -55,7 +55,7 @@ static void usage(void)
 {
     printf("ReBeep Studio %s\n", REBEEP_VERSION);
     printf("Usage: RBSTUDIO [/VIEW:MONO] [/TRACE] [/BENCH] [/DUMP:<screen> /O:<file>]\n");
-    printf("  /VIEW:MONO  draw for a monochrome display\n");
+    printf("  /VIEW:MONO  force the mono view (a monochrome display is noticed without it)\n");
     printf("  /TRACE      log every OPL register write and key event to RBSTUDIO.LOG\n");
     printf("  /BENCH      time the synth screen and the patch list, print the figures and write %s\n", BENCH_FILE);
     printf("  /DUMP:name  draw a reference screen with its sample data; /O:file is the text screen written\n");
@@ -559,7 +559,7 @@ static int run_studio(int mono, int trace)
     video_init();
     kbd_init();
     dice_seed(bios_ticks());
-    role_set_mono(mono || scr_bw80());
+    role_set_mono(mono || scr_mono());
 
     run_detection(&detect);
     wait_ticks(DETECT_PAUSE_TICKS);
@@ -589,7 +589,7 @@ static int run_dump(const char *screen, const char *out, int mono)
     }
     video_init();
     video_set_block_lines(16);
-    role_set_mono(mono || scr_bw80());
+    role_set_mono(mono);   /* the reference screens don't follow the monitor */
     sample_draw(screen);
     scr_flush();
     rc = scr_dump(out);
@@ -785,6 +785,7 @@ static int run_bench(void)
     sample_detect(&detect);
     bench_library(lines[BENCH_FIGURES]);
     video_init();
+    role_set_mono(scr_mono());
     if (bench_list_build() != 0) {
         video_restore();
         opl_shutdown();

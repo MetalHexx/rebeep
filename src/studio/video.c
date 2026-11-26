@@ -10,6 +10,8 @@
 #include "video.h"
 
 #define TEXT_SEG 0xB800
+#define MONO_SEG 0xB000
+#define EGA_INACTIVE 0x08      /* 0040:0087 bit 3: an EGA or VGA is fitted, another card drives the screen */
 #define CGA_MODE_PORT 0x3D8
 #define BLINK_BIT 0x20
 #define CURSOR_HIDDEN 0x2000
@@ -21,11 +23,21 @@
 #define GC_MODE 5
 #define GC_MISC 6
 
+/* A mono card's attributes. */
+#define A_NORMAL 0x07
+#define A_BRIGHT 0x0F
+#define A_INVERSE 0x70
+#define BLANK_CELL ((A_NORMAL << 8) | ' ')   /* never attribute 00h, on which the mouse driver's cursor can't be seen */
+
 static unsigned short back[VIDEO_ROWS * VIDEO_COLS];
 static unsigned short __far *screen;
 static unsigned char __far *bios_mode_select;
 static int active;
 static int has_ega;
+static int ega_active;                  /* the EGA or VGA drives the screen: its BIOS calls and soft font apply */
+static int mono_card;                   /* BIOS mode 7 */
+static int mono_monitor;
+static unsigned char mono_text[256];    /* a text cell's mono attribute by its colour attribute; 0 when it shows nothing */
 static unsigned char saved_mode;
 static unsigned saved_cursor_shape;
 static int font_lines;    /* the cell height of the font the blocks were loaded into: 14 or 16; 0 when none are */
@@ -79,6 +91,16 @@ static int ega_or_vga_present(void)
     r.h.bl = 0x10;
     int86(0x10, &r, &r);
     return r.h.bl != 0x10;
+}
+
+/* The display combination code (INT 10h AX=1A00h, VGA and MCGA BIOSes): 07h and 0Bh are monochrome analog monitors. */
+static int analog_mono_monitor(void)
+{
+    union REGS r;
+
+    r.x.ax = 0x1A00;
+    int86(0x10, &r, &r);
+    return r.h.al == 0x1A && (r.h.bl == 0x07 || r.h.bl == 0x0B);
 }
 
 /* The BIOS character height in scanlines (INT 10h AX=1130h, BH=0). */
@@ -152,7 +174,7 @@ static void gc_write(unsigned char index, unsigned char value)
 
 /* Reads the 15 glyphs back from the font in plane 2 (32 bytes a code) and compares them with what load_blocks wrote.
    An EGA's sequencer and graphics controller are write-only, so their values are not saved: the read sets the registers
-   it needs and puts back the ones the BIOS programs for text mode 3. */
+   it needs and puts back the ones the BIOS programs for text mode 3, or for mode 7 (the memory map at B000h). */
 static int blocks_match(int height)
 {
     int k;
@@ -176,22 +198,23 @@ static int blocks_match(int height)
     seq_write(SEQ_MEMORY_MODE, 0x03);
     gc_write(GC_READ_MAP, 0x00);
     gc_write(GC_MODE, 0x10);
-    gc_write(GC_MISC, 0x0E);
+    gc_write(GC_MISC, mono_card ? 0x0A : 0x0E);
     _enable();
     return same;
 }
 
 /* Blink off means bit 7 of an attribute selects a bright background. EGA and VGA have a BIOS call
-   for it; on a CGA the bit is in the mode register, and the BIOS keeps a copy at 0040:0065. */
+   for it; on a CGA the bit is in the mode register, and the BIOS keeps a copy at 0040:0065. A mono
+   card is left alone: video_flush writes it no attribute with bit 7 set. */
 static void set_blink(int on)
 {
-    if (has_ega) {
+    if (ega_active) {
         union REGS r;
 
         r.x.ax = 0x1003;
         r.h.bl = on ? 1 : 0;
         int86(0x10, &r, &r);
-    } else {
+    } else if (!mono_card) {
         unsigned char mode = *bios_mode_select;
 
         mode = on ? (mode | BLINK_BIT) : (mode & ~BLINK_BIT);
@@ -215,7 +238,11 @@ void video_restore(void)
 {
     if (!active) return;
     active = 0;
-    if (font_lines != 0) load_rom_font(font_lines);
+    if (font_lines != 0) {
+        /* The ROM font alone lacks a mono mode's own nine-column glyphs; its mode set loads both. */
+        if (mono_card) set_mode(7);
+        else load_rom_font(font_lines);
+    }
     font_lines = 0;
     block_lines = 0;
     set_blink(1);
@@ -225,28 +252,47 @@ void video_restore(void)
     set_cursor_pos(0, 0);
 }
 
+static void build_mono_text(void)
+{
+    int attr;
+
+    for (attr = 0; attr < 256; attr++) {
+        int fg = attr & 15;
+        int bg = attr >> 4;
+
+        if (bg != 0 && bg != 8) mono_text[attr] = A_INVERSE;
+        else if (fg >= 9) mono_text[attr] = A_BRIGHT;
+        else if (fg != 0 || bg == 8) mono_text[attr] = A_NORMAL;
+        else mono_text[attr] = 0;
+    }
+}
+
 void video_init(void)
 {
     union REGS r;
 
     if (active) return;
-    screen = (unsigned short __far *)MK_FP(TEXT_SEG, 0);
     bios_mode_select = (unsigned char __far *)MK_FP(0x40, 0x65);
     has_ega = ega_or_vga_present();
 
     saved_mode = current_mode();
-    if (saved_mode != 2 && saved_mode != 3) set_mode(3);
+    if (saved_mode != 2 && saved_mode != 3 && saved_mode != 7) set_mode(3);
+    mono_card = current_mode() == 7;   /* a mono card stays in mode 7 whatever mode is asked of it */
+    screen = (unsigned short __far *)MK_FP(mono_card ? MONO_SEG : TEXT_SEG, 0);
+    ega_active = has_ega && (*(unsigned char __far *)MK_FP(0x40, 0x87) & EGA_INACTIVE) == 0;
+    mono_monitor = saved_mode == 2 || mono_card || analog_mono_monitor();
+    if (mono_card) build_mono_text();
 
     r.h.ah = 0x03;
     r.h.bh = 0;
     int86(0x10, &r, &r);
     saved_cursor_shape = r.x.cx;
+    /* Some mono BIOSes report a colour card's underline, which sits mid-cell in a mono card's 14 lines. */
+    if (mono_card && !ega_active && saved_cursor_shape == 0x0607) saved_cursor_shape = 0x0B0C;
 
     active = 1;
     atexit(video_restore);
-    set_blink(0);
-    set_cursor_shape(CURSOR_HIDDEN);
-    if (has_ega) {
+    if (ega_active) {
         int height = char_height();
 
         if (height == 14 || height == 16) {
@@ -255,6 +301,9 @@ void video_init(void)
             if (blocks_match(height)) block_lines = height;
         }
     }
+    /* Only after the font load: an IBM EGA's reprograms every video register, turning blink and the cursor back on. */
+    set_blink(0);
+    set_cursor_shape(CURSOR_HIDDEN);
     video_fill(0, 0, VIDEO_COLS, VIDEO_ROWS, ' ', 0x07);
 }
 
@@ -377,9 +426,82 @@ void video_text(int x, int y, const char *s, unsigned char attr)
     for (end = p + len; p < end; p++, s++) *p = ((unsigned short)attr << 8) | (unsigned char)*s;
 }
 
+/* What a mono card shows of a colour cell. It has no colours, only normal, bright and inverted, so a coloured background
+   inverts its text, and a shape made of colours (a space, block or shade) becomes the blocks that cover its parts that
+   are not black. */
+
+/* Bright for the colours 9 to 15. */
+static unsigned short lit_cell(int colour, unsigned char ch)
+{
+    return (unsigned short)(((colour >= 9 ? A_BRIGHT : A_NORMAL) << 8) | ch);
+}
+
+/* A cell in two halves of colours `first` (the upper or left one) and `second`; the glyphs cover one half each. Both
+   lit is a solid block, bright when both colours are. */
+static unsigned short mono_halves(int first, int second, unsigned char first_half, unsigned char second_half)
+{
+    if (first != 0 && second != 0) return lit_cell(first < second ? first : second, 0xDB);
+    if (first != 0) return lit_cell(first, first_half);
+    if (second != 0) return lit_cell(second, second_half);
+    return BLANK_CELL;
+}
+
+static unsigned short mono_cell(unsigned short cell)
+{
+    unsigned char ch = (unsigned char)cell;
+    unsigned char attr = (unsigned char)(cell >> 8);
+    int fg = attr & 15;
+    int bg = attr >> 4;
+
+    switch (ch) {
+    case 0x00:
+    case 0x20:
+    case 0xFF:
+        if (bg != 0 && fg == bg) return lit_cell(fg, 0xDB);   /* a space in one colour is a solid shape */
+        return mono_text[attr] == A_INVERSE ? (A_INVERSE << 8) | ' ' : BLANK_CELL;
+    case 0xDB:
+        return mono_halves(fg, fg, 0xDB, 0xDB);
+    case 0xDF:
+        return mono_halves(fg, bg, 0xDF, 0xDC);
+    case 0xDC:
+        return mono_halves(bg, fg, 0xDF, 0xDC);
+    case 0xDD:
+        return mono_halves(fg, bg, 0xDD, 0xDE);
+    case 0xDE:
+        return mono_halves(bg, fg, 0xDD, 0xDE);
+    case 0xB0:
+    case 0xB1:
+    case 0xB2:
+        if (fg != 0 && bg != 0) return lit_cell(fg < bg ? fg : bg, 0xDB);
+        if (fg != 0) return lit_cell(fg, ch);
+        return bg != 0 ? (unsigned short)((A_INVERSE << 8) | ch) : BLANK_CELL;
+    default:
+        return mono_text[attr] != 0 ? (unsigned short)((mono_text[attr] << 8) | ch) : BLANK_CELL;
+    }
+}
+
+/* Converts the back buffer cell by cell; a run of equal cells, most of a screen, is converted once. */
+static void flush_mono(void)
+{
+    const unsigned short *p = back;
+    const unsigned short *end = back + VIDEO_ROWS * VIDEO_COLS;
+    unsigned short __far *to = screen;
+    unsigned short cell = BLANK_CELL;
+    unsigned short shown = BLANK_CELL;
+
+    for (; p < end; p++, to++) {
+        if (*p != cell) {
+            cell = *p;
+            shown = mono_cell(cell);
+        }
+        *to = shown;
+    }
+}
+
 void video_flush(void)
 {
-    _fmemcpy(screen, back, sizeof back);
+    if (mono_card) flush_mono();
+    else _fmemcpy(screen, back, sizeof back);
 }
 
 void scr_put(int x, int y, const char *cp437, int fg, int bg)
@@ -485,7 +607,12 @@ int scr_dump(const char *path)
     return ok ? 0 : -1;
 }
 
-int scr_bw80(void)
+int scr_mono(void)
 {
-    return saved_mode == 2;
+    return mono_monitor;
+}
+
+int scr_mono_card(void)
+{
+    return mono_card;
 }

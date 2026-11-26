@@ -21,7 +21,7 @@ the [studio guide](../guide/studio.md); the hard rules for changing the code are
 | `opl.c` · `opl.h` | The OPL driver: detection, `opl_regs2`/`opl_regs4` (the one parameter-to-register mapping), live notes on every channel, `opl_sink` for tests, `/TRACE` write logging |
 | `jingle.c` · `jingle.h` | The splash jingle on `FACTORY\BELL`, advanced by `jingle_poll` from the BIOS tick count |
 | `rebeep.c` · `rebeep.h` | The resident ReBeep through AMIS (INT 2Dh): traps off (13h) at start, on (12h) at exit |
-| `video.c` · `video.h` | The 80x25 back buffer, the flush to `B800:0000`, blink and cursor handling, the soft font's partial blocks; the `scr_*` screen layer (CP437 text, `SCR_KEEP` colours, boxes, the splash ramp, `scr_dump`); each call clips once and writes its run straight into the buffer |
+| `video.c` · `video.h` | The 80x25 back buffer, the flush to `B800:0000` (or, converted, to a mono card's `B000:0000`), mono detection, blink and cursor handling, the soft font's partial blocks; the `scr_*` screen layer (CP437 text, `SCR_KEEP` colours, boxes, the splash ramp, `scr_dump`); each call clips once and writes its run straight into the buffer |
 | `roles.c` · `roles.h` | The one role table (a colour and a mono index per role) and the colour or mono view |
 | `ansi.c` · `ansi.h` | `ansi_draw` for the `.ans` art, and `scr_remap_mono` (the shared mono remap) |
 | `mouse.c` · `mouse.h` | INT 33h, used only when a driver answers; cells are pixels / 8 |
@@ -104,18 +104,30 @@ the [studio guide](../guide/studio.md); the hard rules for changing the code are
 - **The envelope is integer maths.** `env_levels` in `scr_syn.c` is the mockup's envelope as whole numbers over a common
   denominator (no floating point, and no product past 32 bits: `round_scaled` divides by shift and subtract). The waveform
   is a table of 20 heights per shape. Both match the mockup.
-- **The soft font.** On an EGA or VGA with a 14 or 16 line cell, `video_init` loads fifteen partial blocks (1 to 15 scanlines
-  tall) with `INT 10h AX=1100h` over line-drawing codes no screen uses, so the envelope band draws heights of `4 * lines - 1`
-  (63 on a VGA, 55 on an EGA) instead of half blocks. The reserved codes are `C7 CA CB CC CE CF D0` to `D8`
-  (`VIDEO_BLOCK`): a screen must not draw them. `video_restore` puts the ROM font of that height back (`AX=1104h` or
-  `1101h`) at exit, which replaces a code-page font `DISPLAY.SYS` had loaded.
+- **A monochrome display** is BIOS mode 2 or 7 at start, or a mono analog monitor the VGA BIOS reports (`INT 10h
+  AX=1A00h`, code 07h or 0Bh). It selects the mono view, as `/VIEW:MONO` does on any display.
+- **A mono card** (mode 7: MDA, Hercules, or an EGA or VGA set up for a mono monitor) is drawn at `B000:0000` and shows
+  no colours. The screens draw in colour as ever, and `video_flush` converts each cell: text on a background that is
+  neither black nor dark gray is inverted; other text is bright for colours 9 to 15 and normal for the rest; spaces,
+  blocks and shades become the blocks that cover their parts that aren't black; nothing gets attribute 00h, on which the
+  mouse cursor can't be seen. Where two things differ by colour alone, the drawing asks `scr_mono_card()`: a held piano
+  key is a bullet, a modulator's pill is plain, and `dim_under` blanks the blocks it dims. Dim text looks normal.
+- **The soft font.** On an EGA or VGA that drives the screen with a 14 or 16 line cell, `video_init` loads fifteen partial
+  blocks (1 to 15 scanlines tall) with `INT 10h AX=1100h` over line-drawing codes no screen uses, so the envelope band
+  draws heights of `4 * lines - 1` (63 on a VGA, 55 on an EGA) instead of half blocks. The reserved codes are
+  `C7 CA CB CC CE CF D0` to `D8` (`VIDEO_BLOCK`): a screen must not draw them. `video_restore` puts the ROM font of that
+  height back (`AX=1104h` or `1101h`; on a mono card it sets mode 7 again) at exit, which replaces a code-page font
+  `DISPLAY.SYS` had loaded.
+- **Blink and the cursor come after the font.** On IBM's EGA a font load reprograms every video register from the mode
+  table, turning blink back on and showing the cursor, so `video_init` turns both off only after the load. DOSBox-X does
+  not do this: look at an EGA VM after a change here.
 - **The read-back.** The BIOS answering is not the font holding the blocks, so after the load `video_init` reads the fifteen
   glyphs back from the font in plane 2 (`A000:0000`, 32 bytes a code) and compares them with what it wrote. An EGA's
   sequencer and graphics controller are write-only, so the read sets the registers it needs, with interrupts off, and puts
-  back the values the BIOS programs for text mode 3. It does not check that block 0 is the font on show. `T_FONT` runs under
+  back the values the BIOS programs for text mode 3 (or mode 7). It does not check that block 0 is the font on show. `T_FONT` runs under
   each DOSBox-X machine and pins 0 lines on a `cga`, 14 on an `ega` and 16 on a `vgaonly`, and that a ROM font put back
   reads as missing (`video_blocks_in_font`).
-- **The fallback.** Any other card or cell height (CGA, MDA, an 8-line mode) keeps the half blocks with a lit rim, and so does a card where the read-back fails.
+- **The fallback.** Any other card or cell height (CGA, MDA, Hercules, an 8-line mode) keeps the half blocks with a lit rim, and so does a card where the read-back fails.
   `video_set_block_lines` chooses the path whatever the card.
 - **The dump rule.** `/DUMP` draws the 16-line path on every card, so one set of reference screens holds for all of them;
   the half-block path is checked by `T_ENV`, not by a reference screen.

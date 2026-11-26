@@ -21,7 +21,7 @@ Every module and its functions: [docs/architecture/studio.md](../../docs/archite
   shares data with `main` only through `volatile` bytes and the single-producer queue.
 - **Ctrl+Break and Ctrl+C do nothing; a critical error fails the call** (`INT 24h` returns `AL = 3`), never "Abort, Retry, Fail".
 - **The screen goes through `video_*`** into the back buffer, then one `video_flush`. Blink is off while running (bit 7 of an
-  attribute is a bright background), back on at exit; the cursor is hidden and restored; the screen is cleared on exit.
+  attribute is a bright background), back on at exit; the cursor is hidden and restored (an EGA font load resets both, so they come after it); the screen is cleared on exit.
   The envelope's soft-font blocks own codes `C7 CA CB CC CE CF D0` to `D8` (`VIDEO_BLOCK`): no screen draws them.
 - **Draw only what changed:** the synth screen is parts that own whole rows (`SD_*`, `synth_redraw`); `run_synth` drains every
   queued event, then draws `synth_parts(&drawn, ed)` once. A field the drawing reads goes into `synth_parts` (no path flags a part); `T_REDRW` checks it.

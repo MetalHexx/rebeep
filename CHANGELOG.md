@@ -21,6 +21,8 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
   beforehand what Enter will do ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#saving-and-overrides)).
 - **A smoother envelope** on the studio's synth screen on EGA and VGA
   ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#the-screens)).
+- **Monochrome displays** in the studio: it works on an MDA or Hercules card and switches to its mono view by
+  itself ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#start-it)).
 - **Four-operator voices** on an OPL3, for patches that have one
   ([how it works](https://github.com/MetalHexx/rebeep/blob/main/docs/architecture/how-it-works.md#patches)).
 

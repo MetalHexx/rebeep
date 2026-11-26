@@ -61,7 +61,9 @@ RBSTUDIO
 
 - Add `C:\REBEEP` to your `PATH` ([step 4](real-pc.md#4-add-a-rebeep-boot-menu-entry)) to start it
   from any folder.
-- On a monochrome display, start it with `RBSTUDIO /VIEW:MONO` ([switches](reference.md#rbstudio)).
+- On a monochrome display (an MDA or Hercules card, say) the studio switches to its mono view by
+  itself. If yours isn't noticed, start it with `RBSTUDIO /VIEW:MONO`
+  ([switches](reference.md#rbstudio)).
 
 ## The screens
 

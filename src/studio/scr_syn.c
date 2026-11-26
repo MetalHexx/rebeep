@@ -79,10 +79,12 @@ static int body_colour(const Editor *e, int k)
 int pill_draw(int x, int y, const char *label, int col)
 {
     int len = (int)strlen(label);
+    /* A mono card would invert both kinds of pill alike: a modulator's is plain there. */
+    int plain = scr_mono_card() && col == role(R_MODULATOR);
 
-    scr_put(x, y, "\xDE", col, SCR_KEEP);
-    scr_put(x + 1, y, label, role(R_GROUND), col);
-    scr_put(x + 1 + len, y, "\xDD", col, SCR_KEEP);
+    scr_put(x, y, plain ? " " : "\xDE", col, SCR_KEEP);
+    scr_put(x + 1, y, label, plain ? col : role(R_GROUND), plain ? SCR_KEEP : col);
+    scr_put(x + 1 + len, y, plain ? " " : "\xDD", col, SCR_KEEP);
     return x + 2 + len;
 }
 
@@ -287,7 +289,9 @@ static void bottom_bar(const Editor *e)
         int pc = i % 12;
         int lit = is_held(e, i);
 
-        if (pc == 1 || pc == 3 || pc == 6 || pc == 8 || pc == 10) {
+        if (lit && scr_mono_card()) {   /* a change of colour would not show there */
+            scr_put(KB_X + i, y, "\x07", role(R_GROUND), role(R_KEYS));
+        } else if (pc == 1 || pc == 3 || pc == 6 || pc == 8 || pc == 10) {
             scr_put(KB_X + i, y, "\xDF", role(lit ? R_LIT : R_GROUND), role(R_KEYS));
         } else if ((pc == 4 || pc == 11) && i < ED_KEYS - 1) {
             scr_put(KB_X + i, y, "\xDD", role(lit ? R_LIT : R_KEYS), role(R_GROUND));

@@ -9,7 +9,7 @@ typedef enum {
     R_WINDOWSHADOW, R_BUTTON, R_COUNT
 } Role;
 
-/* The view: mono when the BIOS mode was 2 (BW80) at start or /VIEW:MONO was given (main sets it). */
+/* The view: mono on a monochrome display (scr_mono) or when /VIEW:MONO was given (main sets it). */
 void role_set_mono(int mono);
 int role_mono(void);
 

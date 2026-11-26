@@ -57,7 +57,8 @@ void dim_under(void)
             if (((cell >> 12) & 15) == ground) {
                 scr_paint(x, y, 1, 1, role(R_SHADOW), SCR_KEEP);
             } else if (ch == 0xDF || ch == 0xDC || ch == 0xDB || ch == 0xDD || ch == 0xDE) {
-                scr_fill(x, y, 1, 1, ' ', SCR_KEEP, role(R_SHADOW));
+                /* On a mono card a space in one colour is a solid block, so the colour goes too. */
+                scr_fill(x, y, 1, 1, ' ', scr_mono_card() ? role(R_GROUND) : SCR_KEEP, role(R_SHADOW));
             } else {
                 scr_paint(x, y, 1, 1, role(R_GROUND), role(R_SHADOW));
             }

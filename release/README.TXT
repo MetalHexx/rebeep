@@ -208,7 +208,7 @@ on again when you quit.
 
   RBSTUDIO [/VIEW:MONO] [/TRACE] [/?]
 
-  /VIEW:MONO  draw for a monochrome display
+  /VIEW:MONO  force the mono view (a monochrome display is noticed without it)
   /TRACE      log every FM chip write and key press to RBSTUDIO.LOG
   /?          help
 

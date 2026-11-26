@@ -1,14 +1,15 @@
-/* ReBeep Studio: the 80x25 colour text screen. Everything is drawn into a back buffer of
-   char/attribute words and flushed to B800:0000 in one go. SPDX-License-Identifier: MIT */
+/* ReBeep Studio: the 80x25 text screen. Everything is drawn in colour into a back buffer of char/attribute words and
+   flushed in one go: to B800:0000 as it is, or, on a mono card, converted to B000:0000. SPDX-License-Identifier: MIT */
 #ifndef RBSTUDIO_VIDEO_H
 #define RBSTUDIO_VIDEO_H
 
 #define VIDEO_COLS 80
 #define VIDEO_ROWS 25
 
-/* Forces 80x25 colour text, turns blink off (bit 7 of an attribute then selects a bright
-   background), hides the cursor and clears the back buffer. video_restore() undoes it and is
-   registered to run at exit; it also clears the screen. Safe to call again. */
+/* Sets 80x25 colour text unless the mode is 2 (BW80), 3 or 7 (a mono card: MDA, Hercules, or an EGA or VGA set up for a
+   mono monitor), loads the blocks, turns blink off (bit 7 of an attribute then selects a bright background), hides the
+   cursor and clears the back buffer. video_restore() undoes it and is registered to run at exit; it also clears the
+   screen. Safe to call again. */
 void video_init(void);
 void video_restore(void);
 
@@ -37,7 +38,7 @@ void video_put(int x, int y, unsigned char ch, unsigned char attr);
 void video_fill(int x, int y, int w, int h, unsigned char ch, unsigned char attr);
 void video_text(int x, int y, const char *s, unsigned char attr);
 
-/* Copies the whole back buffer to the screen. */
+/* Copies the whole back buffer to the screen; on a mono card, converts each cell to normal, bright and inverted. */
 void video_flush(void);
 
 /* The screen layer the program draws through. Text is CP437 bytes, so a C literal writes a glyph above 7Fh as a hex
@@ -68,11 +69,16 @@ unsigned scr_cell(int x, int y);
 /* video_flush with the mouse cursor hidden for the copy, so the driver's cursor never lands in the back buffer's view. */
 void scr_flush(void);
 
-/* Writes the 4000 bytes of B800:0000 (character, attribute for each cell, row by row) to `path`, with the mouse
+/* Writes the 4000 bytes of screen memory (character, attribute for each cell, row by row) to `path`, with the mouse
    cursor hidden. Call after scr_flush. Returns 0, or -1 when the file cannot be written. */
 int scr_dump(const char *path);
 
-/* 1 when the BIOS mode at start was 2 (BW80), a monochrome display. Valid after video_init. */
-int scr_bw80(void);
+/* 1 for a monochrome display: BIOS mode 2 at start, a mono card, or a mono analog monitor the VGA BIOS reports. Valid
+   after video_init. */
+int scr_mono(void);
+
+/* 1 on a mono card (mode 7), where colour shows nothing: a screen that tells two things apart by colour alone draws them
+   differently there. Valid after video_init. */
+int scr_mono_card(void);
 
 #endif
