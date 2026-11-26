@@ -3,12 +3,14 @@ import http from 'node:http';
 import path from 'node:path';
 import { CliError } from './cli.mjs';
 import { buildSite } from './site.mjs';
-import { DEV_CSS, DEV_JS } from './sitedev.mjs';
+import { DEV_CSS, DEV_JS, previewHtml } from './sitedev.mjs';
 
 export const DEFAULT_PORT = 8086;
 const HOST = '127.0.0.1';
 const BASE = '/rebeep/';
 const DEV = `${BASE}__dev/`;
+const PREVIEW = `${DEV}preview`;
+const PREVIEW_HTML = previewHtml(BASE);
 const DEBOUNCE_MS = 150;
 
 const MIME = {
@@ -75,10 +77,12 @@ function listenError(err, port) {
 /**
  * Builds the page, then serves `build/site/` at `http://127.0.0.1:<port>/rebeep/` (127.0.0.1 only)
  * and rebuilds on every change under `site/`, telling open pages to reload over Server-Sent Events.
- * The dev client is injected into served HTML only. `release` is stamped on every rebuild; a failed
- * rebuild is logged and the last good build keeps being served. Port 0 picks a free one. Resolves to
- * `{ url, port, out, stamped, close }`; `close()` stops the watcher, the open event streams and the
- * server. Throws a `CliError` when the build fails or the port is taken.
+ * The dev client is injected into served HTML only. `__dev/preview` shows the page at desktop, tablet
+ * and phone widths side by side; it is generated in memory, never part of the build. `release` is
+ * stamped on every rebuild; a failed rebuild is logged and the last good build keeps being served.
+ * Port 0 picks a free one. Resolves to `{ url, previewUrl, port, out, stamped, close }`; `close()`
+ * stops the watcher, the open event streams and the server. Throws a `CliError` when the build
+ * fails or the port is taken.
  */
 export async function startSiteServer({ repo, release = null, port = DEFAULT_PORT, log, debounceMs = DEBOUNCE_MS }) {
   const root = path.resolve(repo.siteBuild);
@@ -120,6 +124,7 @@ export async function startSiteServer({ repo, release = null, port = DEFAULT_POR
       if (requestPath === `${DEV}events`) return events(req, res);
       if (requestPath === `${DEV}dev.js`) return send(req, res, 200, MIME['.js'], DEV_JS);
       if (requestPath === `${DEV}dev.css`) return send(req, res, 200, MIME['.css'], DEV_CSS);
+      if (requestPath === PREVIEW) return send(req, res, 200, MIME['.html'], PREVIEW_HTML);
       return notFound(req, res);
     }
     return serveFile(req, res, requestPath);
@@ -184,5 +189,6 @@ export async function startSiteServer({ repo, release = null, port = DEFAULT_POR
   };
 
   const boundPort = server.address().port;
-  return { url: `http://${HOST}:${boundPort}${BASE}`, port: boundPort, out: built.out, stamped: built.stamped, close };
+  const origin = `http://${HOST}:${boundPort}`;
+  return { url: `${origin}${BASE}`, previewUrl: `${origin}${PREVIEW}`, port: boundPort, out: built.out, stamped: built.stamped, close };
 }

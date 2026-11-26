@@ -29,14 +29,39 @@ environment loaded. Below, `rebeep` stands for `node tools/rebeep.mjs`.
    | Anything | `rebeep repo check` |
    | `tools/` | `rebeep test run --suite tools` |
    | `src/` or `tests/` | Also `rebeep test run --suite interpreter` and `rebeep test run --suite vm` |
+   | `src/studio/` or `tests/studio/` | Also `rebeep test run --suite studio` |
    | Docs | The rules and budgets in the root [AGENTS.md](../../AGENTS.md#10-writing-docs) |
 
-   CI runs the tools and interpreter suites, the build, a package dry run and the payload guard. It
-   can't run 86Box, so the VM probes are yours to run before you push.
+   CI runs the tools, interpreter and studio suites, the build, a package dry run and the payload
+   guard. It can't run 86Box, so the VM probes are yours to run before you push.
 4. Open a pull request against `main`, as a draft until it's ready, and fill in the template: what
    you ran, and what you heard.
 
 Releases are the maintainer's: [releasing](releasing.md).
+
+## The studio
+
+[ReBeep Studio](../architecture/studio.md) (`src/studio/`, `RBSTUDIO.EXE`) is C, built with Open Watcom, which `rebeep tool fetch
+open-watcom` fetches ([setup](setup.md#1-prerequisites)). Its suite compiles each `tests/studio/T_*.C`
+against the studio's modules, runs them in DOSBox-X, then checks every screen:
+
+```sh
+rebeep test run --suite studio
+```
+
+**The reference screens are the screen spec.** `tests/screens/<screen>.<view>.scr` (view `vga` or
+`mono`) holds what each screen must draw, cell by cell. The suite has the studio draw every screen
+with `RBSTUDIO /DUMP:<screen> [/VIEW:MONO] /O:<file>` (a switch for tests, not for players) and
+compares the dump with its `.scr`. The format and the check are in
+[tests/studio/AGENTS.md](../../tests/studio/AGENTS.md).
+
+**To change a screen, edit its `.scr` first**, in the same change as the code, then make the studio
+draw it. The studio's own [AGENTS.md](../../src/studio/AGENTS.md) has the drawing rules. A changed
+screen also means new screenshots in the docs and on the site: the
+[`update-site`](../../.claude/skills/update-site/SKILL.md) skill retakes them in 86Box.
+`RBSTUDIO /BENCH` times the synth screen (a full redraw of the 4-OP and the 2-OP screen, a piano key pressed and released,
+a value changed, the help opened), the library load, and the patch list over 2,048 entries (a draw, a click, PgDn), in
+milliseconds per call, and writes the same lines to `BENCH.TXT`.
 
 ## Seeing what a game does
 
@@ -89,13 +114,15 @@ what broke.
 
 ## Working with an AI agent
 
-The repo ships three skills for AI coding assistants, such as Claude Code, which picks them up from
+The repo ships skills for AI coding assistants, such as Claude Code, which picks them up from
 `.claude/skills/`. Agents start at [AGENTS.md](../../AGENTS.md).
 
 | Skill | What it does |
 |---|---|
-| [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build |
+| [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build, the lab's patch set |
 | [`update-docs`](../../.claude/skills/update-docs/SKILL.md) | Keeps the docs and `AGENTS.md` files true before each commit |
 | [`release`](../../.claude/skills/release/SKILL.md) | Cuts a release: the changelog from the branch's commits, your review of the notes, the checks, the merge and the publish |
+| [`drive-dos-app`](../../.claude/skills/drive-dos-app/SKILL.md) | Drives a DOS program in a real DOSBox-X window, or a lab VM in 86Box, with typed keys and screenshots, for flows the headless checks cannot reach |
+| [`update-site`](../../.claude/skills/update-site/SKILL.md) | Changes the product page with a live three-width preview, and retakes the ReBeep Studio screenshots |
 
 Ask the agent to run `update-docs` before you commit; it applies the doc rules above to your change.

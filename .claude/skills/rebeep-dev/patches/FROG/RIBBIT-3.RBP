@@ -1,0 +1,14 @@
+; ReBeep patch. Edit it in ReBeep Studio or by hand.
+; OPn= AR DR SL RR OL KSL MULT WAVE TREM VIB SUS KSR, decimal, one space apart.
+; SL and OL: bigger is louder. OCTAVE 4 is the game's pitch.
+; FROG candidate for the splash jingle. Croak (the Re): held while the key is down, so you can hear the trill; nasal half-sine carrier. Play the low row.
+[PATCH]
+FORMAT=1
+OCTAVE=3
+
+[2OP]
+; CONNECTION: FM or AM. FEEDBACK 0..7.
+CONNECTION=FM
+FEEDBACK=2
+OP1=15 0 15 8 52 0 0 0 0 0 1 0
+OP2=15 0 15 8 63 0 12 1 0 0 1 0

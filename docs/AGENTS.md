@@ -12,15 +12,17 @@
 | `guide/playing.md` | Guide | Everyday use: RBPLAY, voices, muting, hotkeys, `/OFF`, unload |
 | `guide/troubleshooting.md` | Guide | By symptom, then every message |
 | `guide/compatibility.md` | Guide | Tested games (with game notes) and machines, conflicts with the command to run |
-| `guide/reference.md` | Guide | Options, hotkeys, exit codes, RBTEST. `release/README.TXT` and `REBEEP /?` mirror it |
+| `guide/studio.md` | Guide | ReBeep Studio for players: a showcase on top (the animated synth screen, a gallery of every screen), then the screens, keys, banks, the Save dialog, the settings file |
+| `guide/reference.md` | Guide | Options, hotkeys, exit codes, RBSTUDIO, RBTEST. `release/README.TXT` and `REBEEP /?` mirror it |
 | `architecture/how-it-works.md` | Architecture | The design, and the `P_BENCH` numbers |
+| `architecture/studio.md` | Architecture | ReBeep Studio's modules and design; `src/studio/AGENTS.md` links it |
 | `architecture/gpc-case-study.md` | Architecture | How GPC drives the speaker, ReBeep's handling, what still differs |
 | `lab/setup.md` | Lab | Clone to first VM boot, Free and Full paths, the Verified-on table |
 | `lab/86box-lab.md` | Lab | The lab's VMs, disks, boot flow, snapshot and reset |
-| `lab/contributing.md` | Lab | Workflow and checks, commits, PR and payload rules |
+| `lab/contributing.md` | Lab | Workflow and checks, the studio suite and its screens, commits, PR and payload rules |
 | `lab/releasing.md` | Lab | The release procedure and the checks by a person |
 | `roadmap.md` | — | Where ReBeep is headed, and how to help. The only page with plans |
-| `images/` | — | Pictures. `rebeep-logo.png` is the README's logo, on a transparent background |
+| `images/` | — | Pictures. `rebeep-logo.png` is the README's logo, on a transparent background. `studio/`: ReBeep Studio's screens from 86Box (`checks`, `splash`, `menu`, `patch-list`, `synth-2op`, `synth-4op`, `help-1`, `help-2`, `save-prompt`, `save-dialog`, and `synth.gif`), 4:3, for the README and the studio guide; retake them and the site's copies when a screen changes ([update-site](../.claude/skills/update-site/references/studio-shots.md)) |
 
 ## Rules
 
@@ -32,8 +34,7 @@
 - **Lab:** contributors. Commands, the `rebeep` CLI, the VMs.
 - **The voice:** concise and high signal. Steps first; tables and code blocks over prose; no filler;
   link, never repeat. Never paper over what a newcomer can't know: show the real command, not "turn
-  that feature off". Complete but lean: a cold reader needs nothing else, and reads nothing extra.
-- **The goal:** deliberate, good-looking docs, each page at one level.
+  that feature off". Complete but lean: a cold reader needs nothing else, and reads nothing extra. Each page at one level.
 
 **Guide pages:**
 - Explain each term on first use, in a few words: TSR, FM chip, Jemm, QPIEMU, upper memory, boot menu.
@@ -47,8 +48,7 @@ page gets a row here, and a line in its level's group of the [README](../README.
 
 - `guide/reference.md`, `release/README.TXT` and `REBEEP /?` hold the same tables. Change all three.
 - No version number in a doc: `rebeep version check` rejects one. Write `x.y.z`.
-- `architecture/how-it-works.md`'s numbers come from the `P_BENCH` probe. Re-measure them when the
-  trap code changes.
+- `architecture/how-it-works.md`'s numbers come from `P_BENCH`. Re-measure them when the trap code changes.
 - Host-specific lab steps (Windows, Linux, macOS) drift fastest. Mark anything not verified.
 
 ## Run / test

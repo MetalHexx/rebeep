@@ -40,7 +40,7 @@ dropped, spaces to hyphens) and compare.
 ```markdown
 ### Added
 
-- **Bell patch, brighter:** `/P:4` rings longer and cuts through engine noise
+- **Bell patch, brighter:** `/P:BELL` rings longer and cuts through engine noise
   ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
 
 ### Fixed

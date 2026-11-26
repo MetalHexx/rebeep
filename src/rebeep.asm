@@ -28,4 +28,6 @@ image_start:
 %include "capture/trace.asm"            ; the trace build only
 resident_end:
 %include "startup/main.asm"             ; freed when going resident
+%include "startup/patch.asm"            ; the patch file parser
+%include "startup/files.asm"            ; the program's folder, the settings file, the patch lookup
 %include "startup/dump.asm"             ; the trace build only: REBEEPD /D

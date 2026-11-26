@@ -56,6 +56,28 @@ describe('the real manifest', () => {
   });
 });
 
+describe('the open-watcom pin', () => {
+  const tool = real.tools['open-watcom'];
+
+  test('is one dated snapshot for every host, never the rolling tag', () => {
+    const assets = Object.values(tool.platforms);
+    assert.equal(assets.length, 6);
+    assert.equal(new Set(assets.map((a) => a.url)).size, 1);
+    assert.equal(new Set(assets.map((a) => a.sha256)).size, 1);
+    for (const asset of assets) {
+      assert.equal(asset.archive, 'tar.xz');
+      assert.doesNotMatch(asset.url, /Current-build/);
+    }
+  });
+
+  test("each host's compiler sits in a folder it extracts, beside h and lib286", () => {
+    for (const [key, asset] of Object.entries(tool.platforms)) {
+      assert.ok(asset.extract.includes(asset.bin.split('/')[0]), key);
+      assert.ok(asset.extract.includes('h') && asset.extract.includes('lib286'), key);
+    }
+  });
+});
+
 describe('pickAsset', () => {
   const tool = { platforms: { 'win32-x64': { id: 'win' }, 'linux-x64': { id: 'linux' }, any: { id: 'any' } } };
   test('prefers the exact platform key, then any', () => {
@@ -78,6 +100,22 @@ describe('loadManifest validation', () => {
     },
   });
   test('accepts a minimal manifest', () => assert.ok(loadManifest(write(good())).tools.t));
+  test('accepts a tar.xz archive with the folders to extract, and rejects an unknown archive', () => {
+    const tarXz = good();
+    Object.assign(tarXz.tools.t.platforms.any, { archive: 'tar.xz', extract: ['bin', 'h'] });
+    assert.deepEqual(loadManifest(write(tarXz)).tools.t.platforms.any.extract, ['bin', 'h']);
+
+    const rar = good();
+    rar.tools.t.platforms.any.archive = 'rar';
+    assert.throws(() => loadManifest(write(rar)), /tools.t.platforms.any.*'archive' must be one of: zip, appimage, tar.xz/);
+  });
+  test('extract must be a non-empty array of folders, and only for a tar.xz archive', () => {
+    for (const [archive, extract] of [['tar.xz', 'bin'], ['tar.xz', []], ['tar.xz', [1]], ['tar.xz', ['']], ['zip', ['bin']]]) {
+      const manifest = good();
+      Object.assign(manifest.tools.t.platforms.any, { archive, extract });
+      assert.throws(() => loadManifest(write(manifest)), /'extract'/, JSON.stringify([archive, extract]));
+    }
+  });
   test('names the missing field', () => {
     const noHash = good();
     delete noHash.tools.t.platforms.any.sha256;

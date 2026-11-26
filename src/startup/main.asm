@@ -50,6 +50,7 @@ startup_entry:
         jnc     .cpu_ok
         DIE     msg_no386, EXIT_NO_386
 .cpu_ok:
+        call    find_prog_dir           ; before the environment is freed
         call    amis_search
         jc      .none
         jmp     change_path
@@ -79,6 +80,9 @@ load_path:
 .slot:
         mov     al, [free_id]
         mov     [rb_amis_id], al
+        call    crit_on
+        call    load_patch
+        call    crit_off
         push    cs
         pop     es
         mov     bx, RB_STATE
@@ -146,6 +150,9 @@ change_path:
         call    amis_call
         cmp     al, 0FFh
         jne     mismatch
+        mov     es, [res_seg]
+        cmp     byte [es:bx + RBS_VERSION], RBS_LAYOUT
+        jne     mismatch                ; one release, two layouts: a write would land in the wrong fields
         mov     [res_state], bx
         mov     ax, [opt_set]
         test    ax, OPT_U
@@ -203,6 +210,12 @@ do_status:
         jmp     done_ok
 
 do_update:
+        test    word [opt_set], OPT_P
+        jz      .apply
+        call    crit_on
+        call    select_patch
+        call    crit_off
+.apply:
         mov     es, [res_seg]
         mov     bx, [res_state]
         call    apply_fields
@@ -373,19 +386,33 @@ amis_call:
         ret
 
 ; apply_fields: write the options named on the command line into the RB_STATE at ES:BX,
-; and nothing else, so a change never resets the fields it did not name.
+; and nothing else, so a change never resets the fields it did not name. /P: writes the
+; patch select_patch left in pbuf, the name and the records in one go with interrupts off
+; (a trapped write must never see half a record), or, when none could be used, the faithful
+; voice and no patch.
 apply_fields:
         mov     ax, [opt_set]
         pushf
         cli
+        cld
         test    ax, OPT_F
         jz      .patch
         mov     byte [es:bx + RBS_VOICE], 0
 .patch:
         test    ax, OPT_P
         jz      .volume
-        mov     dl, [opt_voice]
-        mov     [es:bx + RBS_VOICE], dl
+        cmp     byte [patch_ok], 0
+        je      .nopatch
+        lea     di, [bx + RBS_PATCH]
+        mov     si, pbuf
+        mov     cx, PBLK_LEN
+        rep     movsb
+        mov     byte [es:bx + RBS_VOICE], 1
+        jmp     .volume
+.nopatch:
+        mov     byte [es:bx + RBS_VOICE], 0
+        mov     byte [es:bx + RBS_PFLAGS], 0
+        mov     byte [es:bx + RBS_PATCH], 0
 .volume:
         test    ax, OPT_V
         jz      .keys
@@ -413,6 +440,77 @@ apply_fields:
 .done:
         popf
         ret
+
+; ---------------------------------------------------------------- patches
+
+; load_patch: the load path's patch. /P: names one, /F wants none, and with neither the
+; settings file's PATCH= may. A patch found that way goes in as if /P: had named it, so
+; apply_fields writes it; one that fails leaves the defaults (the faithful voice).
+load_patch:
+        mov     ax, [opt_set]
+        test    ax, OPT_P
+        jz      .settings
+        jmp     select_patch
+.settings:
+        test    ax, OPT_F
+        jnz     .ret
+        call    settings_ensure
+        mov     si, cfg_patch
+        cmp     byte [si], 0
+        je      .ret
+        call    asciz_len
+        call    spec_valid
+        jnc     .valid
+        mov     word [fail_spec], cfg_patch
+        mov     word [fail_who], 0
+        mov     word [fail_reason], r_badname
+        jmp     print_not_used
+.valid:
+        call    select_patch
+        cmp     byte [patch_ok], 0
+        je      .ret
+        or      word [opt_set], OPT_P
+.ret:
+        ret
+
+; select_patch: looks the patch spec_buf names up and loads it into pbuf.
+; Out: patch_ok = 1, or 0 with the reason printed. Clobbers ES.
+select_patch:
+        mov     byte [patch_ok], 0
+        mov     si, spec_buf
+        mov     bx, s_factory
+        call    starts_with
+        je      .lookup                 ; FACTORY is beside the program: no settings needed
+        call    settings_ensure
+.lookup:
+        mov     word [fail_spec], spec_buf
+        call    find_patch
+        jc      print_not_used
+        mov     byte [patch_ok], 1
+        ret
+
+; print_not_used: "Patch <spec> not used: [<who>: ]<reason>. Playing the faithful voice."
+; from fail_spec, fail_who (0 for none) and fail_reason.
+print_not_used:
+        mov     dx, msg_pn_1
+        call    print
+        mov     si, [fail_spec]
+        mov     cx, 40
+        call    print_text
+        mov     dx, msg_pn_2
+        call    print
+        mov     si, [fail_who]
+        or      si, si
+        jz      .reason
+        mov     cx, 80
+        call    print_text
+        mov     dx, msg_pn_3
+        call    print
+.reason:
+        mov     dx, [fail_reason]
+        call    print
+        mov     dx, msg_pn_4
+        jmp     print
 
 ; ---------------------------------------------------------------- options
 
@@ -520,17 +618,29 @@ parse_options:
         jne     .bad
         jmp     .flag
 
-.patch:
+.patch:                                 ; /P:NAME or /P:FOLDER\NAME, up to a space, a tab or the end
         call    getc
         cmp     al, ':'
         jne     .bad
-        call    get_number
+        mov     bx, si
+.spec:
+        call    peekc
+        cmp     al, ' '
+        je      .specend
+        cmp     al, 9
+        je      .specend
+        cmp     al, 0Dh
+        je      .specend
+        inc     si
+        jmp     .spec
+.specend:
+        mov     cx, si
+        sub     cx, bx
+        push    si
+        mov     si, bx
+        call    spec_valid
+        pop     si
         jc      .bad
-        cmp     ax, 1
-        jb      .bad
-        cmp     ax, 4
-        ja      .bad
-        mov     [opt_voice], al
         mov     bx, OPT_P
         jmp     .flag
 
@@ -572,7 +682,7 @@ parse_options:
         jne     .bad
         jmp     .next
 
-; One control option at a time, none beside a config option, and /F or /P:n, not both.
+; One control option at a time, none beside a config option, and /F or /P:, not both.
 .valid:
         mov     ax, [opt_set]
         mov     bx, ax
@@ -687,11 +797,7 @@ done_ok:
         int     21h
 
 show_help:
-        mov     dx, msg_help_1
-        call    print
-        mov     dx, opl_patch_names
-        call    print
-        mov     dx, msg_help_2
+        mov     dx, msg_help
         call    print
         jmp     done_ok
 
@@ -784,28 +890,37 @@ scan_letter:
         ret
 
 ; print_config: "<voice>, volume <n>." then "Ctrl+Alt+<x> toggles, ..." and the /L and /R
-; lines, from the RB_STATE at ES:BX. A patch is named: "patch 2 Flute".
+; lines, from the RB_STATE at ES:BX. A patch is named: "patch USER\BELL", and "(4-OP)" when an
+; OPL3 plays its four-operator variant; the faithful voice names the patch it still holds:
+; "faithful voice (patch USER\BELL loaded)".
 print_config:
         push    ax
         push    dx
-        mov     al, [es:bx + RBS_VOICE]
-        or      al, al
-        jnz     .patch
+        push    di
+        cmp     byte [es:bx + RBS_VOICE], 0
+        jne     .patch
         mov     dx, msg_faithful
+        call    print
+        test    byte [es:bx + RBS_PFLAGS], RBS_PF_LOADED
+        jz      .volume
+        mov     dx, msg_held_1
+        call    print
+        lea     di, [bx + RBS_PATCH]
+        call    print_asciz
+        mov     dx, msg_held_2
         call    print
         jmp     .volume
 .patch:
         mov     dx, msg_patch
-        push    ax                      ; DOS function 09h returns AL = '$'
         call    print
-        pop     ax
-        add     al, '0'
-        push    ax
-        call    putc
-        mov     al, ' '
-        call    putc
-        pop     ax
-        call    print_patch_name
+        lea     di, [bx + RBS_PATCH]
+        call    print_asciz
+        test    byte [es:bx + RBS_FLAGS], RBS_F_OPL3
+        jz      .volume
+        test    byte [es:bx + RBS_PFLAGS], RBS_PF_4OP
+        jz      .volume
+        mov     dx, msg_4op
+        call    print
 .volume:
         mov     dx, msg_volume
         call    print
@@ -836,34 +951,8 @@ print_config:
         mov     dx, msg_raw_0
 .raw:
         call    print
+        pop     di
         pop     dx
-        pop     ax
-        ret
-
-; print_patch_name: AL = '1'..'4'. Prints that patch's name from opl_patch_names
-; ("1 Organ, 2 Flute, ..."), the one list the help prints too.
-print_patch_name:
-        push    ax
-        push    si
-        mov     ah, al
-        mov     si, opl_patch_names
-.find:
-        lodsb
-        cmp     al, '$'
-        je      .done
-        cmp     al, ah
-        jne     .find
-        inc     si                      ; the space after the number
-.name:
-        lodsb
-        cmp     al, ','
-        je      .done
-        cmp     al, '$'
-        je      .done
-        call    putc
-        jmp     .name
-.done:
-        pop     si
         pop     ax
         ret
 
@@ -907,7 +996,6 @@ key_scan        db      1Eh, 30h, 2Eh, 20h, 12h, 21h, 22h, 23h, 17h, 24h, 25h, 2
 
 opt_set         dw      0
 opt_end         dw      0
-opt_voice       db      0
 opt_volume      db      0
 opt_toggle      db      0
 opt_cycle       db      0
@@ -922,6 +1010,8 @@ res_id          db      0
 res_seg         dw      0
 res_ident       dw      0
 res_state       dw      0
+patch_ok        db      0               ; 1 when pbuf holds the patch /P: or PATCH= asked for
+fail_spec       dw      0               ; the spec print_not_used names
 
 msg_badopt      db      "Bad option. Run REBEEP /? for the options.", 13, 10, '$'
 msg_no386       db      "ReBeep needs a 386 or better.", 13, 10, '$'
@@ -937,6 +1027,11 @@ msg_unloaded    db      "ReBeep unloaded.", 13, 10, '$'
 msg_on          db      "ReBeep is on.", 13, 10, '$'
 msg_off         db      "ReBeep is off: the OPL is free for the game.", 13, 10, '$'
 msg_updated     db      "ReBeep updated: $"
+msg_pn_1        db      "Patch $"
+msg_pn_2        db      " not used: $"
+msg_pn_3        db      ": $"
+msg_pn_4        db      ". Playing the faithful voice.", 13, 10, '$'
+r_badname       db      "not a valid patch name$"
 
 msg_stat_1      db      REBEEP_NAME, " is loaded: traps $"
 msg_stat_2      db      ", translation $"
@@ -954,36 +1049,38 @@ msg_loaded_3    db      " bytes resident.", 13, 10, "OPL$"
 msg_loaded_4    db      ", $"
 
 msg_faithful    db      "faithful voice$"
+msg_held_1      db      " (patch $"
+msg_held_2      db      " loaded)$"
 msg_patch       db      "patch $"
+msg_4op         db      " (4-OP)$"
 msg_volume      db      ", volume $"
 msg_keys_1      db      ".", 13, 10, "Ctrl+Alt+$"
 msg_keys_2      db      " toggles, Ctrl+Alt+$"
-msg_keys_3      db      " cycles the voice.", 13, 10, '$'
+msg_keys_3      db      " switches between faithful voice and patch.", 13, 10, '$'
 msg_low_0       db      "Notes below 20 Hz are silent (/L:0).", 13, 10, '$'
 msg_low_1       db      "Notes below 20 Hz are played (/L:1).", 13, 10, '$'
 msg_raw_1       db      "Sounds ReBeep can't translate play on the speaker (/R:1).", 13, 10, '$'
 msg_raw_0       db      "Sounds ReBeep can't translate are muted (/R:0).", 13, 10, '$'
 
-msg_help_1      db      REBEEP_NAME, " - plays PC-speaker beeps on a Sound Blaster's OPL2/OPL3.", 13, 10
+msg_help        db      REBEEP_NAME, " - plays PC-speaker beeps on a Sound Blaster's OPL2/OPL3.", 13, 10
                 db      "Needs a 386 or better and Jemm's QPIEMU (JLOAD QPIEMU.DLL).", 13, 10, 13, 10
 %ifdef REBEEP_TRACE
-                db      "REBEEPD [/F|/P:n] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON|/OFF] [/S] [/U] [/D] [/?]", 13, 10
+                db      "REBEEPD [/F|/P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON|/OFF] [/S] [/U] [/D] [/?]", 13, 10
 %else
-                db      "REBEEP [/F | /P:n] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]", 13, 10
+                db      "REBEEP [/F | /P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]", 13, 10
 %endif
-                db      "  /F     faithful square-wave voice (default)", 13, 10
-                db      "  /P:n   built-in patch n: $"
-msg_help_2      db      13, 10
-                db      "  /V:n   volume 0-15 (default 12)", 13, 10
-                db      "  /L:n   notes below 20 Hz: 0 silent (default), 1 played", 13, 10
-                db      "  /R:n   sounds it can't translate: 1 speaker (default), 0 muted", 13, 10
-                db      "  /K:xy  Ctrl+Alt+x toggles, Ctrl+Alt+y cycles the voice (default BN)", 13, 10
-                db      "  /OFF   stop trapping and release the OPL    /ON  trap again", 13, 10
-                db      "  /S     status                               /U   unload", 13, 10
+                db      "  /F       faithful square-wave voice (default)", 13, 10
+                db      "  /P:name  a patch: FOLDER\NAME, or NAME from USER then FACTORY", 13, 10
+                db      "  /V:n     volume 0-15 (default 12)", 13, 10
+                db      "  /L:n     notes below 20 Hz: 0 silent (default), 1 played", 13, 10
+                db      "  /R:n     sounds it can't translate: 1 speaker (default), 0 muted", 13, 10
+                db      "  /K:xy    Ctrl+Alt+x toggles, Ctrl+Alt+y switches voice (default BN)", 13, 10
+                db      "  /OFF     stop trapping and release the OPL    /ON  trap again", 13, 10
+                db      "  /S       status                               /U   unload", 13, 10
 %ifdef REBEEP_TRACE
-                db      "  /D     add the trace to D:\REBEEP\RBTRACE.TXT, then empty it", 13, 10
+                db      "  /D       add the trace to D:\REBEEP\RBTRACE.TXT, then empty it", 13, 10
 %endif
-                db      "  /?     this help", 13, 10
+                db      "  /?       this help", 13, 10
                 db      "/S, /U, /ON and /OFF act only on a loaded copy. Any other option on a", 13, 10
                 db      "loaded copy changes only what it names.", 13, 10, 13, 10
                 db      "Exit codes: 0 ok, 1 bad option, 2 CPU below 386, 3 no QPI, 4 no OPL,", 13, 10

@@ -54,6 +54,9 @@ jobs:
       - name: Fetch NASM (pinned on Windows, system NASM elsewhere)
         run: node tools/rebeep.mjs tool fetch nasm
 
+      - name: Fetch Open Watcom (pinned snapshot, unpacked with the host's tar)
+        run: node tools/rebeep.mjs tool fetch open-watcom
+
       - name: Build
         run: node tools/rebeep.mjs build run
 
@@ -69,14 +72,23 @@ jobs:
         if: runner.os == 'Linux'
         run: fsck.fat -n build/release/*-floppy.img
 
+      - name: Fetch DOSBox-X (Windows only)
+        if: runner.os == 'Windows'
+        run: node tools/rebeep.mjs tool fetch dosbox-x
+
       - name: Interpreter tests (DOSBox-X, Windows only)
         if: runner.os == 'Windows'
         env:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
-        run: |
-          node tools/rebeep.mjs tool fetch dosbox-x
-          node tools/rebeep.mjs test run --suite interpreter
+        run: node tools/rebeep.mjs test run --suite interpreter
+
+      - name: Studio tests (Open Watcom and DOSBox-X, Windows only)
+        if: runner.os == 'Windows'
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: node tools/rebeep.mjs test run --suite studio
 
       - name: Payload guard
         run: node tools/rebeep.mjs repo check --range origin/main..HEAD --strict

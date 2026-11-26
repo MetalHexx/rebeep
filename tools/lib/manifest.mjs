@@ -6,7 +6,7 @@ import { repoLayout } from './paths.mjs';
 import { listFiles } from './zip.mjs';
 
 const RECORD_NAME = '.rebeep-tool.json';
-const ARCHIVES = ['zip', 'appimage'];
+const ARCHIVES = ['zip', 'appimage', 'tar.xz'];
 
 const fail = (where, message) => new CliError(`manifest ${where}: ${message}`);
 
@@ -27,6 +27,10 @@ function validateAsset(where, asset) {
     throw fail(where, "'sha256' must be 64 hex characters");
   }
   if (!ARCHIVES.includes(asset.archive)) throw fail(where, `'archive' must be one of: ${ARCHIVES.join(', ')}`);
+  if (asset.extract !== undefined) {
+    const ok = Array.isArray(asset.extract) && asset.extract.length > 0 && asset.extract.every((f) => typeof f === 'string' && f);
+    if (asset.archive !== 'tar.xz' || !ok) throw fail(where, "'extract' is a non-empty array of top-level folders, for a tar.xz archive");
+  }
 }
 
 /** Reads and validates the manifest. Throws a `CliError` naming the missing or bad field. */

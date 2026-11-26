@@ -28,13 +28,16 @@ Override the home with `REBEEP_HOME=<path>` or `--home <path>`.
 | `mirror-msdos` | `ficpa2012` (FIC PA-2012, Socket 7) | Pentium MMX 233 | 16 MB | Sound Blaster Vibra 16S | blank; you install MS-DOS 6.22 |
 | `mirror-freedos` | same | same | same | same | FreeDOS 1.4, built by script |
 | `slow-386sx` | `awardsx` (Award 386SX) | 386SX/16 | 4 MB | same | a clone of the `mirror-msdos` baseline |
+| `ega-msdos` | same as `mirror-msdos` | same | same | same | a clone of the `mirror-msdos` baseline, with IBM's EGA card |
+| `hercules-msdos` | same as `mirror-msdos` | same | same | same | a clone of the `mirror-msdos` baseline, with a Hercules mono card |
 
 - **The rig.** The mirrors stand in for the real test rig, a FIC PA-2010 board (VIA VP1). 86Box has
   no VP1 board, so they use FIC's next board, the PA-2012. For ReBeep, the timer, port `61h`, the
   ISA Sound Blaster and the CPU speed matter far more than the chipset.
 - **Sound.** The card is non-PnP, at `A220 I5 D1 H5`, with OPL3 at `388h`. The PC speaker is always
   emulated.
-- **Video.** Tseng ET4000AX (ISA VGA).
+- **Video.** Tseng ET4000AX (ISA VGA), except on `ega-msdos` (IBM's EGA card on an Enhanced Color Display, 640x350 text,
+  for the studio's 14-line font) and `hercules-msdos` (a Hercules card in mono text mode, for the studio's mono view).
 - **The slow profile's timing is indicative only.** An emulator's timing is not a real 386SX.
 
 Each profile is two files in `env/86box/profiles/<vm>/`:
@@ -64,8 +67,10 @@ D:\ENV\MSDOS622\INSTALL.BAT  one-time C: setup for MS-DOS 6.22
 D:\ENV\FREEDOS\INSTALL.BAT   one-time C: setup after a FreeDOS installer
 D:\JEMM\                     Jemm 5.87, JLOAD, QPIEMU
 D:\GAMES\<NAME>\             your games
-D:\REBEEP\                   REBEEP.COM, RBTEST.COM and AUTOLOAD.FLG, the latest build, and
+D:\REBEEP\                   REBEEP.COM, RBTEST.COM, RBSTUDIO.EXE, SPLASH.ANS, MENU.ANS,
+                             FACTORY\*.RBP and AUTOLOAD.FLG, the latest build, and
                              REBEEPD.COM, the dev-only trace build
+D:\REBEEP\PATCHES\LAB\       the lab's patch set (and KQ4\, SQ1\, FROG\): banks, never shipped
 ```
 
 D: is written by the CLI's own FAT16 writer, straight from the repo, the tool archives and your
@@ -118,7 +123,7 @@ Because `BOOT.BAT` lives on D:, changing the boot steps needs only a deploy, nev
 
 On the **ReBeep dev** entry, `BOOT.BAT` loads ReBeep high (`LH D:\REBEEP\REBEEP.COM`) after QPIEMU,
 so every boot starts with the newest build resident. `REBEEP /U` unloads it. The **Clean** entry
-loads nothing. `RBTEST.COM` is deployed beside it.
+loads nothing. The other programs are deployed beside it.
 
 ## The `vm` test suite
 
@@ -139,7 +144,7 @@ All of these refuse while that VM is running. Add `--preview` to see what would 
 
 With no baseline:
 
-- `mirror-freedos` and `slow-386sx` are rebuilt.
+- `mirror-freedos`, `slow-386sx`, `ega-msdos` and `hercules-msdos` are rebuilt.
 - `mirror-msdos` refuses unless you pass `--rebuild`, so a hand-done install is never wiped by
   accident.
 
@@ -166,12 +171,13 @@ re-pin a tool, follow the procedure in [env/AGENTS.md](../../env/AGENTS.md).
 | No sound at all, even `ECHO` + Ctrl+G | Check 86Box in the host's volume mixer, then **Action → Hard Reset** |
 | A game hangs on a black screen in `mirror-freedos` | Some old games don't run on FreeDOS. Grand Prix Circuit hangs there in both menu entries; use `mirror-msdos` |
 | `QPICHK: no QPI` | Boot the **ReBeep dev** entry. Clean has no Jemm |
+| Arrow keys and PgUp/PgDn do nothing in RBSTUDIO on `slow-386sx`, in the **ReBeep dev** entry | Likely 86Box keyboard timing on that profile with Jemm, QPIEMU and ReBeep resident, not a studio bug (not confirmed). The same keys work in the **Clean** entry, on the `mirror-*` VMs, and on a real Pentium slowed below a 386/33 with ReBeep and Jemm loaded. Use the number pad with NumLock off, or boot **Clean** |
 | `… is running. Quit 86Box first.` | Close the VM window, then retry |
 | Changes made in the 86Box settings dialog vanished | Expected. Edit the profile's `86box.cfg.tmpl` |
 
 ## Working with an AI agent
 
-The repo ships three skills for AI coding assistants, such as Claude Code, which picks them up from
+The repo ships skills for AI coding assistants, such as Claude Code, which picks them up from
 `.claude/skills/`. Agents start at [AGENTS.md](../../AGENTS.md).
 
 | Skill | What it does |
@@ -179,6 +185,8 @@ The repo ships three skills for AI coding assistants, such as Claude Code, which
 | [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build |
 | [`update-docs`](../../.claude/skills/update-docs/SKILL.md) | Keeps the docs and `AGENTS.md` files true before each commit |
 | [`release`](../../.claude/skills/release/SKILL.md) | Cuts a release: the changelog from the branch's commits, your review of the notes, the checks, the merge and the publish |
+| [`drive-dos-app`](../../.claude/skills/drive-dos-app/SKILL.md) | Drives a DOS program in a real DOSBox-X window, or a lab VM in 86Box, with typed keys and screenshots, for flows the headless checks cannot reach |
+| [`update-site`](../../.claude/skills/update-site/SKILL.md) | Changes the product page with a live three-width preview, and retakes the ReBeep Studio screenshots |
 
 For this page, its [VMs](../../.claude/skills/rebeep-dev/references/vms.md), [build and
 test](../../.claude/skills/rebeep-dev/references/build-and-test.md) and [D:

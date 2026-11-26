@@ -1,5 +1,5 @@
-; OPL2/OPL3 ports, register bases and the two channels ReBeep's one voice
-; alternates between.
+; OPL2/OPL3 ports, register bases and the two channels (or, in a four-operator
+; voice, the two channel pairs) ReBeep's one voice alternates between.
 ; SPDX-License-Identifier: MIT
 
 %ifndef OPL_INC
@@ -14,6 +14,7 @@ REG_TEST    equ 01h             ; bit 5: waveform select enable
 REG_TIMER1  equ 02h
 REG_TIMCTL  equ 04h             ; timer control and IRQ reset
 REG_NEW     equ 105h            ; bank 1: bit 0 enables OPL3 mode
+REG_4OP     equ 104h            ; bank 1: bits 0-5 join channel pairs (0,3) (1,4) (2,5) of each bank
 
 REG_AVEKSR  equ 20h             ; per operator: + offset
 REG_KSLTL   equ 40h
@@ -25,9 +26,19 @@ REG_KEYBLK  equ 0B0h
 REG_FBCNT   equ 0C0h
 
 OPL_CH_A    equ 7               ; each new note takes the other channel
-OPL_CH_B    equ 8               ; OPL_CH_A + 1: opl.asm loops from A to B
+OPL_CH_B    equ 8               ; OPL_CH_A + 1: opl.asm writes B's registers one above A's
 OP_MOD_OFS  equ 0Ah             ; channels 6-8: modulator offset = channel + 0Ah
 OP_CAR_OFS  equ 3               ; carrier offset = modulator offset + 3
+
+; Four-operator voice: bank 1's pairs 0+3 (A) and 1+4 (B), OPL3 channels 9+12 and 10+13.
+OPL4_CH_A   equ 100h            ; the first channel of pair A, bank bit included; B's is next
+OPL4_CH_B   equ OPL4_CH_A + 1
+OPL4_ENABLE equ 18h             ; REG_4OP bits 3 and 4: pairs A and B
+OPL4_OP1    equ 00h             ; pair A's operators 1 to 4: bank 1 offsets; B's are one more
+OPL4_OP2    equ 03h
+OPL4_OP3    equ 08h
+OPL4_OP4    equ 0Bh
+OPL4_CH2    equ 3               ; the pair's second channel, for C0h
 
 KEY_ON      equ 20h             ; REG_KEYBLK bit 5
 OPL3_OUT    equ 30h             ; REG_FBCNT left and right output enables

@@ -4,6 +4,34 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-26
+
+### Added
+
+- **ReBeep Studio**, a patch editor that comes in the package: shape your own FM sounds, play them on the keyboard,
+  roll random new ones, and collect them in banks you can share
+  ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md)).
+- **Your own sounds in your games:** `/P:` now takes a patch by name, whether you made it or it came with ReBeep
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
+- **Four-operator voices:** on an OPL3, a patch can use four operators for a fuller sound
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
+
+### Changed
+
+- **Ctrl+Alt+N** now switches between the faithful voice and the loaded patch
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#hotkeys)).
+
+### Removed
+
+- **`/P:1` to `/P:4`:** use `/P:ORGAN`, `/P:FLUTE`, `/P:BRASS` or `/P:BELL`. Update old boot and batch files too, or
+  ReBeep reports a bad option and doesn't load
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
+
+### Known issues
+
+- **OPL2 cards** such as an AdLib: the faithful voice hasn't been checked by ear. If it sounds wrong, pick a patch,
+  such as `REBEEP /P:ORGAN` ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
+
 ## [0.1.0] - 2026-11-21
 
 ### Added

@@ -305,8 +305,8 @@ function assertLinkInside(realRoot, realParent, linkTarget, name) {
   }
 }
 
-/** Requires the symlinks at `rels` (default: every one under `root`) to really resolve inside it; removes and reports the first that does not. */
-function assertLinksContained(root, realRoot, rels = listFiles(root)) {
+/** Requires the symlinks at `rels` (default: every one under `root`) to really resolve inside it; removes and reports the first that does not. `realRoot` is `fs.realpathSync(root)`. */
+export function assertLinksContained(root, realRoot, rels = listFiles(root)) {
   for (const rel of rels) {
     const abs = path.join(root, ...rel.split('/'));
     if (!fs.lstatSync(abs).isSymbolicLink()) continue;

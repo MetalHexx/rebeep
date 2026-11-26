@@ -72,16 +72,16 @@ kbd_isr:
         call    capture_translation_changed
         jmp     .swallow
 .cycle:
-        mov     al, [RB_STATE + RBS_VOICE]
-        inc     al
-        cmp     al, 5
-        jb      .store
-        xor     al, al
-.store:
-        mov     [RB_STATE + RBS_VOICE], al
+        test    byte [RB_STATE + RBS_PFLAGS], RBS_PF_LOADED
+        jz      .swallow                ; no patch to switch to
+        xor     byte [RB_STATE + RBS_VOICE], 1
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
         jz      .swallow
+        push    si
+        mov     al, [RB_STATE + RBS_VOICE]
+        mov     si, RB_STATE + RBS_PATCH
         call    opl_set_voice
+        pop     si
         call    capture_voice_changed
 
 .swallow:

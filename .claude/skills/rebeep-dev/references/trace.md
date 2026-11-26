@@ -18,7 +18,7 @@ empties it.
 
 1. `rebeep build run --deploy` with every VM closed, then `rebeep vm run mirror-msdos`.
 2. The user, in the VM:
-   - `REBEEP /U`, then `LH D:\REBEEP\REBEEPD` with the options under test (`/P:2`, `/R:0`, ...);
+   - `REBEEP /U`, then `LH D:\REBEEP\REBEEPD` with the options under test (`/P:FLUTE`, `/R:0`, ...);
    - play just the part that misbehaves, since the buffer fills;
    - quit to DOS, run `REBEEPD /D`, then close the VM.
    Each `/D` adds a dump, so several short runs can go into one file.

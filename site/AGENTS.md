@@ -6,10 +6,10 @@
 
 | Path | Role |
 |---|---|
-| `index.html` | The whole page. Holds the CSP meta, the video slot and the release markers |
+| `index.html` | The whole page. Holds the CSP meta, the release markers, and the monitor's channels: the studio's splash, its patch editor and the video slot |
 | `css/site.css` | All styles. Lime and green glow, one pixel font |
-| `js/site.js` | The video facade and small page behaviour. No libraries |
-| `img/` | Logo, favicons and the social card |
+| `js/site.js` | The monitor's channels, the video facade and small page behaviour. No libraries |
+| `img/` | Logo, favicons, the social card, and `studio/`: copies of `docs/images/studio` (made together by the `update-site` skill) |
 | `fonts/` | Web437 IBM VGA 8x16 (CC BY-SA 4.0), with its licence file beside it. The footer credits it |
 
 `rebeep site create` copies this folder to `build/site/` (never committed) and stamps the latest
@@ -28,7 +28,8 @@ deploys that build.
   click. With no id the slot says "coming soon".
 - Keep the CSP meta in `index.html`, and no inline `<style>`, `<script>` or `style=""`.
 - Lime and green glow only: no pink, no purple.
-- Every asset under 1 MiB (the repo guard); `site check` holds the whole build to 400 KB.
+- Every asset under 1 MiB (the repo guard); `site check` holds the build to 500 KB. A picture loads
+  only when its channel is next. The channels pause: a button, hover, focus, off screen, reduced motion.
 - **No game names in file paths.** The payload guard flags "grand prix" in a path.
 - The font's licence file stays beside the font.
 
@@ -41,7 +42,7 @@ deploys that build.
 - `workflow_run` and `workflow_dispatch` use the copy of the workflow on `main`, so the Pages
   trigger can't be tried from a PR. The first real run is the merge. The owner sets Settings, Pages,
   Source to "GitHub Actions" before it.
-- Live reload and the font-trial panel exist only in the dev server's output, never on disk.
+- Live reload, the font trial and `__dev/preview#demo` (three widths) exist only in the dev server.
 
 ## Run / test
 

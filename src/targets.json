@@ -33,6 +33,38 @@
       "root": "tests",
       "format": "bin",
       "deploy": "REBEEP"
+    },
+    {
+      "name": "RBSTUDIO.EXE",
+      "source": "studio",
+      "format": "exe",
+      "deploy": "REBEEP"
+    }
+  ],
+  "files": [
+    {
+      "source": "studio/data/SPLASH.ANS",
+      "deploy": "REBEEP"
+    },
+    {
+      "source": "studio/data/MENU.ANS",
+      "deploy": "REBEEP"
+    },
+    {
+      "source": "studio/data/FACTORY/ORGAN.RBP",
+      "deploy": "REBEEP/FACTORY"
+    },
+    {
+      "source": "studio/data/FACTORY/FLUTE.RBP",
+      "deploy": "REBEEP/FACTORY"
+    },
+    {
+      "source": "studio/data/FACTORY/BRASS.RBP",
+      "deploy": "REBEEP/FACTORY"
+    },
+    {
+      "source": "studio/data/FACTORY/BELL.RBP",
+      "deploy": "REBEEP/FACTORY"
     }
   ]
 }

@@ -73,7 +73,8 @@ note instead. A change of `/L` on a loaded copy applies to a count the game is h
 
 ## The OPL voice
 
-ReBeep plays one voice on OPL channels 7 and 8 and touches nothing else. Each new note takes the
+ReBeep plays one voice on OPL channels 7 and 8 and touches nothing else (a four-operator patch
+uses two channel pairs instead, see [Patches](#patches)). Each new note takes the
 other channel, so the note before it fades out on its own. Starting a note again on the channel
 that is still sounding would restart its wave mid-cycle, which clicks.
 
@@ -90,8 +91,39 @@ in an additive voice such as Organ the modulators too, so the voice keeps its ba
 volume. Volume 0 keys no note at all. Divisor 0 plays as 65535, block 0. The faithful voice is a
 square wave on an OPL3. An OPL2 has no square wave, so it gets a two-operator FM approximation.
 The faithful voice fades in over about a millisecond and out over about ten, so a beep never starts
-or stops on a step. The four patches (Organ, Flute, Brass, Bell) are plain FM settings. On an OPL3
-the chip stays in OPL3 mode, with both channels routed to both outputs, while ReBeep is trapping.
+or stops on a step. On an OPL3 the chip stays in OPL3 mode, with both channels routed to both
+outputs, while ReBeep is trapping.
+
+## Patches
+
+A patch is a plain FM setting in an `.RBP` text file: a `[PATCH]` section (`FORMAT=1`, an `OCTAVE`
+from 0 to 7 where 4 is the game's pitch), a required `[2OP]` section and an optional `[4OP]` one.
+Each voice has a `CONNECTION`, a `FEEDBACK` and one line of 12 numbers per operator. A file is at
+most 2048 bytes. [ReBeep Studio](../guide/studio.md) writes the same format that ReBeep's startup
+reads, and both refuse a file that breaks its rules, with the reason.
+
+**The startup loader.** ReBeep reads a patch once, at load, so nothing resident touches a file.
+The name comes from `/P:`, or from `PATCH=` in `RBSTUDIO.CFG` when there is neither `/F` nor `/P:`.
+A bare `NAME` is looked up as `USER\NAME`, then `FACTORY\NAME`, and the first file that exists
+decides. `BANK\NAME` is that file alone: a bank is a folder of patches. `FACTORY` sits beside the program; `USER` and the
+other banks sit in the patches folder, `PATCHES=` in the settings file or else `PATCHES` beside the program.
+The loader parses the file into a record, then the startup part is freed. A patch it can't use is
+a message and the faithful voice, never an exit code.
+
+**`RB_STATE`, layout 2.** The state block the command line reads over AMIS holds the patch as 53
+bytes however many patches exist: its `FOLDER\NAME`, octave, a flags byte (a patch is loaded, it
+has a four-operator variant), the 11-byte two-operator record and the 22-byte four-operator record,
+both already in register order. The voice byte says which voice plays: 0 the faithful one, 1 the
+patch. A loaded copy with a different layout number, in the first byte, is refused, because its
+bytes would be misread.
+
+**Four-operator voices.** On an OPL3, a patch with a `[4OP]` section plays on two channel pairs of
+the second register bank, 0+3 and 1+4 (OPL3 channels 9+12 and 10+13), which register `104h` joins
+into four-operator voices. Each note takes the other pair, as the two-operator voice takes the
+other channel, and keys it through the pair's first channel. The connection is one of FM-FM, AM-FM,
+FM-AM and AM-AM: the first operator pair and the second each choose FM or AM. On an OPL2, or for a
+patch without `[4OP]`, the two-operator record plays instead. Changing voice keys the old channels
+off before `104h` changes, so a note never sounds half joined.
 
 ## The fallback
 
@@ -119,7 +151,8 @@ because removing ReBeep would break that chain.
 
 The hotkey hooks `INT 09h`. It tracks Ctrl and Alt from the raw scan codes, so it still works when a
 game replaces the BIOS keyboard handler, but not when a game takes over the interrupt entirely, as
-Grand Prix Circuit does.
+Grand Prix Circuit does. Ctrl+Alt+N flips the voice byte between the faithful voice and the loaded
+patch, and does nothing when no patch is loaded.
 
 ## Performance
 
@@ -132,7 +165,7 @@ MMX 233 in 86Box:
 
 | State | `OUT 61h` | One tone change (two `OUT 42h` writes) |
 |---|---|---|
-| ReBeep loaded and trapping | 6.9 µs | 22.6 µs |
+| ReBeep loaded and trapping | 6.4 µs | 21.7 µs |
 | After `/OFF` | 0.9 µs | 1.9 µs |
 | After unload | 0.9 µs | 1.9 µs |
 
@@ -143,5 +176,40 @@ are indicative, not a real machine's.
 
 | Profile | `OUT 61h` loaded | `OUT 61h` after `/OFF` |
 |---|---|---|
-| `mirror-freedos` (86Box, Pentium MMX 233) | 6.9 µs | 0.9 µs |
+| `mirror-freedos` (86Box, Pentium MMX 233) | 6.4 µs | 0.9 µs |
 | `slow-386sx` (86Box, 386SX/16) | Not measured yet | Not measured yet |
+
+### The studio
+
+`RBSTUDIO /BENCH` times the synth screen on a sample patch with the chip silenced, each figure over at
+least 5 seconds, and writes the milliseconds per call to `BENCH.TXT`. Measured on `slow-386sx` (86Box,
+a 386SX/16) after the dev boot, ReBeep resident. "Before" is the same bench on the studio as it drew
+until then: a call per cell, and every key event a full redraw.
+
+| Figure, per call | Before | After |
+|---|---|---|
+| Full redraw, 4-OP screen | 176 ms | 119 ms |
+| Full redraw, 2-OP screen | 163 ms | 109 ms |
+| A piano key pressed and released | 352 ms | 18 ms |
+| A value changed (voice reprogrammed, undo step) | 361 ms | 112 ms |
+| Help page 1 opened over the screen | 406 ms | 352 ms |
+
+A piano key now redraws the bottom bar alone, and a modifier or a held key's repeat draws nothing. A
+value change still redraws the whole parameter grid and the band. The help's own drawing, about
+230 ms of its figure, was not changed. The envelope's sixteenth blocks cost nothing measurable: the same
+bench before and after them differs by noise.
+
+**The library.** The studio reads every patch once per run. Measured on `slow-386sx` on 1,151 patches (the
+1,000 of a test bank plus the lab set), the file reads dominating at about 60 ms a file:
+
+| Figure | Before | After |
+|---|---|---|
+| One read of the library | 70 s | 70 s: a count of 1.4 s on the checks screen, then 69 s once on the splash |
+| Waiting before the first edit | about 140 s: the checks screen, then entering the Patch Editor | 70 s, all on the splash behind a percentage; 0 s entering the Patch Editor |
+| Library block (computed from the 21-byte entry, not measured) | about 43 KB, one entry for each of the 2,048 the library could hold | about 25 KB, sized to the files |
+| `MEM` largest executable program, taken at boot | 620K | 620K: a boot figure, before the studio ran |
+
+The saving is the second pass and the wait on the checks screen, not the reads. Free memory with the library
+loaded was not measured: `MEM` was read at boot only. **The patch list**, measured on `slow-386sx` over 2,048
+patches in 34 banks, All view, selection at the end, costs by the number of banks, not of patches: a draw
+55 ms, a click on the bottom row 16 ms, PgDn 32 ms. There is no "before": the list had no banks to switch.

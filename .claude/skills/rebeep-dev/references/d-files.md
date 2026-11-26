@@ -18,7 +18,7 @@ The trace build's log, `D:\REBEEP\RBTRACE.TXT`, is fetched this way: [trace.md](
 - **Quit the VM first.** All three refuse while 86Box runs, because it holds `d.img` open and
   DOS may not have flushed its writes yet. Ask the user to quit the VM, then fetch.
 - **A deploy rebuilds D:.** `disk deploy` and `build run --deploy` drop everything DOS wrote and
-  every file added. Fetch first.
+  every file added. Fetch first; patches saved in the studio are collected as in [patches.md](patches.md).
 - **Game folders are refused.** Game files stay in `~/.rebeep/media`, never in the repo or
   `build/`.
 - **Names are 8.3.** `add` refuses any other name, and replaces a file of the same name.

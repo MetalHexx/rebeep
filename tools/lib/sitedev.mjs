@@ -1,7 +1,9 @@
 /**
- * The dev client the preview server injects into served pages, kept as strings so `tools/` stays
- * all `.mjs`. Both files are same-origin and CSP-clean: no inline `<style>`, no `style=""` markup.
- * The JS template has no backticks, `${` or backslashes, so it reaches the browser as written.
+ * The dev client the preview server injects into served pages, and the three-width preview page,
+ * kept as strings so `tools/` stays all `.mjs`. The injected script and style are same-origin and
+ * CSP-clean: no inline `<style>`, no `style=""` markup. The preview page is a tool page the server
+ * generates, not part of the site, so it is not under the site's CSP and carries its own `<style>`.
+ * No template here has backticks, `${` or backslashes, so each reaches the browser as written.
  */
 
 /** `/rebeep/__dev/dev.js`: live reload on the server's `reload` event, and the font-trial switcher. */
@@ -159,3 +161,121 @@ export const DEV_CSS = `.rebeep-dev-fonts {
   }
 }
 `;
+
+const PREVIEW_TEMPLATE = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReBeep preview (dev)</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --scale: 0.55;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px 24px 32px;
+      color: #aab0a6;
+      background: #0b0f0a;
+      font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .bar {
+      margin: 0 0 16px;
+      font-size: 11px;
+      font-weight: normal;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6f776b;
+    }
+
+    .frames {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 24px;
+    }
+
+    .frame {
+      margin: 0;
+    }
+
+    .frame--desktop {
+      --w: 1440;
+      --h: 900;
+    }
+
+    .frame--tablet {
+      --w: 768;
+      --h: 1024;
+    }
+
+    .frame--phone {
+      --w: 390;
+      --h: 844;
+    }
+
+    .frame__label {
+      margin: 0 0 8px;
+      letter-spacing: 0.04em;
+    }
+
+    .frame__box {
+      overflow: hidden;
+      width: calc(var(--w) * var(--scale) * 1px);
+      height: calc(var(--h) * var(--scale) * 1px);
+      outline: 1px solid #243022;
+    }
+
+    .frame__view {
+      display: block;
+      width: calc(var(--w) * 1px);
+      height: calc(var(--h) * 1px);
+      border: 0;
+      background: #ffffff;
+      transform: scale(var(--scale));
+      transform-origin: 0 0;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="bar">dev preview · reloads on save</h1>
+  <div class="frames">
+    <figure class="frame frame--desktop">
+      <figcaption class="frame__label">Desktop · 1440</figcaption>
+      <div class="frame__box"><iframe class="frame__view" src="@BASE@" title="Desktop, 1440 px wide"></iframe></div>
+    </figure>
+    <figure class="frame frame--tablet">
+      <figcaption class="frame__label">Tablet · 768</figcaption>
+      <div class="frame__box"><iframe class="frame__view" src="@BASE@" title="Tablet, 768 px wide"></iframe></div>
+    </figure>
+    <figure class="frame frame--phone">
+      <figcaption class="frame__label">Phone · 390</figcaption>
+      <div class="frame__box"><iframe class="frame__view" src="@BASE@" title="Phone, 390 px wide"></iframe></div>
+    </figure>
+  </div>
+  <script>
+    // A hash opens every frame at that section: __dev/preview#demo.
+    if (location.hash) {
+      document.querySelectorAll('.frame__view').forEach(function (frame) {
+        frame.src = frame.getAttribute('src') + location.hash;
+      });
+    }
+  </script>
+</body>
+</html>
+`;
+
+/**
+ * `/rebeep/__dev/preview`: the page at desktop (1440), tablet (768) and phone (390) widths side by
+ * side, each a same-origin iframe at its real width scaled down with CSS. `base` is the site's
+ * served path, e.g. `/rebeep/`. The frames reload themselves through the injected dev client. A hash on
+ * the preview's URL (`#demo`) opens every frame at that section.
+ */
+export const previewHtml = (base) => PREVIEW_TEMPLATE.replaceAll('@BASE@', base);

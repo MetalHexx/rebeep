@@ -27,13 +27,13 @@ boot menu, so your usual setup stays as it is.
 | A real DOS PC | [Set up on a real PC](real-pc.md) |
 | The 86Box emulator | [Set up in 86Box](86box.md) |
 
-Then see [playing](playing.md).
+Then see [playing](playing.md). To make a voice of your own, see [ReBeep Studio](studio.md).
 
 ## What you'll hear
 
 - The game's tunes and sound effects come from the sound card, and the PC speaker stays quiet.
-- The default voice is a square wave, close to the real speaker. There are four FM instruments to
-  pick from as well.
+- The default voice is a square wave, close to the real speaker. There are four FM patches to pick
+  from as well, and you can shape your own in [ReBeep Studio](studio.md).
 - Some sounds can't become a note, such as clicks, noise and very high pitches. They still play on
   the real speaker, unless you mute them with `REBEEP /R:0`.
 

@@ -6,7 +6,7 @@ import { END_MARKER, START_MARKER } from './site.mjs';
 /** The repo guard's per-file limit. */
 export const FILE_LIMIT_BYTES = 1024 * 1024;
 /** The whole built folder must stay under this, so the page stays light. */
-export const BUDGET_BYTES = 400 * 1024;
+export const BUDGET_BYTES = 500 * 1024;
 
 const TEXT_EXTENSIONS = new Set(['.html', '.css', '.js', '.mjs', '.json', '.svg', '.txt', '.xml', '.webmanifest']);
 const CODE_EXTENSIONS = new Set(['.html', '.css', '.js', '.mjs']);

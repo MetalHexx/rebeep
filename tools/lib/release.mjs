@@ -11,9 +11,9 @@ import { changelogEntries, changelogProblems, compareSemver } from './version.mj
 
 const WIDTH = 78;
 const MAX_LINE = 80;
-const BINARY_EXTENSIONS = new Set(['COM']);
+const BINARY_EXTENSIONS = new Set(['COM', 'EXE', 'ANS']);
 const BOOT_CONFIGS = new Set(['CONFIG.SYS', 'AUTOEXEC.BAT', 'FDCONFIG.SYS', 'FDAUTO.BAT']);
-export const PACKAGED_TARGETS = ['REBEEP.COM', 'RBTEST.COM'];
+export const PACKAGED_TARGETS = ['REBEEP.COM', 'RBTEST.COM', 'RBSTUDIO.EXE'];
 const REQUIRED_FILES = ['README.TXT', 'INSTALL.BAT', 'RBPLAY.BAT'];
 /** Package files whose `@VERSION@` is filled in with the version. */
 const VERSIONED = new Set(['README.TXT', 'INSTALL.BAT']);
@@ -189,21 +189,40 @@ function readBuildJson(repo) {
   }
 }
 
+/** The bytes of `file`, which must exist and still match its build.json `sha256`. */
+function readVerified(file, sha256) {
+  if (!fs.existsSync(file)) throw new CliError(`${file} is missing`, { hint: 'rebeep build run' });
+  const bytes = fs.readFileSync(file);
+  if (sha256Buffer(bytes) !== sha256) {
+    throw new CliError(`${file} does not match build/build.json`, { hint: 'rebeep build run' });
+  }
+  return bytes;
+}
+
 /** The build.json record of `name` and the bytes of `build/<name>`, which must still match it. */
 export function readBuiltTarget(repo, name, buildJson = readBuildJson(repo)) {
   const target = buildJson.targets?.find((t) => t.name === name);
   if (!target) throw new CliError(`build/build.json has no ${name}`, { hint: 'rebeep build run' });
-  const file = path.join(repo.build, name);
-  if (!fs.existsSync(file)) throw new CliError(`${file} is missing`, { hint: 'rebeep build run' });
-  const bytes = fs.readFileSync(file);
-  if (sha256Buffer(bytes) !== target.sha256) {
-    throw new CliError(`${file} does not match build/build.json`, { hint: 'rebeep build run' });
-  }
-  return { bytes, sha256: target.sha256 };
+  return { bytes: readVerified(path.join(repo.build, name), target.sha256), sha256: target.sha256 };
 }
 
 /**
- * Builds the package tree: the built programs, everything under `release/` except its AGENTS.md
+ * The package path of a build.json `files` entry deployed to `REBEEP` or a folder below it
+ * (`REBEEP/FACTORY` gives `FACTORY/<name>`), or null for one deployed elsewhere.
+ */
+function packagedDataPath(entry) {
+  const [root, ...below] = String(entry.deploy).split('/');
+  return root === 'REBEEP' ? [...below, entry.name].join('/') : null;
+}
+
+/** The bytes of a build.json `files` entry in `build/files/<deploy>/`, which must still match it. */
+function readBuiltDataFile(repo, entry) {
+  return readVerified(path.join(repo.build, 'files', ...String(entry.deploy).split('/'), entry.name), entry.sha256);
+}
+
+/**
+ * Builds the package tree: the built programs, the built data files deployed to `REBEEP` (at their
+ * path below it), everything under `release/` except its AGENTS.md
  * (README.TXT and INSTALL.BAT with `@VERSION@` replaced) and a generated CHANGES.TXT. Paths use `/`. `problems`
  * lists everything `checkPackageText` found, any boot config file at the top level, any `@VERSION@` left unfilled, a
  * REBEEP.COM that doesn't name the version (a stale build), and every CHANGELOG.md rule `version check` applies.
@@ -218,6 +237,10 @@ export function composeRelease(ctx, { version }) {
 
   const buildJson = readBuildJson(repo);
   for (const name of PACKAGED_TARGETS) files.push({ path: name, bytes: readBuiltTarget(repo, name, buildJson).bytes });
+  for (const entry of buildJson.files ?? []) {
+    const packaged = packagedDataPath(entry);
+    if (packaged) files.push({ path: packaged, bytes: readBuiltDataFile(repo, entry) });
+  }
 
   if (!fs.existsSync(releaseDir)) throw new CliError(`${releaseDir} is missing`);
   for (const rel of listTree(releaseDir, '').map((p) => p.slice(1)).filter((p) => p.toUpperCase() !== 'AGENTS.MD')) {

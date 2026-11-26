@@ -13,7 +13,7 @@ import {
   readRecord,
   strategyOf,
 } from '../lib/manifest.mjs';
-import { extractZip, hashTree, listFiles } from '../lib/zip.mjs';
+import { assertLinksContained, checkEntryName, extractZip, hashTree, listFiles } from '../lib/zip.mjs';
 
 /** The tools a verb applies to: the named one, else all (fetch skips on-demand tools). */
 function selectTools(manifest, name, { includeOnDemand }) {
@@ -51,6 +51,68 @@ function extractAppImage(file, dir, log) {
   return hashTree(dir);
 }
 
+/**
+ * The tar that reads xz: bsdtar by absolute path on Windows (the `tar` first on a Git Bash PATH is
+ * GNU tar, which reads `C:\...` as a remote `host:file`), else `tar` from PATH.
+ */
+function tarCommand(env) {
+  const systemRoot = env.SystemRoot ?? env.SYSTEMROOT ?? 'C:\\Windows';
+  return process.platform === 'win32' ? path.join(systemRoot, 'System32', 'tar.exe') : 'tar';
+}
+
+function runTar(tar, args) {
+  const run = spawnSync(tar, args, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    encoding: 'utf8',
+    maxBuffer: 256 * 1024 ** 2,
+    timeout: 15 * 60 * 1000,
+  });
+  if (run.error) throw new CliError(`could not run ${tar}: ${run.error.message}`);
+  return run;
+}
+
+/**
+ * Unpacks the listed top-level folders (default: everything) of a `.tar.xz` into `dir` with the
+ * host's tar, after checking every entry name the way zip entry names are checked, and returns the
+ * SHA-256 of every file written. Node has no xz decoder, hence the child process.
+ */
+function extractTarXz(file, dir, { extract, env, log }) {
+  const tar = tarCommand(env);
+  const name = path.basename(file);
+  const banner = runTar(tar, ['--version']);
+  const tarName = `${tar} (${(banner.stdout || banner.stderr).split(/\r?\n/)[0].trim() || 'unknown version'})`;
+
+  log.step(`listing ${name}`);
+  const listing = runTar(tar, ['-tf', file]);
+  if (listing.status !== 0) {
+    throw new CliError(`${tarName} cannot read ${name}: ${(listing.stderr || `exit ${listing.status}`).trim().slice(-1000)}`, {
+      hint: 'The archive is xz-compressed: use a tar with xz support (bsdtar with liblzma, or GNU tar with xz installed).',
+    });
+  }
+  // Entries may be listed as `./name`; `members` keeps the listed spelling so tar matches it.
+  const members = new Map();
+  for (const entry of listing.stdout.split(/\r?\n/).filter(Boolean)) {
+    const rel = entry.startsWith('./') ? entry.slice(2) : entry;
+    if (rel === '') continue;
+    checkEntryName(rel);
+    const top = rel.split('/')[0];
+    if (!members.has(top)) members.set(top, entry.slice(0, entry.length - rel.length) + top);
+  }
+  const wanted = (extract ?? []).map((folder) => {
+    checkEntryName(folder);
+    if (!members.has(folder)) throw new CliError(`${name} has no '${folder}' folder`);
+    return members.get(folder);
+  });
+
+  log.step(`extracting ${wanted.length ? wanted.join(', ') : name}`);
+  const unpacked = runTar(tar, ['-xf', file, '--no-same-owner', '-C', dir, ...wanted]);
+  if (unpacked.status !== 0) {
+    throw new CliError(`${tarName} failed extracting ${name}: ${(unpacked.stderr || `exit ${unpacked.status}`).trim().slice(-1000)}`);
+  }
+  assertLinksContained(dir, fs.realpathSync(dir));
+  return hashTree(dir);
+}
+
 async function fetchDownload(ctx, tool, asset, { force }) {
   const { paths, log } = ctx;
   const record = readRecord(paths, tool.name, tool.version);
@@ -68,10 +130,9 @@ async function fetchDownload(ctx, tool, asset, { force }) {
   try {
     fs.rmSync(staging, { recursive: true, force: true });
     fs.mkdirSync(staging, { recursive: true });
-    files =
-      asset.archive === 'appimage'
-        ? extractAppImage(file, staging, log)
-        : extractZip(file, staging, { stripRoot: asset.stripRoot, into: asset.into, extractor: asset.extractor, log }).files;
+    if (asset.archive === 'appimage') files = extractAppImage(file, staging, log);
+    else if (asset.archive === 'tar.xz') files = extractTarXz(file, staging, { extract: asset.extract, env: ctx.env, log });
+    else files = extractZip(file, staging, { stripRoot: asset.stripRoot, into: asset.into, extractor: asset.extractor, log }).files;
     fs.writeFileSync(
       path.join(staging, RECORD_FILE),
       `${JSON.stringify(

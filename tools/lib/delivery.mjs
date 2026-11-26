@@ -11,6 +11,9 @@ const DIR_ENTRY_BYTES = 32;
 /** `BOOT.BAT` loads a deployed target only when this file sits next to it. */
 const AUTOLOAD_FLAG = 'AUTOLOAD.FLG';
 const AUTOLOAD_BYTES = Buffer.from('autoload\r\n');
+/** Where the lab's patch set lands: banks in the studio's default patches folder. */
+const PATCHES_DIR = 'REBEEP/PATCHES';
+const LAB_BANK = `${PATCHES_DIR}/LAB`;
 
 const fileNames = (dir) =>
   fs
@@ -83,6 +86,32 @@ function envFiles(repo) {
     for (const name of fileNames(dir)) files.push(textFile(path.join(dir, name), `ENV/${dos.toUpperCase()}/${name}`));
   }
   return files;
+}
+
+/**
+ * The lab's patch set (`repo.labPatches`, the rebeep-dev skill's `patches/`), as banks the studio lists on
+ * every VM, CRLF: every `.RBP` at its top goes to `REBEEP/PATCHES/LAB/`, and each folder in it is a bank of
+ * its own name (`KQ4/` goes to `REBEEP/PATCHES/KQ4/`). A dev aid only: `release create` never reads it. No
+ * folder, no files and no warning.
+ */
+function labPatchFiles(repo) {
+  if (!repo.labPatches || !fs.existsSync(repo.labPatches)) return [];
+  const bank = (dir, dest) =>
+    fileNames(dir)
+      .filter((name) => /\.rbp$/i.test(name))
+      .map((name) => {
+        const bytes = toCrlf(fs.readFileSync(path.join(dir, name)));
+        return { path: `${dest}/${name.toUpperCase()}`, bytes, size: bytes.length };
+      });
+  const folders = fs
+    .readdirSync(repo.labPatches, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort();
+  return [
+    ...bank(repo.labPatches, LAB_BANK),
+    ...folders.flatMap((name) => bank(path.join(repo.labPatches, name), `${PATCHES_DIR}/${name.toUpperCase()}`)),
+  ];
 }
 
 function jemmFiles(ctx, warnings) {
@@ -229,12 +258,24 @@ function buildFiles(ctx, warnings) {
       }
     }
   }
+  // Data files from targets.json; the folders they sit in are created with them.
+  for (const data of Array.isArray(manifest.files) ? manifest.files : []) {
+    const where = `${data.deploy}/${data.name}`;
+    const source = path.join(ctx.repo.build, 'files', ...String(data.deploy).split('/'), String(data.name));
+    if (/[\\/]/.test(String(data.name)) || where.includes('\\') || nameProblem(where)) {
+      warnings.push(`data file ${where} skipped: not a valid 8.3 path`);
+    } else if (!fs.existsSync(source)) {
+      warnings.push(`data file ${where} is listed in build.json but missing from build/files/`);
+    } else {
+      files.push({ path: where, read: () => fs.readFileSync(source), size: fs.statSync(source).size });
+    }
+  }
   return files;
 }
 
 /**
  * Composes the D: delivery disk from the repo's DOS boot files, the fetched JEMM tool, the
- * imported games and the latest build. Returns `{ files, dirs, warnings, skipped }`; `files` and
+ * imported games, the latest build and the lab's patch set. Returns `{ files, dirs, warnings, skipped }`; `files` and
  * `dirs` go straight to `buildImage`. Names that are not 8.3 are left out, listed in `skipped` and
  * reported in `warnings`. Pass the disk's profile section as `d` (`{ geometry, clusterSize }`) so
  * that games which would not fit are skipped, in name order, instead of failing the whole disk.
@@ -242,7 +283,12 @@ function buildFiles(ctx, warnings) {
 export function composeDelivery(ctx, { d } = {}) {
   const warnings = [];
   const skipped = [];
-  const base = [...envFiles(ctx.repo), ...jemmFiles(ctx, warnings), ...buildFiles(ctx, warnings)];
+  const base = [
+    ...envFiles(ctx.repo),
+    ...jemmFiles(ctx, warnings),
+    ...buildFiles(ctx, warnings),
+    ...labPatchFiles(ctx.repo),
+  ];
   const kept = [];
   for (const file of base) {
     const problem = nameProblem(file.path);

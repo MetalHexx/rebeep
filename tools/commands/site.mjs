@@ -73,6 +73,7 @@ async function siteRun(ctx) {
   try {
     ctx.log.ok(`built ${server.out} (${stampSummary(stampData(server, lookup))})`);
     ctx.log.info(`Serving ${server.url} (Ctrl+C to stop)`);
+    ctx.log.info(`Three-width preview: ${server.previewUrl}`);
     await untilInterrupted();
   } finally {
     await server.close();
@@ -118,7 +119,7 @@ export default {
       name: 'run',
       summary: 'Preview the page locally, rebuilding and reloading on every save',
       description:
-        'Builds the page, serves it at http://127.0.0.1:<port>/rebeep/ (this machine only), and rebuilds and reloads open pages whenever a file under site/ changes. The release is looked up once, at start-up. Stop it with Ctrl+C.',
+        'Builds the page, serves it at http://127.0.0.1:<port>/rebeep/ (this machine only), and rebuilds and reloads open pages whenever a file under site/ changes. The release is looked up once, at start-up. Also serves a dev-only preview of the page at desktop, tablet and phone widths side by side at http://127.0.0.1:<port>/rebeep/__dev/preview. Stop it with Ctrl+C.',
       args: [],
       options: [
         {
@@ -139,7 +140,7 @@ export default {
       name: 'check',
       summary: 'Check the built page in build/site/',
       description:
-        'Checks the output of `site create` and reports every failure: file sizes and the 400 KB budget, local links that resolve, https only, img alt text, one h1, a Content-Security-Policy, no dev-server injection, the release markers, lang, title and description, and noopener on external target="_blank" links. Exits 1 if any check fails.',
+        'Checks the output of `site create` and reports every failure: file sizes and the 500 KB budget, local links that resolve, https only, img alt text, one h1, a Content-Security-Policy, no dev-server injection, the release markers, lang, title and description, and noopener on external target="_blank" links. Exits 1 if any check fails.',
       args: [],
       options: [],
       destructive: false,

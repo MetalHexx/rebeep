@@ -10,6 +10,7 @@ From a fresh clone to a booted DOS VM with ReBeep's environment loaded.
 | About 4 GB free | for 86Box, its ROMs, the VM disks and their baselines (`env check` warns below 4 GB) |
 | Linux/macOS only: NASM ≥ 2.16 | `nasm -v` (`sudo apt install nasm`, `brew install nasm`) |
 | Linux only, for the DOS test suite: DOSBox-X | `dosbox-x --version` (distro package or Flatpak) |
+| A `tar` that reads xz, to unpack Open Watcom | Windows: its own `System32\tar.exe`. Linux: GNU tar with `xz-utils`. macOS: its own `tar` |
 
 Then check the host:
 
@@ -91,7 +92,27 @@ Its 1990 Award BIOS forgets the disks when it loads defaults, so the first boot 
 4. Set **Drive A:** to **1.44M, 3½ in.**, then **F10** to save.
 5. Once it boots, quit 86Box and `rebeep vm snapshot slow-386sx`.
 
+The EGA profile, for the studio's 14-line font, and the Hercules profile, for its mono view, clone
+the same baseline and need only the F1:
+
+```sh
+rebeep vm create ega-msdos
+rebeep vm run ega-msdos
+rebeep vm create hercules-msdos
+rebeep vm run hercules-msdos
+```
+
+On each, press **F1** at the CMOS message, and once it reaches the DOS prompt, quit 86Box and
+`rebeep vm snapshot <vm>`.
+
 ## 4. Everyday loop
+
+[ReBeep Studio](../architecture/studio.md) is C, so the build needs Open Watcom once. `tool fetch` downloads the pinned snapshot
+and unpacks it with the `tar` from the prerequisites:
+
+```sh
+rebeep tool fetch open-watcom
+```
 
 ```sh
 rebeep build run --deploy      # edit src/, assemble, rewrite every VM's D:
@@ -121,7 +142,7 @@ Tried it on Linux or macOS? A PR adding your result to this table is very welcom
 
 ## Working with an AI agent
 
-The repo ships three skills for AI coding assistants, such as Claude Code, which picks them up from
+The repo ships skills for AI coding assistants, such as Claude Code, which picks them up from
 `.claude/skills/`. Agents start at [AGENTS.md](../../AGENTS.md).
 
 | Skill | What it does |
@@ -129,6 +150,8 @@ The repo ships three skills for AI coding assistants, such as Claude Code, which
 | [`rebeep-dev`](../../.claude/skills/rebeep-dev/SKILL.md) | Drives the lab through the `rebeep` CLI: environment, VMs, build and deploy, tests, D: files, the trace build |
 | [`update-docs`](../../.claude/skills/update-docs/SKILL.md) | Keeps the docs and `AGENTS.md` files true before each commit |
 | [`release`](../../.claude/skills/release/SKILL.md) | Cuts a release: the changelog from the branch's commits, your review of the notes, the checks, the merge and the publish |
+| [`drive-dos-app`](../../.claude/skills/drive-dos-app/SKILL.md) | Drives a DOS program in a real DOSBox-X window, or a lab VM in 86Box, with typed keys and screenshots, for flows the headless checks cannot reach |
+| [`update-site`](../../.claude/skills/update-site/SKILL.md) | Changes the product page with a live three-width preview, and retakes the ReBeep Studio screenshots |
 
 For this page, its [environment](../../.claude/skills/rebeep-dev/references/environment.md) and
 [VMs](../../.claude/skills/rebeep-dev/references/vms.md) references cover setup, media and first

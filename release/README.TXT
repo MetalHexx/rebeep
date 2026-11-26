@@ -8,9 +8,10 @@ Contents
   2  Getting Jemm
   3  Setting up
   4  Options and hotkeys
-  5  Testing with RBTEST
-  6  Troubleshooting
-  7  License and contact
+  5  ReBeep Studio
+  6  Testing with RBTEST
+  7  Troubleshooting
+  8  License and contact
 
 The same guide, with more detail, is online:
 
@@ -75,10 +76,14 @@ ReBeep loads on every boot.
      INSTALL /I installs and INSTALL /U updates without the menu. The
      menu needs CHOICE, which MS-DOS 5 lacks, so use them there.
 
+     If ReBeep is already loaded, reboot to load the new copy.
+
      If INSTALL fails, copy the files by hand:
 
        MD C:\REBEEP
        COPY A:\*.* C:\REBEEP
+       MD C:\REBEEP\FACTORY
+       COPY A:\FACTORY\*.* C:\REBEEP\FACTORY
 
   3. Add the ReBeep entry. With no boot menu yet, make CONFIG.SYS look
      like this. Move your own HIMEM.SYS and EMM386.EXE lines into
@@ -153,14 +158,15 @@ JEMMEX.EXE in CONFIG.SYS. If Jemm is not in C:\JEMM, set RBJEMM first:
 
 4 Options and hotkeys
 ---------------------
-  REBEEP [/F | /P:n] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
+  REBEEP [/F | /P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
 
   /F      faithful square-wave voice (default)
-  /P:n    built-in patch n, 1 to 4: 1 Organ, 2 Flute, 3 Brass, 4 Bell
+  /P:name a patch: FOLDER\NAME, or NAME from USER then FACTORY (the four that
+          come with ReBeep are ORGAN, FLUTE, BRASS and BELL)
   /V:n    volume, 0 to 15 (default 12)
   /L:n    notes below 20 Hz: 0 silent (default), 1 played
   /R:n    sounds it can't translate: 1 speaker (default), 0 muted
-  /K:xy   Ctrl+Alt+x toggles, Ctrl+Alt+y cycles the voice (default BN)
+  /K:xy   Ctrl+Alt+x toggles, Ctrl+Alt+y switches the voice (default BN)
   /ON     trap the speaker again
   /OFF    stop trapping and release the OPL to the game
   /S      status
@@ -168,7 +174,9 @@ JEMMEX.EXE in CONFIG.SYS. If Jemm is not in C:\JEMM, set RBJEMM first:
   /?      this help
 
 /S, /U, /ON and /OFF act only on a loaded copy. On a loaded copy, any
-other option changes only what it names.
+other option changes only what it names. With neither /F nor /P:, a PATCH=
+line in RBSTUDIO.CFG (section 5) picks the patch at load. A patch ReBeep
+can't use is a message, and the faithful voice plays.
 
 Some games use a pitch below 20 Hz as a rest, as Grand Prix Circuit's
 engine does. /L:0 keeps those silent, close to what the real speaker
@@ -182,7 +190,7 @@ as Grand Prix Circuit's percussion.
 Hotkeys, with the defaults:
 
   Ctrl+Alt+B   turn translation on or off
-  Ctrl+Alt+N   cycle the voice
+  Ctrl+Alt+N   switch between the faithful voice and the patch
 
 Exit codes, also in ERRORLEVEL:
 
@@ -193,7 +201,49 @@ Exit codes, also in ERRORLEVEL:
    4  no OPL at 388h            9  other failure
 
 
-5 Testing with RBTEST
+5 ReBeep Studio
+----------------
+RBSTUDIO.EXE is a full-screen editor for FM patches: shape a voice, play it
+on the keyboard, save it, then hear it in a game. It needs an OPL2 or OPL3
+at 388h. If ReBeep is loaded, the studio switches it off while it runs and
+on again when you quit.
+
+  RBSTUDIO [/VIEW:MONO] [/TRACE] [/?]
+
+  /VIEW:MONO  force the mono view (a monochrome display is noticed without it)
+  /TRACE      log every FM chip write and key press to RBSTUDIO.LOG
+  /?          help
+
+Its keys are on screen under F1. The main ones: Up and Down move between
+rows, Left and Right change a value, Z to M and Q to P play notes, F12
+rolls a random sound and F11 nudges it, Ctrl+S opens the Save dialog and
+Esc steps back.
+
+Patches are .RBP text files in banks, which are folders:
+
+  FACTORY   ORGAN, FLUTE, BRASS and BELL. INSTALL replaces it on an update.
+  USER      your patches, and where the Save dialog starts. A USER patch
+            named like a factory one overrides it for /P:name.
+  banks     any other folder in the patches folder, such as HEXX. Use them
+            as /P:HEXX\ORGAN. The Save dialog can save into one, or make a
+            new one. AdLib .BNK files are not read.
+
+USER and the other banks are in the PATCHES folder beside RBSTUDIO.EXE.
+To hear a patch in a game, save it in the studio, then run REBEEP /P:name
+before the game, and press Ctrl+Alt+N to switch between it and the
+faithful voice.
+
+RBSTUDIO.CFG, beside RBSTUDIO.EXE, is optional. INSTALL never creates it or
+overwrites it. SAMPLES\RBSTUDIO.CFG is a commented example to copy:
+
+  PATCHES=D:\MYSOUNDS   where USER and the banks are (default: PATCHES)
+  PATCH=FLUTE          the patch REBEEP loads with neither /F nor /P:
+
+RBSTUDIO.LOG, beside the program, records each run and every patch file it
+left out, and why.
+
+
+6 Testing with RBTEST
 ---------------------
 RBTEST.COM plays speaker test cases. Run it with no options for a menu:
 keys 0 to 9 play a case, and Esc quits. Its options are:
@@ -210,7 +260,7 @@ keys 0 to 9 play a case, and Esc quits. Its options are:
 RBTEST exits with 0 when every check passed, and 1 otherwise.
 
 
-6 Troubleshooting
+7 Troubleshooting
 -----------------
 Messages, and what to do about each:
 
@@ -251,6 +301,13 @@ Messages, and what to do about each:
   "DOS would not free ReBeep's memory."
       Reboot to clear the resident copy.
 
+  "Patch NAME not used: ... Playing the faithful voice."
+      ReBeep could not use the patch. The reason follows: "not found in USER
+      or FACTORY" means no NAME.RBP in either folder (a patch in another
+      bank needs its bank, /P:HEXX\ORGAN). "folder does not exist" means
+      the PATCHES= folder is missing. Anything about the file itself names
+      a line to fix in a text editor.
+
 Other problems:
 
   Games with their own FM music
@@ -262,7 +319,7 @@ Other problems:
   A hotkey that does not fire
       Some games, such as Grand Prix Circuit, take over the keyboard
       interrupt, so Ctrl+Alt keys do nothing in them. They still work at
-      the DOS prompt. Set the voice (REBEEP /F or REBEEP /P:n), or run
+      the DOS prompt. Set the voice (REBEEP /F or REBEEP /P:name), or run
       REBEEP /OFF, before you start the game.
 
   Games that toggle the speaker heavily
@@ -270,7 +327,7 @@ Other problems:
       ReBeep translates. Run REBEEP /OFF before starting it.
 
 
-7 License and contact
+8 License and contact
 ---------------------
 ReBeep is released under the MIT License. See LICENSE in the source
 repository. Source and issues:
