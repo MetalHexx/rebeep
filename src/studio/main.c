@@ -2,6 +2,7 @@
 #include <conio.h>
 #include <dos.h>
 #include <i86.h>
+#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,7 +26,10 @@
 
 #define BENCH_FILE "BENCH.TXT"
 #define BENCH_TICKS 92UL          /* each figure runs at least this many BIOS ticks: just over 5 s */
-#define BENCH_FIGURES 5
+#define BENCH_FIGURES 8
+#define BENCH_LIST 2048           /* the patch list figures: this many entries ... */
+#define BENCH_LIST_BANKS 34       /* ... in this many banks (FACTORY, USER and 32 more) */
+#define BENCH_LIST_BOTTOM 15      /* the list's bottom row */
 #define BENCH_LINE 96
 #define BENCH_PIANO 0x2C          /* the Z key: piano key 0, not held in the sample editor */
 #define TICKS_PER_DAY 0x1800B0UL
@@ -45,6 +49,7 @@ static Detect detect;         /* what the detection log found: the help names th
 static Editor editor;
 static char last_patch[20];   /* FOLDER\NAME of the patch opened last: the list opens on it */
 static char list_msg[80];     /* why the last patch would not open, shown under the list */
+static int list_view;         /* the patch list's view (0 All, else a bank), kept for the run */
 
 static void usage(void)
 {
@@ -52,7 +57,7 @@ static void usage(void)
     printf("Usage: RBSTUDIO [/VIEW:MONO] [/TRACE] [/BENCH] [/DUMP:<screen> /O:<file>]\n");
     printf("  /VIEW:MONO  draw for a monochrome display\n");
     printf("  /TRACE      log every OPL register write and key event to RBSTUDIO.LOG\n");
-    printf("  /BENCH      time the synth screen, print the figures and write %s\n", BENCH_FILE);
+    printf("  /BENCH      time the synth screen and the patch list, print the figures and write %s\n", BENCH_FILE);
     printf("  /DUMP:name  draw a reference screen with its sample data; /O:file is the text screen written\n");
     printf("  /?          show this help\n");
 }
@@ -338,6 +343,28 @@ static void run_synth(Editor *ed, Library *lib)
     editor_release(ed);
 }
 
+/* The list's movement that a key's binding makes. */
+static int list_move_of(int id)
+{
+    switch (id) {
+    case KID_UP: return LIST_UP;
+    case KID_DOWN: return LIST_DOWN;
+    case KID_PGUP: return LIST_PGUP;
+    case KID_PGDN: return LIST_PGDN;
+    case KID_HOME: return LIST_HOME;
+    default: return LIST_END;
+    }
+}
+
+/* Steps the list to the next (1) or previous (-1) view: the patch stays selected when the view lists it, else the view's
+   first does, and the list starts from its top. */
+static void switch_view(int *sel, int *top, int dir)
+{
+    list_view = list_view_step(&patch_lib, list_view, dir);
+    *sel = list_view_pick(&patch_lib, list_view, *sel);
+    *top = 0;
+}
+
 /* The Patch Editor: the list of patches, then the synth screen of the one chosen. Esc steps back a level. */
 static void run_patch_editor(void)
 {
@@ -362,6 +389,7 @@ static void run_patch_editor(void)
     }
     found = last_patch[0] != '\0' ? lib_find(&patch_lib, last_patch) : -1;
     if (found >= 0) sel = found;
+    sel = list_view_pick(&patch_lib, list_view, sel);
     list_msg[0] = '\0';
     key_pressed();
     was_down = mouse_read(&mx, &my) & 1;
@@ -372,18 +400,27 @@ static void run_patch_editor(void)
         int down;
 
         while (kbd_next(&event) && !open && !back) {
-            switch (key_lookup(K_MENU, event, key_mods())) {
+            int id = key_lookup(K_MENU, event, key_mods());
+
+            switch (id) {
             case KID_UP:
-                if (sel > 0) {
-                    sel--;
+            case KID_DOWN:
+            case KID_PGUP:
+            case KID_PGDN:
+            case KID_HOME:
+            case KID_END: {
+                int to = list_move(&patch_lib, list_view, sel, list_move_of(id));
+
+                if (to != sel) {
+                    sel = to;
                     redraw = 1;
                 }
                 break;
-            case KID_DOWN:
-                if (sel + 1 < lib_count(&patch_lib)) {
-                    sel++;
-                    redraw = 1;
-                }
+            }
+            case KID_LEFT:
+            case KID_RIGHT:
+                switch_view(&sel, &top, id == KID_RIGHT ? 1 : -1);
+                redraw = 1;
                 break;
             case KID_ENTER:
                 open = 1;
@@ -399,8 +436,13 @@ static void run_patch_editor(void)
 
         down = mouse_read(&mx, &my) & 1;
         if (down && !was_down && !open && !back) {
-            int hit = list_item_at(&patch_lib, top, mx, my);
+            int arrow = list_arrow_at(&patch_lib, list_view, mx, my);
+            int hit = list_item_at(&patch_lib, list_view, top, mx, my);
 
+            if (arrow != 0) {
+                switch_view(&sel, &top, arrow);
+                redraw = 1;
+            }
             if (hit >= 0) {
                 unsigned long now = bios_ticks();
 
@@ -423,6 +465,7 @@ static void run_patch_editor(void)
                 list_msg[0] = '\0';
                 run_synth(&editor, &patch_lib);
                 sel = editor.pos - 1;
+                list_view = list_view_back(&patch_lib, list_view, sel);
                 was_down = mouse_read(&mx, &my) & 1;
             } else {
                 log_line("Cannot open %s\\%s: %s", en.folder, en.name, list_msg);
@@ -430,8 +473,8 @@ static void run_patch_editor(void)
             redraw = 1;
         }
         if (redraw && !back) {
-            top = list_scroll(&patch_lib, sel, top);
-            list_draw(&patch_lib, sel, top, list_msg);
+            top = list_scroll(&patch_lib, list_view, sel, top);
+            list_draw(&patch_lib, list_view, sel, top, list_msg);
             scr_flush();
             redraw = 0;
         }
@@ -608,6 +651,54 @@ static void bench_help(void)
     editor_help(&editor, 0);
 }
 
+/* The patch list figures run over a library of BENCH_LIST entries built in memory, All view, the selection at the end:
+   the draw as the list makes it, a click on the bottom row, and a PgDn. */
+static Library bench_lib;
+static int bench_top;
+
+static int bench_list_build(void)
+{
+    Entry __far *rows = (Entry __far *)_fmalloc(sizeof(Entry) * BENCH_LIST);
+    int i;
+
+    if (rows == NULL) return -1;
+    for (i = 0; i < BENCH_LIST; i++) {
+        Entry en;
+        int bank = (int)((long)i * BENCH_LIST_BANKS / BENCH_LIST);
+
+        memset(&en, 0, sizeof en);
+        if (bank == 0) strcpy(en.folder, "FACTORY");
+        else if (bank == 1) strcpy(en.folder, "USER");
+        else sprintf(en.folder, "B%02d", bank);
+        sprintf(en.name, "P%04d", i);
+        en.octave = 4;
+        rows[i] = en;
+    }
+    memset(&bench_lib, 0, sizeof bench_lib);
+    bench_lib.entries = rows;
+    bench_lib.count = BENCH_LIST;
+    bench_lib.cap = BENCH_LIST;
+    bench_top = list_scroll(&bench_lib, 0, BENCH_LIST - 1, 0);
+    return 0;
+}
+
+static void bench_list_draw(void)
+{
+    bench_top = list_scroll(&bench_lib, 0, BENCH_LIST - 1, 0);
+    list_draw(&bench_lib, 0, BENCH_LIST - 1, bench_top, NULL);
+    scr_flush();
+}
+
+static void bench_list_click(void)
+{
+    list_item_at(&bench_lib, 0, bench_top, 10, BENCH_LIST_BOTTOM);
+}
+
+static void bench_list_page(void)
+{
+    list_move(&bench_lib, 0, BENCH_LIST - 1, LIST_PGDN);
+}
+
 /* Runs `call` for at least BENCH_TICKS from a tick edge and writes a line with the time per call. */
 static void bench_time(const char *name, void (*call)(void), char *line)
 {
@@ -629,7 +720,8 @@ static void bench_time(const char *name, void (*call)(void), char *line)
             elapsed * TICK_US / 1000UL);
 }
 
-/* Times the synth screen on the sample editor with the chip silenced: the figures in `lines`, one each. */
+/* Times the synth screen on the sample editor with the chip silenced, then the patch list: the figures in `lines`, one
+   each. */
 static void bench_run(char lines[BENCH_FIGURES][BENCH_LINE])
 {
     static const struct {
@@ -638,7 +730,9 @@ static void bench_run(char lines[BENCH_FIGURES][BENCH_LINE])
         void (*call)(void);
     } figure[BENCH_FIGURES] = {
         {"Redraw, 4-OP", 4, bench_redraw}, {"Redraw, 2-OP", 2, bench_redraw}, {"Piano key, 4-OP", 4, bench_key},
-        {"Value change, 4-OP", 4, bench_value}, {"Help page 1, 4-OP", 4, bench_help}
+        {"Value change, 4-OP", 4, bench_value}, {"Help page 1, 4-OP", 4, bench_help},
+        {"List draw, 2048", 4, bench_list_draw}, {"List click, 2048", 4, bench_list_click},
+        {"List PgDn, 2048", 4, bench_list_page}
     };
     int i;
 
@@ -691,12 +785,20 @@ static int run_bench(void)
     sample_detect(&detect);
     bench_library(lines[BENCH_FIGURES]);
     video_init();
+    if (bench_list_build() != 0) {
+        video_restore();
+        opl_shutdown();
+        editor_done();
+        printf("Out of memory for the patch list figures\n");
+        return EXIT_IO;
+    }
     bench_run(lines);
+    lib_free(&bench_lib);
     video_restore();
     opl_shutdown();
     editor_done();
 
-    sprintf(head, "RBSTUDIO %s bench: the synth screen, each figure over at least 5 s", REBEEP_VERSION);
+    sprintf(head, "RBSTUDIO %s bench: the synth screen and the patch list, each figure over at least 5 s", REBEEP_VERSION);
     out = fopen(BENCH_FILE, "w");
     printf("%s\n", head);
     if (out != NULL) ok = fprintf(out, "%s\n", head) >= 0;

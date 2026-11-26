@@ -21,6 +21,8 @@
 #define SCAN_F1 0x3B
 #define SCAN_F11 0x57
 #define SCAN_F12 0x58
+#define SCAN_HOME 0x47
+#define SCAN_END 0x4F
 #define SCAN_UP 0x48
 #define SCAN_PGUP 0x49
 #define SCAN_LEFT 0x4B
@@ -33,6 +35,12 @@ const KeyBinding key_table[] = {
     {KID_DOWN, K_MENU, SCAN_DOWN, 0},
     {KID_ENTER, K_MENU, SCAN_ENTER, 0},
     {KID_ESC, K_MENU, SCAN_ESC, 0},
+    {KID_LEFT, K_MENU, SCAN_LEFT, 0},
+    {KID_RIGHT, K_MENU, SCAN_RIGHT, 0},
+    {KID_PGUP, K_MENU, SCAN_PGUP, 0},
+    {KID_PGDN, K_MENU, SCAN_PGDN, 0},
+    {KID_HOME, K_MENU, SCAN_HOME, 0},
+    {KID_END, K_MENU, SCAN_END, 0},
     {KID_ESC, K_SYNTH, SCAN_ESC, 0},
     {KID_UP, K_SYNTH, SCAN_UP, 0},
     {KID_DOWN, K_SYNTH, SCAN_DOWN, 0},

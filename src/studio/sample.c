@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: MIT */
+#include <malloc.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "roles.h"
@@ -7,7 +9,7 @@
 #define SAMPLE_VERSION "0.1.0"
 #define SPLASH_SAMPLE_PERCENT 45
 
-/* The patch list sample: three folders, USER\BELL selected. */
+/* The patch list sample's first nine rows: three folders, USER\BELL selected in the All view. */
 static const struct {
     const char *folder;
     const char *name;
@@ -18,7 +20,6 @@ static const struct {
     {"USER", "SLAPBASS", 0, 4, 0}, {"HEXX", "ELEC_GTR", 0, 4, 0}, {"HEXX", "ORGAN", 0, 4, 0}
 };
 #define LIST_SAMPLE_ROWS ((int)(sizeof list_rows / sizeof list_rows[0]))
-#define LIST_SAMPLE_SELECTED 4
 
 /* BRASS as the mockup's first sample patch: 4-OP then 2-OP operators in the P_* order. */
 static const unsigned char brass4[4][P_COUNT] = {
@@ -85,26 +86,73 @@ void sample_editor(Editor *e, int variant)
     e->msgRole = R_TEXT;
 }
 
-static void sample_list(void)
+#define LAB_COUNT 6
+#define KQ4_COUNT 45
+#define SQ1_COUNT 96
+#define LIST_SAMPLE_TOTAL (LIST_SAMPLE_ROWS + KQ4_COUNT + LAB_COUNT + SQ1_COUNT)
+
+static const char *const lab_names[LAB_COUNT] = {"BELL", "BELL-2", "DRUMS-1", "JAZZELEC", "POKEMON", "SUBBASS"};
+
+static void put_entry(Entry __far *out, const char *folder, const char *name, int has4, int octave, int overrides)
 {
-    static Library lib;
-    static Entry rows[LIST_SAMPLE_ROWS];
+    Entry en;
+
+    memset(&en, 0, sizeof en);
+    strcpy(en.folder, folder);
+    strcpy(en.name, name);
+    en.has4 = (unsigned char)has4;
+    en.octave = (unsigned char)octave;
+    en.overrides = (unsigned char)overrides;
+    *out = en;
+}
+
+/* The sample library, built into a far block: the nine rows above, then the banks KQ4, LAB and SQ1 (the lab set's
+   files: TKQ4-000, TKQ4-002, TKQ4-005 to 047; six named patches; TSQ1-000 to 095), 2-op at octave 4. Returns NULL when
+   memory runs out. */
+static Entry __far *sample_entries(void)
+{
+    Entry __far *rows = (Entry __far *)_fmalloc(sizeof(Entry) * LIST_SAMPLE_TOTAL);
+    char name[9];
+    int at = 0;
     int i;
 
-    for (i = 0; i < LIST_SAMPLE_ROWS; i++) {
-        strcpy(rows[i].folder, list_rows[i].folder);
-        strcpy(rows[i].name, list_rows[i].name);
-        rows[i].has4 = list_rows[i].has4;
-        rows[i].octave = list_rows[i].octave;
-        rows[i].overrides = list_rows[i].overrides;
+    if (rows == NULL) return NULL;
+    for (i = 0; i < LIST_SAMPLE_ROWS; i++, at++) {
+        put_entry(&rows[at], list_rows[i].folder, list_rows[i].name, list_rows[i].has4, list_rows[i].octave,
+                  list_rows[i].overrides);
     }
-    lib.entries = rows;
-    lib.count = LIST_SAMPLE_ROWS;
-    list_draw(&lib, LIST_SAMPLE_SELECTED, 0, NULL);
+    for (i = 0; i < KQ4_COUNT; i++, at++) {
+        sprintf(name, "TKQ4-%03d", i < 2 ? i * 2 : i + 3);
+        put_entry(&rows[at], "KQ4", name, 0, 4, 0);
+    }
+    for (i = 0; i < LAB_COUNT; i++, at++) put_entry(&rows[at], "LAB", lab_names[i], 0, 4, 0);
+    for (i = 0; i < SQ1_COUNT; i++, at++) {
+        sprintf(name, "TSQ1-%03d", i);
+        put_entry(&rows[at], "SQ1", name, 0, 4, 0);
+    }
+    return rows;
+}
+
+/* The patch list: the All view with USER\BELL selected, or (`bank`) the bank view of KQ4 with its first patch. */
+static void sample_list(int bank)
+{
+    Library lib;
+    int sel;
+    int view = 0;
+
+    memset(&lib, 0, sizeof lib);
+    lib.entries = sample_entries();
+    if (lib.entries == NULL) return;
+    lib.count = LIST_SAMPLE_TOTAL;
+    lib.cap = LIST_SAMPLE_TOTAL;
+    sel = lib_find(&lib, bank ? "KQ4\\TKQ4-000" : "USER\\BELL");
+    if (bank) view = list_view_back(&lib, 1, sel);
+    list_draw(&lib, view, sel, list_scroll(&lib, view, sel, 0), NULL);
+    lib_free(&lib);
 }
 
 static const char *const SAMPLE_SCREENS[] = {
-    "detectlog", "splash", "splash-load", "menu", "patchlist", "synth-4op", "synth-2op", "help1-4op", "help2-4op", "help1-2op",
+    "detectlog", "splash", "splash-load", "menu", "patchlist", "patchlist-bank", "synth-4op", "synth-2op", "help1-4op", "help2-4op", "help1-2op",
     "help2-2op", "save-4op", "save-2op", "savedlg-4op"
 };
 
@@ -178,8 +226,8 @@ void sample_draw(const char *screen)
         splash_loading(SPLASH_SAMPLE_PERCENT);
     } else if (stricmp(screen, "menu") == 0) {
         menu_draw(MENU_PATCHES);
-    } else if (stricmp(screen, "patchlist") == 0) {
-        sample_list();
+    } else if (stricmp(screen, "patchlist") == 0 || stricmp(screen, "patchlist-bank") == 0) {
+        sample_list(stricmp(screen, "patchlist-bank") == 0);
     } else if (stricmp(screen, "synth-4op") == 0 || stricmp(screen, "synth-2op") == 0) {
         Editor e;
 

@@ -5,7 +5,7 @@
 
 /* Contexts. K_GLOBAL bindings work in every context. */
 #define K_GLOBAL 0
-#define K_MENU 1     /* the menu and the patch list */
+#define K_MENU 1     /* the menu and the patch list (the menu and the "coming soon" page ignore what only the list uses) */
 #define K_SYNTH 2
 #define K_HELP 3     /* the help overlay: page flip and close */
 #define K_PROMPT 4   /* the unsaved-changes prompt: its buttons and their first letters */
@@ -41,6 +41,8 @@
 #define KID_MUTATE 27
 #define KID_BANK_PREV 28   /* Ctrl+PgUp and Ctrl+PgDn: the first patch of the previous or next bank */
 #define KID_BANK_NEXT 29
+#define KID_HOME 30   /* the patch list: the view's first and last patch */
+#define KID_END 31
 
 #define MOD_SHIFT 1
 #define MOD_CTRL 2

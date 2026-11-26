@@ -1,5 +1,6 @@
-/* The patch list: the library grouped by folder, one heading rule per folder. It was drawn as an .ans, so it uses the
-   standard view's colour indexes and, in the mono view, passes every cell through scr_remap_mono().
+/* The patch list: the library in All (grouped by bank, one heading rule per bank) or one bank at a time, with the view
+   switcher in the top border. It was drawn as an .ans, so it uses the standard view's colour indexes and, in the mono
+   view, passes every cell through scr_remap_mono().
    SPDX-License-Identifier: MIT */
 #include <stdio.h>
 #include <string.h>
@@ -17,6 +18,8 @@
 #define OCT_X 30
 #define OVER_X 37
 #define NOTE_Y 17
+#define SWITCH_X 4        /* the switcher's left arrow, in the top border */
+#define BORDER_Y 2
 
 #define C_BAR 10
 #define C_HEAD 14
@@ -25,64 +28,288 @@
 #define C_DIM 8
 #define C_TEXT 7
 
-/* Does entry `i` start a folder (so a heading rule comes before it)? */
-static int new_folder(const Library *lib, int i)
+/* Do entries a and b share a bank? The rule of lib_bank (folder names equal without regard to case). Folders are
+   stored zero-padded, so equal words settle it at once: on a 386SX the compares are what a walk over the banks costs. */
+static int same_bank(const Library *lib, int a, int b)
 {
-    Entry a;
-    Entry b;
-
-    if (i == 0) return 1;
-    a = *lib_entry(lib, i - 1);
-    b = *lib_entry(lib, i);
-    return strcmp(a.folder, b.folder) != 0;
-}
-
-/* The line of entry `e` in the list: heading rules and entries, in order, from line 0. */
-static int entry_line(const Library *lib, int e)
-{
+    const Entry __far *x = &lib->entries[a];
+    const Entry __far *y = &lib->entries[b];
+    const unsigned __far *p = (const unsigned __far *)x->folder;
+    const unsigned __far *q = (const unsigned __far *)y->folder;
     int i;
-    int headings = 0;
 
-    for (i = 0; i <= e; i++) {
-        if (new_folder(lib, i)) headings++;
+    if (p[0] == q[0] && p[1] == q[1] && p[2] == q[2] && p[3] == q[3] && x->folder[8] == y->folder[8]) return 1;
+    for (i = 0; i < (int)sizeof x->folder; i++) {
+        char ca = x->folder[i];
+        char cb = y->folder[i];
+
+        if (ca >= 'a' && ca <= 'z') ca = (char)(ca - 32);
+        if (cb >= 'a' && cb <= 'z') cb = (char)(cb - 32);
+        if (ca != cb) return 0;
+        if (ca == '\0') return 1;
     }
-    return e + headings;
+    return 1;
 }
 
-int list_scroll(const Library *lib, int sel, int top)
+/* A bank is contiguous: the index after the last entry of the bank that starts at `first`, found by halving. */
+static int bank_end(const Library *lib, int first)
+{
+    int lo = first + 1;
+    int hi = lib_count(lib);
+
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+
+        if (same_bank(lib, mid, first)) lo = mid + 1;
+        else hi = mid;
+    }
+    return lo;
+}
+
+/* The entries `view` lists, [*first, *first + *count). A view the list does not have is All. Returns the view that
+   applies: 0 for All, else the bank's number from 1. Walking to a bank costs a halving per bank before it. */
+static int view_range(const Library *lib, int view, int *first, int *count)
 {
     int n = lib_count(lib);
+    int f = 0;
+    int k;
+
+    for (k = 1; view > 0 && f < n; k++) {
+        int end = bank_end(lib, f);
+
+        if (k == view) {
+            *first = f;
+            *count = end - f;
+            return view;
+        }
+        f = end;
+    }
+    *first = 0;
+    *count = n;
+    return 0;
+}
+
+/* In All: the banks that end at or before entry `e`, and the banks in all. */
+static void all_geometry(const Library *lib, int e, int *before, int *banks)
+{
+    int f = 0;
+    int n = lib_count(lib);
+
+    *before = 0;
+    *banks = 0;
+    while (f < n) {
+        int end = bank_end(lib, f);
+
+        if (end <= e) (*before)++;
+        (*banks)++;
+        f = end;
+    }
+}
+
+/* The line of entry `e` in the view (All: its index plus the headings up to and including its bank), and the view's
+   lines in all. `v` and `first` come from view_range. */
+static int entry_line(const Library *lib, int v, int first, int count, int e, int *total)
+{
+    int before;
+    int banks;
+
+    if (v > 0) {
+        *total = count;
+        return e - first;
+    }
+    all_geometry(lib, e, &before, &banks);
+    *total = count + banks;
+    return e + before + 1;
+}
+
+/* In All: the entry on line `line`: a heading line gives its bank's first entry, a line past either end the last or
+   first entry. The list must not be empty. */
+static int all_entry_at_line(const Library *lib, int line)
+{
+    int n = lib_count(lib);
+    int f = 0;
+    int at = 0;
+
+    if (line < 0) line = 0;
+    while (f < n) {
+        int end = bank_end(lib, f);
+
+        if (line <= at + end - f) return line == at ? f : f + line - at - 1;
+        at += end - f + 1;
+        f = end;
+    }
+    return n - 1;
+}
+
+/* The entry on line `line` of the view, as all_entry_at_line, clamped to the view. */
+static int entry_at_line(const Library *lib, int v, int first, int count, int line)
+{
+    if (v == 0) return all_entry_at_line(lib, line);
+    if (line < 0) line = 0;
+    return line < count ? first + line : first + count - 1;
+}
+
+int list_views(const Library *lib)
+{
+    int before;
+    int banks;
+
+    all_geometry(lib, -1, &before, &banks);
+    return 1 + banks;
+}
+
+int list_view_step(const Library *lib, int view, int dir)
+{
+    int views = list_views(lib);
+
+    if (view < 0 || view >= views) view = 0;
+    return ((view + dir) % views + views) % views;
+}
+
+int list_view_pick(const Library *lib, int view, int sel)
+{
+    int first;
+    int count;
+
+    view_range(lib, view, &first, &count);
+    if (count == 0) return 0;
+    return (sel >= first && sel < first + count) ? sel : first;
+}
+
+int list_view_back(const Library *lib, int view, int sel)
+{
+    int before;
+    int banks;
+
+    if (view == 0 || sel < 0 || sel >= lib_count(lib)) return view;
+    all_geometry(lib, sel, &before, &banks);
+    return before + 1;
+}
+
+int list_move(const Library *lib, int view, int sel, int how)
+{
+    int first;
+    int count;
+    int v = view_range(lib, view, &first, &count);
     int total;
     int line;
-    int first;
 
-    if (n == 0) return 0;
-    if (sel < 0) sel = 0;
-    if (sel >= n) sel = n - 1;
-    total = entry_line(lib, n - 1) + 1;
-    line = entry_line(lib, sel);
-    first = new_folder(lib, sel) ? line - 1 : line;
-    if (first < top) top = first;
+    if (count == 0) return 0;
+    if (sel < first) sel = first;
+    if (sel >= first + count) sel = first + count - 1;
+    switch (how) {
+    case LIST_UP:
+        return sel > first ? sel - 1 : sel;
+    case LIST_DOWN:
+        return sel + 1 < first + count ? sel + 1 : sel;
+    case LIST_HOME:
+        return first;
+    case LIST_END:
+        return first + count - 1;
+    default:
+        line = entry_line(lib, v, first, count, sel, &total);
+        return entry_at_line(lib, v, first, count, line + (how == LIST_PGDN ? LIST_ROWS : -LIST_ROWS));
+    }
+}
+
+int list_scroll(const Library *lib, int view, int sel, int top)
+{
+    int first;
+    int count;
+    int v = view_range(lib, view, &first, &count);
+    int total;
+    int line;
+    int head;
+
+    if (count == 0) return 0;
+    if (sel < first) sel = first;
+    if (sel >= first + count) sel = first + count - 1;
+    line = entry_line(lib, v, first, count, sel, &total);
+    head = line;
+    if (v == 0 && (sel == 0 || !same_bank(lib, sel - 1, sel))) head = line - 1;
+    if (head < top) top = head;
     if (line >= top + LIST_ROWS) top = line - LIST_ROWS + 1;
     if (top > total - LIST_ROWS) top = total - LIST_ROWS;
     if (top < 0) top = 0;
     return top;
 }
 
-int list_item_at(const Library *lib, int top, int x, int y)
+int list_item_at(const Library *lib, int view, int top, int x, int y)
 {
-    int n = lib_count(lib);
+    int first;
+    int count;
     int want = top + y - BODY_Y;
-    int e;
+    int n = lib_count(lib);
+    int f = 0;
+    int at = 0;
 
     if (x < LEFT || x >= LEFT + INNER_W || y < BODY_Y || y >= BODY_Y + LIST_ROWS) return -1;
-    for (e = 0; e < n; e++) {
-        int line = entry_line(lib, e);
+    if (view_range(lib, view, &first, &count) > 0) return want < count ? first + want : -1;
+    while (f < n) {
+        int end = bank_end(lib, f);
 
-        if (line == want) return e;
-        if (line > want) break;
+        if (want == at) return -1;
+        if (want <= at + end - f) return f + want - at - 1;
+        at += end - f + 1;
+        f = end;
     }
     return -1;
+}
+
+/* In All: where the body starts at line `top`. Gives the bank holding that line, [*f, *f + *c) (*c is 0 when `top` is past
+   the end), and `*off`, the line within it (0 the heading rule, else the entry *f + *off - 1). Returns the banks in all. */
+static int all_start(const Library *lib, int top, int *f, int *c, int *off)
+{
+    int n = lib_count(lib);
+    int at = 0;
+    int banks = 0;
+    int next = 0;
+
+    *f = 0;
+    *c = 0;
+    *off = 0;
+    while (next < n) {
+        int end = bank_end(lib, next);
+
+        if (*c == 0 && top <= at + end - next) {
+            *f = next;
+            *c = end - next;
+            *off = top - at;
+        }
+        at += end - next + 1;
+        next = end;
+        banks++;
+    }
+    return banks;
+}
+
+/* The view's name: All, or its bank's folder. */
+static void view_name(const Library *lib, int v, int first, char *out)
+{
+    if (v == 0) {
+        strcpy(out, "All");
+    } else {
+        Entry en = *lib_entry(lib, first);
+
+        strcpy(out, en.folder);
+    }
+}
+
+int list_arrow_at(const Library *lib, int view, int x, int y)
+{
+    int first;
+    int count;
+    int v;
+    char name[9];
+    int right;
+
+    if (y != BORDER_Y) return 0;
+    v = view_range(lib, view, &first, &count);
+    view_name(lib, v, first, name);
+    right = SWITCH_X + 3 + (int)strlen(name);
+    if (x >= SWITCH_X - 1 && x <= SWITCH_X + 1) return -1;
+    if (x >= right - 1 && x <= right + 1) return 1;
+    return 0;
 }
 
 static void shift_text(int octave, char *out)
@@ -145,45 +372,97 @@ static void chrome(void)
     scr_put(50, 20, "\x04", C_BAR, 0);
     scr_put(52, 20, "has a 4-op variant", C_DIM, 0);
     scr_put(2, 21, "USER", C_BAR, 0);
-    scr_put(11, 21, "your own patches", C_DIM, 0);
+    scr_put(11, 21, "the default save bank", C_DIM, 0);
     scr_put(50, 21, "\xFA", C_BAR, 0);
     scr_put(52, 21, "2-op only", C_DIM, 0);
-    scr_put(2, 22, "packs", C_BAR, 0);
-    scr_put(11, 22, "any other folder, such as a friend's", C_DIM, 0);
+    scr_put(2, 22, "banks", C_BAR, 0);
+    scr_put(11, 22, "other folders, yours or a friend's", C_DIM, 0);
     scr_put(50, 22, "Octave", C_NAME, 0);
     scr_put(57, 22, "shift from game pitch", C_DIM, 0);
 
     scr_fill(0, 24, VIDEO_COLS, 1, ' ', C_TEXT, 2);
     scr_put(1, 24, "\x18\x19", C_NAME, 2);
-    scr_fill(4, 24, 8, 1, ' ', 0, C_TEXT);
-    scr_put(5, 24, "Choose", 0, C_TEXT);
-    scr_put(13, 24, "Enter", C_NAME, 2);
-    scr_fill(19, 24, 6, 1, ' ', 0, C_TEXT);
-    scr_put(20, 24, "Edit", 0, C_TEXT);
-    scr_put(26, 24, "Esc", C_NAME, 2);
-    scr_fill(30, 24, 50, 1, ' ', 0, C_TEXT);
-    scr_put(31, 24, "Menu", 0, C_TEXT);
+    scr_put(4, 24, "PgUp", C_NAME, 2);
+    scr_put(9, 24, "PgDn", C_NAME, 2);
+    scr_put(14, 24, "Home", C_NAME, 2);
+    scr_put(19, 24, "End", C_NAME, 2);
+    scr_fill(23, 24, 8, 1, ' ', 0, C_TEXT);
+    scr_put(24, 24, "Choose", 0, C_TEXT);
+    scr_put(32, 24, "\x11\x10", C_NAME, 2);
+    scr_fill(35, 24, 6, 1, ' ', 0, C_TEXT);
+    scr_put(36, 24, "Bank", 0, C_TEXT);
+    scr_put(42, 24, "Enter", C_NAME, 2);
+    scr_fill(48, 24, 6, 1, ' ', 0, C_TEXT);
+    scr_put(49, 24, "Edit", 0, C_TEXT);
+    scr_put(55, 24, "Esc", C_NAME, 2);
+    scr_fill(59, 24, 21, 1, ' ', 0, C_TEXT);
+    scr_put(60, 24, "Menu", 0, C_TEXT);
 }
 
-void list_draw(const Library *lib, int sel, int top, const char *msg)
+/* The switcher in the top border: "<- name ->  N of M" at the left, the view's patch count at the right. */
+static void switcher(const Library *lib, int v, int views, int first, int count)
 {
+    char name[9];
+    char text[24];
+    int at = SWITCH_X + 2;
+    int len;
+
+    view_name(lib, v, first, name);
+    sprintf(text, "%d of %d", v + 1, views);
+    scr_fill(SWITCH_X - 1, BORDER_Y, 8 + (int)(strlen(name) + strlen(text)), 1, ' ', C_FRAME, 0);
+    scr_put(SWITCH_X, BORDER_Y, "\x11", C_BAR, 0);
+    scr_put(at, BORDER_Y, name, C_NAME, 0);
+    at += (int)strlen(name);
+    scr_put(at + 1, BORDER_Y, "\x10", C_BAR, 0);
+    scr_put(at + 4, BORDER_Y, text, C_TEXT, 0);
+
+    sprintf(text, count == 1 ? "%d patch" : "%d patches", count);
+    len = (int)strlen(text);
+    scr_fill(75 - len, BORDER_Y, len + 2, 1, ' ', C_FRAME, 0);
+    scr_put(76 - len, BORDER_Y, text, C_TEXT, 0);
+}
+
+void list_draw(const Library *lib, int view, int sel, int top, const char *msg)
+{
+    int first;
+    int count;
+    int v = view_range(lib, view, &first, &count);
     int n = lib_count(lib);
-    int e;
-    int line = 0;
+    int row = 0;
+    int off;
+    int f;
+    int c;
+    int views;
 
     chrome();
     if (n == 0) {
         scr_put(NAME_X, BODY_Y + 1, "No patches found.", C_TEXT, 0);
     }
-    for (e = 0; e < n; e++) {
-        Entry en = *lib_entry(lib, e);
+    if (v > 0) {
+        f = first;
+        c = count;
+        off = top + 1;
+        views = list_views(lib);
+    } else {
+        views = 1 + all_start(lib, top, &f, &c, &off);
+    }
+    switcher(lib, v, views, first, count);
+    while (row < LIST_ROWS && c > 0) {
+        for (; off <= c && row < LIST_ROWS; off++, row++) {
+            if (off == 0) {
+                Entry en = *lib_entry(lib, f);
 
-        if (new_folder(lib, e)) {
-            if (line >= top && line < top + LIST_ROWS) heading_row(BODY_Y + line - top, en.folder);
-            line++;
+                heading_row(BODY_Y + row, en.folder);
+            } else {
+                Entry en = *lib_entry(lib, f + off - 1);
+
+                entry_row(BODY_Y + row, &en, f + off - 1 == sel);
+            }
         }
-        if (line >= top && line < top + LIST_ROWS) entry_row(BODY_Y + line - top, &en, e == sel);
-        line++;
+        if (v > 0 || f + c >= n) break;
+        f += c;
+        c = bank_end(lib, f) - f;
+        off = 0;
     }
 
     if (msg != NULL && msg[0] != '\0') {
@@ -192,14 +471,6 @@ void list_draw(const Library *lib, int sel, int top, const char *msg)
         strncpy(note, msg, sizeof note - 1);
         note[sizeof note - 1] = '\0';
         scr_put(3, NOTE_Y, note, C_HEAD, 0);
-    } else if (sel >= 0 && sel < n) {
-        Entry en = *lib_entry(lib, sel);
-
-        if (en.overrides) {
-            int next = put_parts(3, NOTE_Y, en.folder, "\\", en.name, C_HEAD);
-
-            put_parts(next + 1, NOTE_Y, "overrides the factory ", en.name, ". Reset to factory brings it back.", C_TEXT);
-        }
     }
     if (role_mono()) scr_remap_mono();
 }

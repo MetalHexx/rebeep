@@ -49,15 +49,43 @@ int menu_item_at(int x, int y);
 /* The plain "coming soon" page of a menu item. */
 void soon_draw(int item);
 
-/* The patch list: the library grouped by folder, in the standard view's indexes (mono: through the shared remap).
-   Its body shows LIST_ROWS lines (heading rules and entries) from line `top`. list_draw draws the list with entry `sel`
-   selected and, under the frame's last row, the note of a selected override or `msg` (NULL or "" for none).
-   list_scroll gives the `top` that keeps `sel` in view (its folder heading too, when it is the folder's first);
-   list_item_at gives the entry whose row holds cell (x, y), or -1. */
+/* The patch list, in the standard view's indexes (mono: through the shared remap). A view is an int: 0 is All (the
+   library grouped by bank, a heading rule per bank), n from 1 is the n-th bank in list order, FACTORY, USER, then the
+   others by name; a bank lists its patches with no heading rule. A view the library does not have counts as All. The
+   views, selection and `top` are indexes into the one library; `top` is the first line shown, and the body holds
+   LIST_ROWS lines (heading rules and entries).
+   list_draw draws the list with entry `sel` selected, the view's name, place and patch count in the top border, and
+   `msg` under the frame's last row (NULL or "" for none).
+   list_scroll gives the `top` that keeps `sel` in view (its bank's heading too, in All, when it is the bank's first);
+   list_item_at gives the entry whose row holds cell (x, y), or -1; list_arrow_at gives -1 for a click on the border's
+   left arrow, 1 for the right arrow and 0 for any other cell. */
 #define LIST_ROWS 12
-void list_draw(const Library *lib, int sel, int top, const char *msg);
-int list_scroll(const Library *lib, int sel, int top);
-int list_item_at(const Library *lib, int top, int x, int y);
+void list_draw(const Library *lib, int view, int sel, int top, const char *msg);
+int list_scroll(const Library *lib, int view, int sel, int top);
+int list_item_at(const Library *lib, int view, int top, int x, int y);
+int list_arrow_at(const Library *lib, int view, int x, int y);
+
+/* The views there are (All and a bank each: 1 for an empty library), and the view `dir` (1 or -1) steps from `view`,
+   wrapping. */
+int list_views(const Library *lib);
+int list_view_step(const Library *lib, int view, int dir);
+
+/* The selection after a change of view: `sel` when the view lists it, else the view's first entry. */
+int list_view_pick(const Library *lib, int view, int sel);
+
+/* The view to show when the list comes back with `sel` selected: All stays All, a bank view becomes the bank of `sel`. */
+int list_view_back(const Library *lib, int view, int sel);
+
+/* The selection after a key, kept inside the view: one entry (LIST_UP, LIST_DOWN), a screenful of lines (LIST_PGUP,
+   LIST_PGDN: a heading line counts as a line, and landing on one gives its bank's first entry), or the view's first or
+   last entry (LIST_HOME, LIST_END). */
+#define LIST_UP 0
+#define LIST_DOWN 1
+#define LIST_PGUP 2
+#define LIST_PGDN 3
+#define LIST_HOME 4
+#define LIST_END 5
+int list_move(const Library *lib, int view, int sel, int how);
 
 /* The synth screen for the variant `e->n` of the patch in the editor, in the role table's colours. It is drawn in
    parts, each owning whole rows (the top bar, the voice block, the parameter grid, the band with the frame's bottom
@@ -111,7 +139,7 @@ void dialog_draw(const Editor *e);
 int dialog_hit(int x, int y);
 
 /* Sample state for the reference screens: the fixed sample version, the sample detection, a log path of
-   C:\REBEEP\RBSTUDIO.LOG, the sample patch list, FACTORY\BRASS, 2 of 4 in its bank: the data that makes a dump
+   C:\REBEEP\RBSTUDIO.LOG, the sample patch list (156 patches in 6 banks, the All view and the KQ4 view), FACTORY\BRASS, 2 of 4 in its bank: the data that makes a dump
    comparable. sample_known says whether `screen` is one of the reference names this program can draw; sample_draw draws
    it into the back buffer. */
 const char *sample_version(void);
