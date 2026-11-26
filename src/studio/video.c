@@ -21,6 +21,10 @@ static int active;
 static int has_ega;
 static unsigned char saved_mode;
 static unsigned saved_cursor_shape;
+static int font_lines;    /* the cell height of the font the blocks were loaded into: 14 or 16; 0 when none are */
+static int block_lines;   /* the drawing path: font_lines, or what video_set_block_lines chose */
+
+const unsigned char VIDEO_BLOCK[15] = {0xC7, 0xCA, 0xCB, 0xCC, 0xCE, 0xCF, 0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8};
 
 static unsigned char current_mode(void)
 {
@@ -70,6 +74,61 @@ static int ega_or_vga_present(void)
     return r.h.bl != 0x10;
 }
 
+/* The BIOS character height in scanlines (INT 10h AX=1130h, BH=0). */
+static int char_height(void)
+{
+    union REGPACK r;
+
+    memset(&r, 0, sizeof r);
+    r.w.ax = 0x1130;
+    r.w.bx = 0;
+    intr(0x10, &r);
+    return (int)r.w.cx;
+}
+
+/* Loads the user characters `table` (`count` glyphs of `height` bytes) from code `first` (INT 10h AX=1100h: it does not
+   reprogram the CRTC, which AX=1110h would). */
+static void load_glyphs(const unsigned char *table, int count, int height, int first)
+{
+    union REGPACK r;
+
+    memset(&r, 0, sizeof r);
+    r.w.ax = 0x1100;
+    r.w.bx = (unsigned)height << 8;
+    r.w.cx = count;
+    r.w.dx = first;
+    r.w.es = FP_SEG((const void __far *)table);
+    r.w.bp = FP_OFF((const void __far *)table);
+    intr(0x10, &r);
+}
+
+/* Puts the ROM font of the cell height back, without reprogramming (AX=1104h for 16 lines, 1101h for 14). */
+static void load_rom_font(int height)
+{
+    union REGPACK r;
+
+    memset(&r, 0, sizeof r);
+    r.w.ax = height == 16 ? 0x1104 : 0x1101;
+    r.w.bx = 0;
+    intr(0x10, &r);
+}
+
+/* The sixteenth blocks: glyph k (1 to 15) fills the bottom min(k, height) scanlines, `height` bytes each, one after
+   another. Three loads, one per run of codes. */
+static void load_blocks(int height)
+{
+    static unsigned char glyphs[15 * 16];
+    int k;
+    int line;
+
+    for (k = 1; k <= 15; k++) {
+        for (line = 0; line < height; line++) glyphs[(k - 1) * height + line] = line >= height - k ? 0xFF : 0x00;
+    }
+    load_glyphs(glyphs, 1, height, 0xC7);
+    load_glyphs(glyphs + 1 * height, 3, height, 0xCA);
+    load_glyphs(glyphs + 4 * height, 11, height, 0xCE);
+}
+
 /* Blink off means bit 7 of an attribute selects a bright background. EGA and VGA have a BIOS call
    for it; on a CGA the bit is in the mode register, and the BIOS keeps a copy at 0040:0065. */
 static void set_blink(int on)
@@ -104,6 +163,9 @@ void video_restore(void)
 {
     if (!active) return;
     active = 0;
+    if (font_lines != 0) load_rom_font(font_lines);
+    font_lines = 0;
+    block_lines = 0;
     set_blink(1);
     set_cursor_shape(saved_cursor_shape);
     if (current_mode() != saved_mode) set_mode(saved_mode);
@@ -132,7 +194,26 @@ void video_init(void)
     atexit(video_restore);
     set_blink(0);
     set_cursor_shape(CURSOR_HIDDEN);
+    if (has_ega) {
+        int height = char_height();
+
+        if (height == 14 || height == 16) {
+            load_blocks(height);
+            font_lines = height;
+            block_lines = height;
+        }
+    }
     video_fill(0, 0, VIDEO_COLS, VIDEO_ROWS, ' ', 0x07);
+}
+
+int video_block_lines(void)
+{
+    return block_lines;
+}
+
+void video_set_block_lines(int lines)
+{
+    block_lines = lines;
 }
 
 /* The cells a draw writes. A run is clipped once and then written straight into `back`: a cell becomes

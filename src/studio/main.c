@@ -543,6 +543,7 @@ static int run_dump(const char *screen, const char *out, int mono)
         return EXIT_USAGE;
     }
     video_init();
+    video_set_block_lines(16);
     role_set_mono(mono || scr_bw80());
     sample_draw(screen);
     scr_flush();

@@ -12,6 +12,18 @@
 void video_init(void);
 void video_restore(void);
 
+/* VIDEO_BLOCK[k - 1] fills the bottom k scanlines. C0h-DFh copy the 8th pixel column into the 9th on VGA, so the blocks
+   join. video_init loads them into the font over line-drawing codes no screen uses, on an EGA or VGA, and video_restore
+   puts the ROM font back. */
+extern const unsigned char VIDEO_BLOCK[15];   /* C7 CA CB CC CE CF D0 D1 D2 D3 D4 D5 D6 D7 D8 */
+
+/* The scanlines a cell has while the blocks are loaded (16 VGA, 14 EGA); 0 when they are not: draw half blocks. */
+int video_block_lines(void);
+
+/* Chooses the drawing path regardless of the card: 16, 14 or 0. For /DUMP, which draws one set of reference screens on
+   every card, and for tests. Call after video_init, which sets it from the card. */
+void video_set_block_lines(int lines);
+
 /* Back-buffer drawing. Coordinates are 0-based; anything off the screen is clipped. Each call (these and the scr_* ones
    below) clips once and writes its run straight into the buffer: draw a rectangle or a string in one call, not a cell at a
    time. */

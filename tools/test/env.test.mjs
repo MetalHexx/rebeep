@@ -97,7 +97,7 @@ describe('env status', () => {
     assert.deepEqual(data.tools.map((t) => t.name), ['86box', '86box-roms', 'jemm', 'freedos']);
     assert.ok(data.tools.every((t) => t.state === 'fetched' && t.strategy === 'download' && t.version));
     assert.deepEqual(data.media.map((m) => m.kind), ['msdos622']);
-    assert.deepEqual(data.vms.map((v) => v.name), ['mirror-freedos', 'mirror-msdos', 'slow-386sx']);
+    assert.deepEqual(data.vms.map((v) => v.name), ['ega-msdos', 'mirror-freedos', 'mirror-msdos', 'slow-386sx']);
     const msdos = data.vms.find((v) => v.name === 'mirror-msdos');
     assert.equal(msdos.c.present, true);
     assert.equal(msdos.d.present, true);
@@ -163,7 +163,7 @@ describe('env reset', () => {
     const { code, envelope } = s.json('env', 'reset', '--yes');
     assert.equal(code, 0);
     assert.deepEqual(envelope.data.reset, ['mirror-msdos']);
-    assert.deepEqual(envelope.data.skipped, ['mirror-freedos', 'slow-386sx']);
+    assert.deepEqual(envelope.data.skipped, ['ega-msdos', 'mirror-freedos', 'slow-386sx']);
     assert.equal(markerOf('mirror-msdos'), 'hand-installed');
     assert.equal(markerOf('slow-386sx'), 'hand-installed', 'a VM with no baseline is left alone');
   });

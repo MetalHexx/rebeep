@@ -193,7 +193,7 @@ describe('vm create', () => {
   test('an unknown VM is a usage error that lists the valid ones', () => {
     const result = s.rebeep('vm', 'create', 'nope');
     assert.equal(result.code, 2);
-    assert.match(result.stderr, /Valid VMs: mirror-freedos, mirror-msdos, slow-386sx/);
+    assert.match(result.stderr, /Valid VMs: ega-msdos, mirror-freedos, mirror-msdos, slow-386sx/);
   });
 });
 
@@ -393,7 +393,7 @@ describe('vm list and show', () => {
   test('list reports every profile; show gives the profile, paths and disk states', () => {
     create();
     const list = s.json('vm', 'list').envelope.data.vms;
-    assert.deepEqual(list.map((v) => v.name), ['mirror-freedos', 'mirror-msdos', 'slow-386sx']);
+    assert.deepEqual(list.map((v) => v.name), ['ega-msdos', 'mirror-freedos', 'mirror-msdos', 'slow-386sx']);
     const msdos = list.find((v) => v.name === 'mirror-msdos');
     assert.equal(msdos.c.bytes, C_BYTES);
     assert.equal(msdos.d.present, true);

@@ -421,14 +421,44 @@ static void draw_wave(int x, int y, int wave, int rim)
     }
 }
 
-/* The envelope's height in half cells (0 to 7) at each of ENV_W points on a fixed time scale. The shape is the
-   attack curve, then the decay to the sustain level, the hold (Sustained), then the release. Every quantity is a
-   whole number over a small common denominator, so the rounding is exact:
+/* floor((k * n + d) / (2 * d)) for n <= d < 2^31 and k < 2^8, without a product past 32 bits: the quotient comes a bit of
+   k at a time (Horner), keeping the remainder under 2d. */
+static unsigned long round_scaled(unsigned k, unsigned long n, unsigned long d)
+{
+    unsigned long m = 2 * d;
+    unsigned long q = 0;
+    unsigned long r = 0;
+    int bit;
+
+    for (bit = 7; bit >= 0; bit--) {
+        q *= 2;
+        r *= 2;
+        if (r >= m) {
+            r -= m;
+            q++;
+        }
+        if ((k >> bit) & 1) {
+            r += n;
+            if (r >= m) {
+                r -= m;
+                q++;
+            }
+        }
+    }
+    r += d;
+    if (r >= m) q++;
+    return q;
+}
+
+/* The envelope's height at each of ENV_W points on a fixed time scale, 0 to `scale` (4 * the scanlines of a cell - 1: 63
+   on a VGA, 55 on an EGA, 7 for half blocks). The shape is the attack curve, then the decay to the sustain level, the hold
+   (Sustained), then the release. Every quantity is a whole number over a small common denominator, so the rounding is
+   exact:
      peak       = (OL + 1) / 64, at least 0.1;   sustain fraction = (SL + 1) / 16
      time       = 28 * (2 * point + 1) over 110 of a second step;   attack time = 99 * (15 - AR) over the same
      decay time = (16 - DR) * (15 - SL) / 16;    release time = 16 - RR (0 is never; DR 0 never decays)
-   The heights are 7 * peak * level, rounded half up. */
-static void env_levels(const Op *op, unsigned char *out)
+   The heights are scale * peak * level, rounded half up. */
+static void env_levels(const Op *op, int scale, unsigned char *out)
 {
     int ar = op->v[P_AR];
     int dr = op->v[P_DR];
@@ -436,8 +466,9 @@ static void env_levels(const Op *op, unsigned char *out)
     int rr = op->v[P_RR];
     int ol = op->v[P_OL];
     int sus = op->v[P_SUS];
-    unsigned long pn = ol + 1 <= 6 ? 7UL : 7UL * (unsigned)(ol + 1);
-    unsigned long pd = ol + 1 <= 6 ? 10UL : 64UL;
+    int floor_peak = ol + 1 <= 6;
+    unsigned long pm = floor_peak ? 1UL : (unsigned long)(ol + 1);
+    unsigned long pd = floor_peak ? 10UL : 64UL;
     long df = dr == 0 ? 16L : 16L - dr;
     int i;
 
@@ -477,13 +508,13 @@ static void env_levels(const Op *op, unsigned char *out)
                 }
             }
         }
-        out[i] = (unsigned char)((2 * pn * (unsigned long)a + pd * (unsigned long)b) / (2 * pd * (unsigned long)b));
+        out[i] = (unsigned char)round_scaled(2 * scale, pm * (unsigned long)a, pd * (unsigned long)b);
     }
 }
 
-/* The envelope: a lit rim over a solid body, two pixels a cell (a half block with the rim as foreground and the body
-   as background), one column a point. The top pixel row stays clear. */
-static void draw_env(int x, int y, const Op *op, int rim, int body)
+/* The envelope in half blocks, today's: a lit rim over a solid body, two pixels a cell (a half block with the rim as
+   foreground and the body as background), one column a point. The top pixel row stays clear. */
+static void draw_env_halves(int x, int y, const Op *op, int rim, int body)
 {
     unsigned char hs[ENV_W];
     int paint[3];
@@ -492,7 +523,7 @@ static void draw_env(int x, int y, const Op *op, int rim, int body)
     paint[0] = -1;
     paint[1] = body;
     paint[2] = rim;
-    env_levels(op, hs);
+    env_levels(op, BAND_PIXELS - 1, hs);
     for (i = 0; i < ENV_W; i++) {
         int n = hs[i];
         int low = i > 0 ? hs[i - 1] : 0;
@@ -517,6 +548,44 @@ static void draw_env(int x, int y, const Op *op, int rim, int body)
             else scr_put(x + i, y + r, "\xDF", ct, cb < 0 ? role(R_GROUND) : cb);
         }
     }
+}
+
+/* The envelope in the font's partial blocks: a solid body, `lines` scanlines a cell, one column a point, 4 * lines
+   heights. Each cell holds the scanlines of its height that fall in it, from the bottom of the band up; no rim, the top
+   scanline stays clear. */
+static void draw_env_blocks(int x, int y, const Op *op, int body, int lines)
+{
+    unsigned char hs[ENV_W];
+    int i;
+    int r;
+
+    env_levels(op, BAND_ROWS * lines - 1, hs);
+    for (i = 0; i < ENV_W; i++) {
+        int n = hs[i];
+
+        for (r = 0; r < BAND_ROWS; r++) {
+            int f = n - (BAND_ROWS - 1 - r) * lines;
+            char glyph[2];
+
+            if (f > lines) f = lines;
+            glyph[1] = '\0';
+            if (f <= 0) scr_put(x + i, y + r, r == BAND_ROWS - 1 && n == 0 ? "_" : " ", role(R_DIM), role(R_GROUND));
+            else if (f == lines) scr_put(x + i, y + r, " ", body, body);
+            else {
+                glyph[0] = (char)VIDEO_BLOCK[f - 1];
+                scr_put(x + i, y + r, glyph, body, role(R_GROUND));
+            }
+        }
+    }
+}
+
+/* The envelope band: sixteenth blocks where the font has them (video_block_lines), half blocks with a rim otherwise. */
+static void draw_env(int x, int y, const Op *op, int rim, int body)
+{
+    int lines = video_block_lines();
+
+    if (lines != 0) draw_env_blocks(x, y, op, body, lines);
+    else draw_env_halves(x, y, op, rim, body);
 }
 
 /* The background of rows y0 to y1. */

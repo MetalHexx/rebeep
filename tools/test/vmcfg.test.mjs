@@ -45,8 +45,8 @@ describe('geometryParams', () => {
 describe('the real profile templates', () => {
   const names = listProfiles(repo);
 
-  test('all three profiles are found and load', () => {
-    assert.deepEqual(names, ['mirror-freedos', 'mirror-msdos', 'slow-386sx']);
+  test('all profiles are found and load', () => {
+    assert.deepEqual(names, ['ega-msdos', 'mirror-freedos', 'mirror-msdos', 'slow-386sx']);
     for (const name of names) assert.equal(loadProfile(repo, name).name, name);
   });
 
