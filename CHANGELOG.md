@@ -6,25 +6,13 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 
 ### Added
 
-- **ReBeep Studio**, a full-screen patch editor: shape your own FM voices, play them on the keyboard,
-  and save them. It comes in the package, and `INSTALL` copies it
+- **ReBeep Studio**, a patch editor that comes in the package: shape your own FM sounds, play them on the keyboard,
+  roll random new ones, and collect them in banks you can share
   ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md)).
-- **Random and Mutate** in the studio: F12 rolls a new sound and F11 nudges the one you have,
-  playing it while you hold the key ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#the-keys)).
-- **Patches by name:** `/P:` takes the name of a patch from `USER`, `FACTORY` or another bank, and
-  `PATCH=` in `RBSTUDIO.CFG` picks one at every load
+- **Your own sounds in your games:** `/P:` now takes a patch by name, whether you made it or it came with ReBeep
   ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
-- **Banks** in the studio: a bank is a folder of patches. The patch list switches between them, pages through
-  up to 2,048 patches, and the studio reads them all once, on the splash
-  ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#banks)).
-- **One Save dialog** in the studio: Ctrl+S saves a patch or a copy into `USER`, another bank or a new one, and says
-  beforehand what Enter will do ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#saving-and-overrides)).
-- **A smoother envelope** on the studio's synth screen on EGA and VGA
-  ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#the-screens)).
-- **Monochrome displays** in the studio: it works on an MDA or Hercules card and switches to its mono view by
-  itself ([studio](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#start-it)).
-- **Four-operator voices** on an OPL3, for patches that have one
-  ([how it works](https://github.com/MetalHexx/rebeep/blob/main/docs/architecture/how-it-works.md#patches)).
+- **Four-operator voices:** on an OPL3, a patch can use four operators for a fuller sound
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
 
 ### Changed
 
@@ -33,7 +21,8 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 
 ### Removed
 
-- **`/P:1` to `/P:4`.** Use `/P:ORGAN`, `/P:FLUTE`, `/P:BRASS` and `/P:BELL`
+- **`/P:1` to `/P:4`:** use `/P:ORGAN`, `/P:FLUTE`, `/P:BRASS` or `/P:BELL`. Update old boot and batch files too, or
+  ReBeep reports a bad option and doesn't load
   ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#pick-a-voice)).
 
 ## [0.1.0] - 2026-11-21
