@@ -11,7 +11,7 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
   ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#game-profiles)).
 - **Sound effects in patches of their own:** a profile can give a game's effects, such as a race's
   start lights or a tire squeal, their own patch, taking turns with the engine or the music as in the game
-  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#game-profiles)).
+  ([game profiles](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/profiles.md)).
 
 ## [0.2.0] - 2026-11-26
 

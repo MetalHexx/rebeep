@@ -235,7 +235,7 @@ it.
 |---|---|
 | `PATCHES=D:\MYSOUNDS` | Where `USER` and the other banks are. Plain DOS names only. With no drive or leading `\`, the path starts at the program's folder. The default is `PATCHES` there |
 | `PATCH=FLUTE` | The patch ReBeep loads when you give it neither `/F` nor `/P:`. Same names as `/P:` |
-| `PROFILES=D:\MYGAMES` | Where the [game profiles](playing.md#game-profiles) are, a folder each. The same kind of path as `PATCHES=`. The default is `PROFILES` beside the program |
+| `PROFILES=D:\MYGAMES` | Where the [game profiles](profiles.md) are, a folder each. The same kind of path as `PATCHES=`. The default is `PROFILES` beside the program |
 
 A line is `KEY=VALUE`, in any case. A line starting with `;` is a comment, and a line the studio does
 not know is ignored. The first line for a key counts. A `PATCHES=` that is not a plain DOS path is

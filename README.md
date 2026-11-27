@@ -91,7 +91,8 @@ emulated Pentium MMX and a 386SX/16, backed by automated checks that run in DOS 
 | [Getting started](docs/guide/getting-started.md) | What it is, what you need, which setup to follow |
 | [Set up on a real PC](docs/guide/real-pc.md) | Jemm, installing, a boot menu entry, checking it, undoing it |
 | [Set up in 86Box](docs/guide/86box.md) | The VM's settings, getting the files in, then the same steps |
-| [Playing](docs/guide/playing.md) | Voices, volume, muting, hotkeys, turning it off |
+| [Playing](docs/guide/playing.md) | Voices, game profiles, volume, muting, hotkeys, turning it off |
+| [Writing a game profile](docs/guide/profiles.md) | A game's parts and effects in patches of their own: the file, and how it matches |
 | [ReBeep Studio](docs/guide/studio.md) | A tour, then making and saving your own patches, banks, the settings file |
 | [Troubleshooting](docs/guide/troubleshooting.md) | By symptom, then every message |
 | [Compatibility](docs/guide/compatibility.md) | Tested games and machines, settings per game, known conflicts |
@@ -134,9 +135,8 @@ What's here now, and the ideas being considered: [roadmap](docs/roadmap.md).
   [game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.yml).
 - **Found a bug?** File a [bug report](https://github.com/MetalHexx/rebeep/issues/new?template=bug-report.yml). The
   [troubleshooting page](docs/guide/troubleshooting.md) may already have the fix.
-- **Planning a feature?** Talk it over first in a
-  [feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.yml), so it fits the
-  [roadmap](docs/roadmap.md).
+- **Planning a feature?** Talk it over first in a [feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.yml),
+  so it fits the [roadmap](docs/roadmap.md).
 
 Start with [contributing](docs/lab/contributing.md); AI agents start at [AGENTS.md](AGENTS.md).
 

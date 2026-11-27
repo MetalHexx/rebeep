@@ -5,7 +5,7 @@ folder named for it, holding `NAME.RBG` and the `.RBP` patches its rules name. E
 (`build run --deploy`, `disk deploy`, a `vm` probe) puts each folder on D: as
 `D:\REBEEP\PROFILES\NAME\`, so `REBEEP /G:NAME` (or `REBEEPD /G:NAME`) loads it. A dev aid: they
 never ship, and `release create` does not read this folder. The format is in
-[playing](../../../../docs/guide/playing.md#game-profiles); the limits are in
+[writing a game profile](../../../../docs/guide/profiles.md); the limits are in
 `src/include/profile.inc`.
 
 | Profile | Game | Covers |

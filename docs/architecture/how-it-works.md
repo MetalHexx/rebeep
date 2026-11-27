@@ -139,7 +139,7 @@ gives the game the real speaker, unmuted.
 
 ## Game profiles
 
-A [profile](../guide/playing.md#game-profiles) picks a patch from what the game plays. `/G:` reads
+A [profile](../guide/profiles.md) picks a patch from what the game plays. `/G:` reads
 its file and every patch it names at load, into a table in the resident part.
 
 **Rules go by events, never time.** Each game byte gives at most one event: a note start, a pitch

@@ -46,54 +46,31 @@ On a loaded copy, an option changes only what it names, so the other settings st
 
 ## Game profiles
 
-A game profile gives each part of a game its own patch, such as one for the title music and
-another for the menus. ReBeep tells the parts apart by what the game sends the speaker.
+A game profile gives each part of a game its own patch, such as one for the title music, another
+for the menus and others for sound effects. ReBeep tells the parts apart by what the game sends
+the speaker, and changes the patch as you play. A profile is a folder in `PROFILES`, in ReBeep's
+folder, holding a text file and its patches. No profile comes with ReBeep yet: to make one, see
+[writing a game profile](profiles.md).
+
+Load a profile by its folder's name, before you start the game:
 
 ```
 REBEEP /G:MYGAME
 ```
 
-`/G:MYGAME` loads `PROFILES\MYGAME\MYGAME.RBG` from ReBeep's folder, and the patches beside it. No
-profile comes with ReBeep yet: you write your own, as below. The profile's default patch plays
-until a rule picks another, and a rule's patch plays in its own voice, even after Ctrl+Alt+N.
-`REBEEP /S` names the profile, and `/P:` or `/F` ends it. It lasts until you unload ReBeep or restart the PC. If ReBeep can't use a profile
-it says why, and what was playing goes on ([why](troubleshooting.md#a-profile-was-not-used)).
+You should see `Profile MYGAME picks the patch from what the game plays. /P: or /F ends it.`
 
-A profile is a text file, in the same style as a patch:
-
-```
-[PROFILE]
-FORMAT=1
-NAME=My Game
-DEFAULT=MENU
-
-[RULE]
-ID=RACE
-STEP=CTRL B6h
-STEP=NOTE C22Eh 40
-PATCH=ENGINE
-
-[EFFECT]
-NAME=Tire squeal
-WHILE=RACE
-PITCH=0950h 50
-PATCH=SQUEAL
-```
-
-| Line | Means |
+| To | Do this |
 |---|---|
-| `FORMAT=1` | Required |
-| `NAME=My Game` | A name to show in a menu later, 1 to 24 characters, in any section. Optional |
-| `DEFAULT=MENU` | The patch that plays first, `MENU.RBP` in the profile's folder. Without it, the patch you had plays on |
-| `[RULE]` | One rule, up to 16. They are tried in order, and the first to match picks its patch. That patch plays until another rule picks a different one |
-| `ID=RACE` | A rule's name, for `WHILE=`: 1 to 8 letters, digits, `_` or `-`, not only digits. Optional |
-| `WHILE=RACE` | The rule or effect counts only while `RACE` is the last rule to have matched. Optional |
-| `STEP=` | Up to 4 a rule, in order. Each matches the next sound event of its kind. `NOTE n t`: a note starts within `t` of the timer count `n`. `CHANGE n t`: a sounding note changes to that count. `PITCH n t`: either. `OFF`: a note stops. `CTRL n`: the game writes `n` to the timer's control port, `43h`. Leave out the number to take any |
-| `PATCH=ENGINE` | The rule's or effect's patch, `ENGINE.RBP` in the profile's folder. Up to 8 patches a profile |
-| `[EFFECT]` | A sound effect with a patch of its own, up to 8. While a note is within `t` of the count `n` in `PITCH=n t` (`n - t` at least 193), it plays in the effect's patch on an FM channel of its own; then the rule's patch takes the note back. Not in the faithful voice |
+| Load it for one game only | `RBPLAY GAME.EXE /G:MYGAME` |
+| See which profile is on | `REBEEP /S` |
+| Change to another | `REBEEP /G:OTHER` |
+| End it | `REBEEP /P:ORGAN`, or `REBEEP /F` |
 
-Numbers are decimal, or hex with a trailing `h`. Lines starting with `;` are comments. A profile
-file is at most 2,048 bytes. A `PROFILES=` line in [the settings file](studio.md#the-settings-file) moves the profiles folder.
+A profile lasts until you end it, unload ReBeep or restart the PC. Give `/G:` without `/P:` or
+`/F`. While a profile is on, each change of patch replaces a voice you picked with Ctrl+Alt+N. If
+ReBeep can't use a profile it says why, and what was playing goes on
+([why](troubleshooting.md#a-profile-was-not-used)).
 
 ## Set the volume
 

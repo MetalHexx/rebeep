@@ -63,7 +63,7 @@ default folder is used. Both lines are explained in [the settings file](studio.m
 
 ## A profile was not used
 
-A [game profile](playing.md#game-profiles) ReBeep can't use is never an error either. It names the
+A [game profile](profiles.md) ReBeep can't use is never an error either. It names the
 file and the reason, and what was playing goes on:
 
 ```

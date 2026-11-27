@@ -14,8 +14,8 @@ a Sound Blaster's OPL2 or OPL3 FM chip. It is proven on Grand Prix Circuit, on a
 86Box.
 
 **Game profiles.** `/G:` gives each part of a game its own patch, told apart by what the game
-sends the speaker. Being worked out on Grand Prix Circuit, where the intro and the menus each get
-their own ([playing](guide/playing.md#game-profiles)).
+sends the speaker. Being worked out on Grand Prix Circuit, where the intro, the menus, the race and
+its effects get their own ([game profiles](guide/profiles.md)).
 
 **A project website**, on GitHub Pages at <https://metalhexx.github.io/rebeep/>: what ReBeep is,
 what it runs on, and how to get it. It shows the latest release on its own.
