@@ -15,12 +15,10 @@
 
 - Interpreter test programs are `tests/interpreter/T_*.ASM`. `rebeep test run --suite interpreter`
   assembles each one and runs it headless in DOSBox-X.
-- A DOS program's exit code never reaches the host, so each program writes `RESULT.TXT`:
-  - `PASS <case>` for each passing case
-  - `FAIL <case>: <detail>` for each failure (any line starting with `FAIL` counts)
-  - `DONE <n>` as the **last** line, where n is the number of PASS and FAIL lines
-
-  A missing or miscounted `DONE`, any `FAIL`, no results, or hitting the time limit fails the run.
+- A DOS program's exit code never reaches the host, so each program writes `RESULT.TXT`: `PASS <case>`
+  per passing case, `FAIL <case>: <detail>` per failure (any line starting with `FAIL` counts), and
+  `DONE <n>` **last**, n the number of PASS and FAIL lines. A missing or miscounted `DONE`, any
+  `FAIL`, no results, or hitting the time limit fails the run.
 - `interpreter/testlib.inc` is the shared helper library: `CASE "name"` ... `ENDCASE` brackets a
   case, `t_check` (AX = CX) and `t_checkd` (also BX = SI) record the first mismatch (reported with its
   step number), and `t_done` prints `DONE <n>` last and exits.
@@ -31,6 +29,8 @@
   shutdown, a patch block's record (`E0h` held to 0-3 on an OPL2), octave shift and (OPL3) 4-OP voices; as an OPL2 and as an OPL3. Every routine must preserve its registers and use at most 16 bytes of stack (depths print as an `INFO` line).
 - `interpreter/T_PATCH.ASM` (`T_PATCH.COM`) covers the startup part's `.RBP` parser, name rules, `RBSTUDIO.CFG` reader,
   patch lookup and INT 24h handler, on text buffers and on `FACTORY\` (the suite stages the factory files). Its cases are `patch.c`'s: both parsers take and refuse the same files.
+- `interpreter/T_RULES.ASM` covers a game profile's rules (`engine/rules.asm`) and the patch switch, through a
+  recording sink; `T_PROF.ASM` the `.RBG` parser (`startup/profile.asm`) on text buffers: its numbers, reasons and limits.
 - Listening check: `T_OPL /L` plays the faithful voice, then the four factory records and, on an OPL3, a 4-OP patch, a second each. Run `build/tests/T_OPL.COM /L`
   in DOSBox-X with sound on, once per `oplmode` (`-set "sblaster oplmode=opl2"`, then `opl3`; one space-separated argument).
 - `RBTEST.COM` plays speaker cases for listening, runs PASS/FAIL checks (with `/R`, against ReBeep's state through AMIS), probes free
