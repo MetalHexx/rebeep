@@ -308,7 +308,7 @@ int patch_format(const Patch *p, char *buf, unsigned buflen)
     if (buflen == 0) return -1;
     buf[0] = '\0';
     put(buf, buflen, &pos, "; ReBeep patch. Edit it in ReBeep Studio or by hand." EOL
-                           "; OPn= AR DR SL RR OL KSL MULT WAVE TREM VIB SUS KSR, decimal, one space apart." EOL
+                           "; OPn= AR DR SL RR OL KSL MULT WAVE TREM VIB SUS KSR, decimal, 1 space apart." EOL
                            "; SL and OL: bigger is louder. OCTAVE 4 is the game's pitch." EOL
                            "[PATCH]" EOL "FORMAT=1" EOL);
     sprintf(line, "OCTAVE=%d" EOL EOL "[2OP]" EOL, p->octave);

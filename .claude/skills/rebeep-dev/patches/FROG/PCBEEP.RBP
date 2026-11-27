@@ -1,7 +1,8 @@
 ; ReBeep patch. Edit it in ReBeep Studio or by hand.
-; OPn= AR DR SL RR OL KSL MULT WAVE TREM VIB SUS KSR, decimal, one space apart.
+; OPn= AR DR SL RR OL KSL MULT WAVE TREM VIB SUS KSR, decimal, 1 space apart.
 ; SL and OL: bigger is louder. OCTAVE 4 is the game's pitch.
-; FROG candidate for the splash jingle. Beep: a pure square wave, like the PC speaker. OPL3 (an OPL2 plays it as a rounder abs-sine).
+; FROG candidate for the splash jingle. Beep: a pure square wave, like the PC
+; speaker. OPL3 (an OPL2 plays it as a rounder abs-sine).
 [PATCH]
 FORMAT=1
 OCTAVE=5

@@ -337,8 +337,8 @@ Messages, and what to do about each:
       Every AMIS slot is in use by other resident programs. Unload one
       of them and try again.
 
-  "Another program already traps the speaker ports (for example
-   SBEMU's PC-speaker feature)."
+  "Another program already traps the speaker ports
+   (for example SBEMU's PC-speaker feature)."
       Only one program can trap the speaker ports. For SBEMU, start it
       with /PCS0 to turn its PC-speaker emulation off.
 
@@ -357,12 +357,12 @@ Messages, and what to do about each:
   "DOS would not free ReBeep's memory."
       Reboot to clear the resident copy.
 
-  "Patch NAME not used: ... Playing the faithful voice."
-      ReBeep could not use the patch. The reason follows: "not found in USER
-      or FACTORY" means no NAME.RBP in either folder (a patch in another
-      bank needs its bank, /P:HEXX\ORGAN). "folder does not exist" means
-      the PATCHES= folder is missing. Anything about the file itself names
-      a line to fix in a text editor.
+  "Patch NAME not used. Playing the faithful voice."
+      ReBeep could not use the patch. The reason is on the lines below: "not
+      found in USER or FACTORY" means no NAME.RBP in either folder (a patch
+      in another bank needs its bank, /P:HEXX\ORGAN). "folder does not exist"
+      means the PATCHES= folder is missing. Anything about the file itself
+      names a line to fix in a text editor.
 
 Other problems:
 

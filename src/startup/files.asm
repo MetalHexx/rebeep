@@ -731,7 +731,7 @@ s_profiles:                             ; the folder's default name and the sett
 w_profiles      db      "PROFILES", 0
 
 s_badpatches_1  db      "PATCHES=$"
-s_badpatches_2  db      " ignored: not a plain DOS path. Using the default folder.", 13, 10, '$'
+s_badpatches_2  db      13, 10, "ignored: not a plain DOS path. Using the default folder.", 13, 10, '$'
 
 r_notfound      db      "not found$"
 r_notfound2     db      "not found in USER or FACTORY$"

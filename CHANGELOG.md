@@ -21,6 +21,12 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 - **The factory patches moved** to `FACTORY\PATCHES` in ReBeep's folder. `INSTALL` moves them on an
   update, and `/P:` names stay the same ([banks](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#banks)).
 
+### Fixed
+
+- **Long lines on a DOS screen:** ReBeep's longer messages, such as why a patch wasn't used, now
+  break into lines that fit 80 columns, and so does the comment at the top of a patch file
+  ([troubleshooting](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/troubleshooting.md#a-patch-was-not-used)).
+
 ## [0.2.0] - 2026-11-26
 
 ### Added

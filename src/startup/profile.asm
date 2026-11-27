@@ -85,6 +85,8 @@ profile_select:
 .failed:
         mov     [fail_reason], si
         call    prof_not_used
+        mov     dx, msg_gn_file
+        call    print
         mov     si, path_buf
         mov     cx, 80
         call    print_text
@@ -139,7 +141,7 @@ prof_read:
         mov     cx, PATCH_FILE_MAX + 1
         jmp     read_file
 
-; prof_not_used: prints "Profile NAME not used: ".
+; prof_not_used: prints "Profile NAME not used:"; what follows says why.
 prof_not_used:
         mov     dx, msg_gn_1
         call    print
@@ -941,9 +943,10 @@ s_factoryprofs  db      "FACTORY\PROFILES", 0     ; beside the program
 s_unset         db      0                       ; dir_resolve's "no setting"
 
 msg_gn_1        db      "Profile $"
-msg_gn_2        db      " not used: $"
+msg_gn_2        db      " not used:$"
 msg_gn_3        db      ".", 13, 10, '$'
-msg_gn_nowhere  db      "not found in PROFILES or FACTORY.", 13, 10, '$'
+msg_gn_file     db      13, 10, "  $"                    ; the file and the reason: lines of their own
+msg_gn_nowhere  db      " not found in PROFILES or FACTORY.", 13, 10, '$'
 
 g_noprofile     db      "there is no [PROFILE] section$"
 g_noformat      db      "[PROFILE] has no FORMAT$"

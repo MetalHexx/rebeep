@@ -542,13 +542,16 @@ select_patch:
         mov     byte [patch_ok], 1
         ret
 
-; print_not_used: "Patch <spec> not used: [<who>: ]<reason>. Playing the faithful voice."
-; from fail_spec, fail_who (0 for none) and fail_reason.
+; print_not_used: from fail_spec, fail_who (0 for none) and fail_reason, in lines of 78 columns
+; at most (a very deep folder in <who> can wrap):
+;   Patch <spec> not used. Playing the faithful voice.
+;     <who>:
+;     <reason>.
 print_not_used:
         mov     dx, msg_pn_1
         call    print
         mov     si, [fail_spec]
-        mov     cx, 40
+        mov     cx, 34                  ; a long PATCH= value is cut, to keep the line in 78
         call    print_text
         mov     dx, msg_pn_2
         call    print
@@ -1112,7 +1115,8 @@ msg_no386       db      "ReBeep needs a 386 or better.", 13, 10, '$'
 msg_noqpi       db      "QPIEMU is not loaded. Run JLOAD QPIEMU.DLL first (see README.TXT).", 13, 10, '$'
 msg_noopl       db      "No OPL2/OPL3 found at port 388h.", 13, 10, '$'
 msg_noslot      db      "No free AMIS multiplex number.", 13, 10, '$'
-msg_trapped     db      "Another program already traps the speaker ports (for example SBEMU's PC-speaker feature).", 13, 10, '$'
+msg_trapped     db      "Another program already traps the speaker ports", 13, 10
+                db      "(for example SBEMU's PC-speaker feature).", 13, 10, '$'
 msg_mismatch    db      " is loaded. Use that version's REBEEP to change or unload it.", 13, 10, '$'
 msg_notloaded   db      "ReBeep is not loaded.", 13, 10, '$'
 msg_refused     db      "Can't unload: another program hooked in after ReBeep. Unload it first.", 13, 10, '$'
@@ -1122,9 +1126,9 @@ msg_on          db      "ReBeep is on.", 13, 10, '$'
 msg_off         db      "ReBeep is off: the OPL is free for the game.", 13, 10, '$'
 msg_updated     db      "ReBeep updated: $"
 msg_pn_1        db      "Patch $"
-msg_pn_2        db      " not used: $"
-msg_pn_3        db      ": $"
-msg_pn_4        db      ". Playing the faithful voice.", 13, 10, '$'
+msg_pn_2        db      " not used. Playing the faithful voice.", 13, 10, "  $"
+msg_pn_3        db      ":", 13, 10, "  $"           ; after the file or folder a reason is about
+msg_pn_4        db      ".", 13, 10, '$'
 r_badname       db      "not a valid patch name$"
 
 msg_stat_1      db      REBEEP_NAME, " is loaded: traps $"

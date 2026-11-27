@@ -1,7 +1,8 @@
 /**
  * What ships as a factory default, in the real repo: every file under src/factory/ is wired into
  * targets.json at the matching place, every profile is whole, and INSTALL.BAT puts each folder in
- * place. A new patch or profile that isn't wired up fails here.
+ * place. A new patch or profile that isn't wired up fails here, as does a patch or profile, the
+ * lab's included, with a line too long for a DOS screen.
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -83,6 +84,18 @@ describe('factory defaults', () => {
       const to = /\bGOTO (\S+)/.exec(line)?.[1].slice(0, 8).toUpperCase();
       if (to) assert.ok(labels.includes(to), `no label for: ${line}`);
     }
+  });
+
+  test('every line of a patch or profile, the lab ones too, fits a DOS screen: 78 columns', () => {
+    const files = [FACTORY, repo.labPatches, repo.labProfiles]
+      .filter((dir) => fs.existsSync(dir))
+      .flatMap((dir) => fs.readdirSync(dir, { recursive: true }).map((name) => path.join(dir, name)))
+      .filter((file) => /\.rb[pg]$/i.test(file));
+    assert.ok(files.length > 0);
+    const long = files.flatMap((file) =>
+      fs.readFileSync(file, 'latin1').split(/\r?\n/).flatMap((line, i) =>
+        (line.length > 78 ? [`${path.relative(repo.root, file)}:${i + 1} is ${line.length}`] : [])));
+    assert.deepEqual(long, []);
   });
 
   test('INSTALL.BAT makes, clears and copies each folder', () => {
