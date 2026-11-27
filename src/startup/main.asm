@@ -106,7 +106,10 @@ load_path:
         DIE     msg_trapped, EXIT_TRAPPED
 .trapped:
         mov     al, [load_opl]
-        call    rb_opl_start
+        pushf
+        cli                             ; the traps are live: a write mid-init would find the
+        call    rb_opl_start            ; voices half set, or swapped (engine/fx.asm)
+        popf
         mov     ax, 3509h
         int     21h
         mov     [rb_old09], bx
@@ -435,6 +438,7 @@ apply_fields:
         test    ax, OPT_F | OPT_P       ; the last command wins
         jz      .profile
         mov     byte [es:di + PT_ACTIVE], 0
+        mov     byte [es:di + PT_FXCOUNT], 0 ; and its effects: fx_find tests only the count
 .profile:
         test    ax, OPT_G
         jz      .faithful

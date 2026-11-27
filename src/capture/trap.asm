@@ -100,7 +100,7 @@ capture_remove:
         cli
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
         jz      .untrap
-        call    opl_note_off
+        call    fx_quiet
         mov     byte [masked], 0
         call    sync_real_61
 .untrap:
@@ -192,10 +192,11 @@ capture_translation_changed:
         cmp     byte [RB_STATE + RBS_MODE], M_TONE
         jne     .real
         mov     bx, [RB_STATE + RBS_DIVISOR]
-        call    opl_note_on
+        mov     al, EV_TONE_ON          ; on the main voice, or an effect's
+        call    fx_play
         jmp     .real
 .off:
-        call    opl_note_off
+        call    fx_quiet
 .real:
         call    sync_real_61
 .done:
@@ -204,8 +205,9 @@ capture_translation_changed:
         ret
 
 ; capture_voice_changed: the voice changed (or is being re-applied): a tone that is sounding
-; on the OPL, and stays there, restarts with the new voice. One that is moving between the
-; OPL and the speaker is left to capture_translation_changed, which runs next.
+; on the OPL, and stays there, restarts with the new voice, or an effect's, as fx_play picks
+; again. One that is moving between the OPL and the speaker is left to
+; capture_translation_changed, which runs next.
 ; Does nothing while the traps are off. Preserves every register.
 capture_voice_changed:
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
@@ -218,9 +220,10 @@ capture_voice_changed:
         jz      .done
         cmp     byte [RB_STATE + RBS_MODE], M_TONE
         jne     .done                   ; a rest: nothing is sounding
-        call    opl_note_off
+        call    fx_quiet
         mov     bx, [RB_STATE + RBS_DIVISOR]
-        call    opl_note_on
+        mov     al, EV_TONE_ON
+        call    fx_play
 .done:
         popa
 .ret:
@@ -367,18 +370,14 @@ qpi_out:
         pop     dx
         ret
 
-; play_event: drive the OPL from an interpreter event while translation is on.
+; play_event: drive the OPL from an interpreter event while translation is on: the main
+; voice, or a profile's effect (engine/fx.asm).
 ; In:  AL = event, BX = divisor
 play_event:
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRANSLATE
         jz      .ret
         TRACE_EVENT
-        cmp     al, EV_TONE_ON
-        je      opl_note_on
-        cmp     al, EV_PITCH
-        je      opl_pitch
-        cmp     al, EV_TONE_OFF
-        je      opl_note_off
+        jmp     fx_play
 .ret:
         ret
 

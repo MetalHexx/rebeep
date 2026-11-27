@@ -13,8 +13,8 @@
 %include "amis.inc"
 %include "profile.inc"
 
-%if SK_NOTE != EV_TONE_ON || SK_PITCH != EV_PITCH || SK_OFF != EV_TONE_OFF
-%error a step's kind is the interpreter's event for the three note kinds
+%if SK_NOTE != EV_TONE_ON || SK_PITCH != EV_PITCH || EV_TONE_OFF != 3 || SK_TONE != (SK_NOTE | SK_PITCH)
+%error an event's kind is the interpreter's event for a note start or a pitch, SK_OFF for an off
 %endif
 %if STEP_LEN != 5
 %error step_at multiplies by 5
@@ -43,7 +43,9 @@ rules_match:
         jz      .none                   ; EV_NONE: a count byte half written, or a step held
         cmp     al, EV_TONE_OFF
         ja      .none
-.rules:                                 ; DL = the event's kind, BX = its value
+        jb      .rules
+        mov     dl, SK_OFF
+.rules:                                 ; DL = the event's kind, one bit, BX = its value
         mov     si, rules_tbl + PT_RULES
         xor     dh, dh                  ; DH = the rule's number
 .rule:
@@ -58,6 +60,9 @@ rules_match:
         mov     al, dh
         mov     ah, [si + RL_SLOT]
         mov     ch, [si + RL_FLAGS]
+        inc     dh                      ; the state, as a WHILE holds it: (rule + 1) * 2
+        shl     dh, 1
+        mov     [rules_tbl + PT_STATE], dh ; here, not in rules_switch: the slot may not change
         call    rules_reset
         stc
         jmp     .out
@@ -70,13 +75,21 @@ rules_match:
 .ret:
         ret
 
-; rule_step: In: SI = a rule, DL = the event's kind, BX = its value. An event of another kind
-; than the rule's next step leaves it; one of that kind moves it on when the value fits, and
-; otherwise sends it back to its first step, which the same event may start again.
+; rule_step: In: SI = a rule, DL = the event's kind, BX = its value. A rule whose WHILE does not
+; hold, or an event of another kind than its next step, leaves it; one of that kind moves it on
+; when the value fits, and otherwise sends it back to its first step, which the same event may
+; start again. A WHILE changes only when a rule fires, which sends every rule back to its first
+; step, so a rule left out by its WHILE is never half matched.
 ; Out: CF set when the rule has completed.
 rule_step:
         push    ax
         push    di
+        mov     al, [si + RL_FLAGS]
+        and     al, RL_F_WHILE
+        jz      .on
+        cmp     al, [rules_tbl + PT_STATE]
+        jne     .keep
+.on:
         mov     al, [si + RL_AT]
         call    step_at
         call    step_test
@@ -125,8 +138,8 @@ step_at:
 step_test:
         mov     ah, [di + ST_KIND]
         and     ah, 0FFh ^ SK_ANY
-        cmp     ah, dl
-        jne     .other
+        test    ah, dl                  ; the step's kinds hold the event's
+        jz      .other
         test    byte [di + ST_KIND], SK_ANY
         jnz     .match
         cmp     bx, [di + ST_LO]
@@ -208,6 +221,9 @@ rules_tbl:
         db      0                       ; PT_ACTIVE
         db      PT_NONE                 ; PT_CUR
         db      0                       ; PT_COUNT
+        db      0                       ; PT_STATE
+        db      0                       ; PT_FXCOUNT
+        db      PT_NONE                 ; PT_FXSLOT
         times PT_LEN - PT_NAME db 0
 %if $ - rules_tbl != PT_LEN
 %error rules_tbl does not match profile.inc

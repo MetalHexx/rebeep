@@ -1,8 +1,8 @@
 ; The trace build's resident part (REBEEPD.COM, REBEEP_TRACE defined; assembled to nothing
 ; otherwise). It records every speaker step ReBeep makes on the real 61h, every OPL note the
-; game's writes start and stop, and every rule of a profile that completes, each with a
-; timestamp and the game's last byte
-; OUTs, into a buffer that AMIS 15h hands to "REBEEPD /D". Layout: include/trace.inc.
+; game's writes start and stop, each large pitch jump on one, every rule of a profile that
+; completes and every tone one of its effects takes, each with a timestamp and the game's
+; last byte OUTs, into a buffer that AMIS 15h hands to "REBEEPD /D". Layout: include/trace.inc.
 ; Resident code (386, like the capture code that calls it). Port 43h goes through QPI;
 ; port 40h is not trapped, so it is read directly. Nothing here calls DOS.
 ; SPDX-License-Identifier: MIT
@@ -28,13 +28,16 @@ trace_note:
         pop     bx
         ret
 
-; trace_event: record an OPL note on or off. In: AL = interpreter event. Preserves all.
+; trace_event: record an OPL note on or off, or a pitch jump (TK_PITCH in trace.inc).
+; In: AL = interpreter event, BX = divisor. Preserves all.
 trace_event:
         push    ax
         push    cx
         mov     cl, TK_NOTE_ON
         cmp     al, EV_TONE_ON
-        je      .rec
+        je      .start
+        cmp     al, EV_PITCH
+        je      .pitch
         mov     cl, TK_NOTE_OFF
         cmp     al, EV_TONE_OFF
         jne     .done
@@ -45,6 +48,25 @@ trace_event:
         pop     cx
         pop     ax
         ret
+.start:
+        mov     [trace_div], bx
+        jmp     .rec
+.pitch:
+        mov     ax, [trace_div]         ; AX = the last count recorded
+        mov     cx, bx
+        sub     cx, ax                  ; CX = new - last
+        jae     .up
+        neg     cx                      ; the last is the larger
+        jmp     .size
+.up:
+        mov     ax, bx                  ; the new is the larger
+.size:
+        shr     ax, 3
+        cmp     cx, ax
+        jbe     .done                   ; an eighth or less: vibrato, a glide
+        mov     [trace_div], bx
+        mov     cl, TK_PITCH
+        jmp     .rec
 
 ; trace_rule: record a profile's rule completing. In: AL = rule, AH = slot, CH = its RL_FLAGS.
 ; Preserves all.
@@ -57,6 +79,23 @@ trace_rule:
 .rec:
         call    trace_record
         pop     cx
+        ret
+
+; trace_fx: record a tone moving onto the effect voice. In: SI = the effect, AH = its slot.
+; Preserves all.
+trace_fx:
+        push    ax
+        push    cx
+        mov     ch, ah
+        mov     ax, si
+        sub     ax, rules_tbl + PT_EFFECTS
+        mov     cl, EFFECT_LEN
+        div     cl                      ; AL = the effect's number
+        mov     ah, ch
+        mov     cl, TK_EFFECT
+        call    trace_record
+        pop     cx
+        pop     ax
         ret
 
 ; trace_out61: qpi_out to the real 61h, recording a speaker step first when the write
@@ -143,6 +182,7 @@ trace_record:
         ret
 
 trace_site      db      TK_REBEEP
+trace_div       dw      0               ; the count of the last note on or pitch record
 trace_pos       db      0               ; the next slot in trace_ctx, and so the oldest
 trace_ctx       times 16 db 0
 trace_hdr:

@@ -291,9 +291,11 @@ s_tr_of         db      " records kept of ", 0
 s_tr_cap        db      " offered (capacity ", 0
 s_tr_kinds      db      "# kind: a speaker step forwarding the game's 61h write, one its 42h/43h "
                 db      "write caused, one by ReBeep itself, an OPL note on, an OPL note off, "
-                db      "a profile's rule (before>after = rule>slot), its catch-all", 0
+                db      "a profile's rule (before>after = rule>slot), its catch-all, "
+                db      "a pitch jump of over an eighth on a sounding note, "
+                db      "an effect taking the tone (before>after = effect>slot)", 0
 s_tr_names      db      "step61 ", 0, "steppit", 0, "steprb ", 0, "noteon ", 0, "noteoff", 0
-                db      "rule   ", 0, "fallbk ", 0
+                db      "rule   ", 0, "fallbk ", 0, "pitch  ", 0, "effect ", 0
 %if ($ - s_tr_names) != TK_LAST * 8
 %error s_tr_names needs an 8-byte name for each kind
 %endif

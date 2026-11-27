@@ -24,6 +24,7 @@ image_start:
 %include "engine/interp.asm"            ; cpu 8086
 %include "engine/opl.asm"               ; cpu 8086
 %include "engine/rules.asm"             ; cpu 8086: a game profile's rules and table
+%include "engine/fx.asm"                ; cpu 8086: a profile's effects, on the effect voice
 %include "hotkey/kbd.asm"
 %include "resident/amis.asm"
 %include "capture/trace.asm"            ; the trace build only
@@ -34,6 +35,15 @@ resident_end:
 %include "startup/files.asm"            ; the program's folder, the settings file, the patch lookup
 %include "startup/profile.asm"          ; /G: the profile file parser and loader
 %include "startup/dump.asm"             ; the trace build only: REBEEPD /D
+
+; The resident part costs every player memory, so its size is a decision: the build stops
+; when it grows past the cap. Raise RESIDENT_MAX only on purpose, with how-it-works.md.
+RESIDENT_MAX    equ 5120
+%ifndef REBEEP_TRACE
+%if RESIDENT_PARAS * 16 > RESIDENT_MAX
+%error the resident part is over RESIDENT_MAX bytes: raise the cap only on purpose
+%endif
+%endif
 
 ; A .COM file loads at 100h in one 64 KB segment, with DOS's stack at its top: leave it 512 bytes.
 %if $ - $$ > 10000h - 100h - 512

@@ -1,7 +1,9 @@
 ; INT 09h hook: the Ctrl+Alt hotkeys. Resident code (8086).
 ; Runs on the interrupted program's stack with interrupts off throughout (never STI), and
 ; never touches port 61h: a game may bypass the BIOS, and the only 61h access ReBeep
-; makes is the speaker handoff through QPI.
+; makes is the speaker handoff through QPI. A handler hooked after ReBeep may chain here
+; with interrupts on, so a hotkey clears IF before it touches the OPL: a trapped write
+; landing mid-change would find fx.asm's voices swapped.
 ; Ctrl and Alt are tracked from the raw scan codes, so a game that replaces INT 09h's
 ; BIOS handler still works. A consumed key is never chained; its repeats and its break
 ; code are swallowed too.
@@ -62,6 +64,7 @@ kbd_isr:
         cmp     al, [RB_STATE + RBS_CYCLE_KEY]
         jne     .chain
 .hit:
+        cli                             ; IRET gives the interrupted code its IF back
         mov     [kb_held], al
         or      byte [kb_mods], KB_HELD
         or      bl, bl

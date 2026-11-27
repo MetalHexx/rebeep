@@ -1,12 +1,15 @@
-; OPL render target: plays one voice on the OPL2/OPL3 at 388h, either a
-; faithful square wave or a patch (the two-operator record and octave of a patch
-; block, amis.inc; on an OPL3 its four-operator record too, when it has one). Each
-; new note takes the other of channels 7 and 8 (or, four-operator, of the pairs A and
-; B on bank 1), so the last note releases undisturbed instead of being retriggered;
-; a pitch change stays on the note's own channel.
+; OPL render target: plays a voice, either a faithful square wave or a patch (the
+; two-operator record and octave of a patch block, amis.inc; on an OPL3 its four-operator
+; record too, when it has one). The main voice's new note takes the other of channels 7
+; and 8 (or, four-operator, of the pairs A and B on bank 1), so the last note releases
+; undisturbed instead of being retriggered; a pitch change stays on the note's own channel.
+; A second voice, the effect voice, has one channel: 6, or bank 1's pair 2+5. Everything
+; that differs between the two is in opl_ctx, the current voice's, and every routine
+; serves whichever is current; opl_ctx_swap exchanges it with opl_ctx_alt. Only
+; engine/fx.asm swaps, and the main voice is current between its calls.
 ; Near calls; DS = this module's segment. Every routine preserves all
 ; registers except its outputs, and flags.
-; Only channels 7 and 8's registers (or pairs A and B's), the global 01h, (OPL3)
+; Only channels 6, 7 and 8's registers (or pairs A, B and 2+5's), the global 01h, (OPL3)
 ; 104h and 105h and, while detecting (startup/opldet.asm), the timer registers 02h and
 ; 04h are ever written. Volume 0 keys no note: TL 63 is only -47 dB, not silence.
 ; The voice's mode (opl_four), record and carriers are latched when opl_set_voice
@@ -29,6 +32,9 @@
 %if OPL_CH_B != OPL_CH_A + 1 || OPL4_CH_B != OPL4_CH_A + 1
 %error the loops write the other channel's registers one above the first's
 %endif
+%if OPL_FX_CH != OPL_CH_A - 1 || (OPL4_FX_CH & 100h) != (OPL4_CH_A & 100h)
+%error the effect voice's registers are the main voice's plus a difference, on the same bank
+%endif
 
 ; Status reads after each write, by chip: after the index write, after the data write.
 OPL2_IDX_READS  equ     6
@@ -36,8 +42,9 @@ OPL2_DATA_READS equ     35
 OPL3_IDX_READS  equ     2
 OPL3_DATA_READS equ     2
 
-; opl_init: take over channels 7 and 8, key off, current voice and volume. The mode
-; starts two-operator: opl_shutdown left 104h at 0, and opl_set_voice enables the pairs.
+; opl_init: take over the current voice's channels, key off, its voice and the volume. The
+; mode starts two-operator: opl_shutdown left 104h at 0, and opl_set_voice enables the pairs.
+; fx_init runs it for each voice.
 ; In:  AL = 2 or 3 (the chip opl_detect found)
 opl_init:
         mov     byte [opl_type], 2
@@ -76,16 +83,25 @@ opl_init:
         call    opl_swap_ch             ; the first note goes to B
         jmp     opl_program
 
-; opl_channels: the channels of the mode in opl_four, the first note about to take the
-; second of them.
+; opl_channels: the current voice's channels in the mode in opl_four, the first note about to
+; take the second of them; the effect voice has one, so both are it. Sets opl_delta.
 opl_channels:
-        mov     word [opl_ch], OPL_CH_A
-        mov     word [opl_chx], OPL_CH_B
+        push    ax
+        push    bx
+        mov     ax, OPL_CH_A
+        mov     bl, [opl_d2]
         cmp     byte [opl_four], 0
-        je      .done
-        mov     word [opl_ch], OPL4_CH_A
-        mov     word [opl_chx], OPL4_CH_B
-.done:
+        je      .have
+        mov     ax, OPL4_CH_A
+        mov     bl, [opl_d4]
+.have:
+        mov     [opl_delta], bl
+        add     al, bl                  ; AH keeps the bank
+        mov     [opl_ch], ax
+        add     al, [opl_dup]
+        mov     [opl_chx], ax
+        pop     bx
+        pop     ax
         ret
 
 ; opl_swap_ch: the other channel becomes the current one.
@@ -138,12 +154,17 @@ opl_set_voice:
         mov     [opl_four], ah
         call    opl_channels
         push    bx
-        mov     bx, REG_4OP
-        mov     al, OPL4_ENABLE
+        mov     al, [opl_4bits]         ; this voice's pairs join or part; the other voice's stay
         or      ah, ah
-        jnz     .enable
-        xor     al, al
-.enable:
+        jnz     .join
+        not     al
+        and     al, [opl_104]
+        jmp     .put
+.join:
+        or      al, [opl_104]
+.put:
+        mov     [opl_104], al
+        mov     bx, REG_4OP
         call    opl_write
         pop     bx
 .same:
@@ -253,23 +274,30 @@ opl_note_off:
         mov     byte [opl_keyed], 0
         jmp     opl_put_keyblk
 
-; opl_shutdown: the carriers of both channels (or pairs) silenced, both keyed off, then
-; (OPL3) the pairs joined by 104h released and OPL3 mode left. /ON calls opl_init.
-opl_shutdown:
-        mov     byte [opl_att], 63
-        call    opl_put_carriers
+; opl_silence: the current voice's channels (or pairs) keyed off, then their carriers at TL 63.
+; The carriers come last so this tail-jumps there: opl_shutdown calls it within 16 bytes.
+opl_silence:
         mov     byte [opl_keyed], 0
         call    opl_put_keyblk
         call    opl_swap_ch
         call    opl_put_keyblk
         call    opl_swap_ch
+        mov     byte [opl_att], 63
+        jmp     opl_put_carriers
+
+; opl_shutdown: the current voice silenced, then (OPL3) every pair 104h joins released and
+; OPL3 mode left. The other voice must be silent already: fx_shutdown silences the effect
+; voice, then calls this for the main one. /ON calls opl_init.
+opl_shutdown:
+        call    opl_silence
         cmp     byte [opl_type], 3
         jne     .done
         push    ax
         push    bx
         xor     al, al
-        cmp     byte [opl_four], 0
+        cmp     [opl_104], al
         je      .new
+        mov     [opl_104], al
         mov     bx, REG_4OP             ; after the pairs are keyed off, never under a keyed one
         call    opl_write
 .new:
@@ -346,7 +374,8 @@ opl_put_keyblk:
         ret
 
 ; NEXT_REG label: the operator loops' step. Needs SI = the entry's index, counted from 0.
-; Out: AL = the record's byte, BL = the register it goes to (BH is left to the loop), SI + 1.
+; Out: AL = the record's byte, BL = the register it goes to, the current voice's (the table's,
+; for pair or channel A, + opl_delta; BH is left to the loop), SI + 1.
 ; Jumps to label at the end of the register table, which holds 0.
 %macro NEXT_REG 1
         mov     bx, [opl_rec]
@@ -356,12 +385,14 @@ opl_put_keyblk:
         inc     si
         or      bl, bl
         jz      %1
+        add     bl, [opl_delta]
 %endmacro
 
 ; opl_program: write the current mode's voice to the operators and C0h of both channels
 ; (or both pairs), then the volume. The record and the register table are walked in step:
-; a register gets the record's byte, and then the same byte again one register up, for
-; the other channel. The carriers' 40h is left to opl_put_volume so it is written once,
+; a register gets the record's byte, and then the same byte again opl_dup registers up: one,
+; for the main voice's other channel; none, for the effect voice's one, which so gets it
+; twice. The carriers' 40h is left to opl_put_volume so it is written once,
 ; scaled; an additive two-operator voice's modulator is a carrier here, so its 40h is too.
 ; Latches the record, the table and the carriers (opl_cmask: bit n = operator n + 1 is
 ; heard) for opl_put_carriers.
@@ -428,7 +459,7 @@ opl_program:
         jc      .reg                    ; a carrier's
 .write:
         call    opl_write
-        inc     bx
+        add     bl, [opl_dup]
         call    opl_write
         jmp     .reg
 .done:
@@ -456,7 +487,7 @@ opl_put_volume:
         pop     ax
 
 ; opl_put_carriers: write every carrier's TL: the record's base + opl_att, clamped to
-; 63, on both channels (or pairs); the key scale level bits stay.
+; 63, on both channels (or pairs), as opl_program does; the key scale level bits stay.
 opl_put_carriers:
         push    ax
         push    bx
@@ -482,7 +513,7 @@ opl_put_carriers:
         or      al, bh
         mov     bh, [opl_four]
         call    opl_write
-        inc     bx
+        add     bl, [opl_dup]
         call    opl_write
         jmp     .reg
 .done:
@@ -550,22 +581,64 @@ opl_regs4:
 ; AM-AM), bit n for operator n + 1: op4; op1, op4; op2, op4; op1, op3, op4.
 opl_carriers    db      1000b, 1001b, 1010b, 1101b
 
+; opl_ctx_swap: the other voice becomes the current one, and the current one waits in
+; opl_ctx_alt. Only engine/fx.asm calls it. Preserves every register.
+opl_ctx_swap:
+        push    ax
+        push    cx
+        push    si
+        mov     si, opl_ctx
+        mov     cx, OPL_CTX_LEN / 2
+.next:
+        mov     ax, [si]
+        xchg    ax, [si + OPL_CTX_LEN]
+        mov     [si], ax
+        inc     si
+        inc     si
+        loop    .next
+        pop     si
+        pop     cx
+        pop     ax
+        ret
+
+; The chip, shared by both voices.
 opl_type        db      0               ; 0 = not initialised, 2 or 3
-opl_voice       db      0               ; 0 faithful, 1 patch
-opl_four        db      0               ; 1 = four operators on pairs A and B (OPL3): the mode set by
-                                        ; opl_set_voice, also the bank the voice's registers are on
-opl_octave      db      4               ; the patch's octave, 4 for the faithful voice
 opl_wavemask    db      03h             ; E0h's usable bits: 03h on an OPL2, 07h on an OPL3
-opl_blk         dw      0               ; the patch block (its records are played where they are)
 opl_vol         db      15
 opl_att         db      0               ; what opl_put_carriers adds to a TL: (15 - opl_vol) * 4, 63 at volume 0
-opl_keyed       db      0
-opl_ch          dw      OPL_CH_A        ; the channel the last note took, bank bit included
-opl_chx         dw      OPL_CH_B        ; the other one: the next note's
-opl_block       db      0
-opl_fnum        dw      0
-opl_rec         dw      voice_faithful2 ; record the current voice uses
-opl_tab         dw      opl_regs2       ; its register table
-opl_cmask       db      02h             ; its carriers, as in opl_carriers
+opl_104         db      0               ; REG_4OP as written: each voice's opl_4bits while it is four-operator
 opl_idx_reads   db      OPL2_IDX_READS
 opl_data_reads  db      OPL2_DATA_READS
+
+; The current voice: the main voice, except inside an fx.asm call.
+opl_ctx:
+opl_voice       db      0               ; 0 faithful, 1 patch
+opl_four        db      0               ; 1 = four operators (OPL3): the mode set by opl_set_voice,
+                                        ; also the bank the voice's operator registers are on
+opl_octave      db      4               ; the patch's octave, 4 for the faithful voice
+opl_keyed       db      0
+opl_block       db      0
+opl_cmask       db      02h             ; the carriers, as in opl_carriers
+opl_delta       db      0               ; added to channel or pair A's registers, in this mode
+opl_d2          db      0               ; opl_delta for two operators
+opl_d4          db      0               ; and four
+opl_dup         db      1               ; 1: the twin channel (or pair) one up as well; 0: one only
+opl_4bits       db      OPL4_ENABLE     ; this voice's pairs in REG_4OP
+                db      0
+opl_blk         dw      0               ; the patch block (its records are played where they are)
+opl_ch          dw      OPL_CH_A        ; the channel the last note took, bank bit included
+opl_chx         dw      OPL_CH_B        ; the other one: the next note's
+opl_fnum        dw      0
+opl_rec         dw      voice_faithful2 ; record the voice uses
+opl_tab         dw      opl_regs2       ; its register table
+OPL_CTX_LEN     equ     $ - opl_ctx
+; The other voice: the effect voice, as opl_init leaves it.
+opl_ctx_alt:
+        db      0, 0, 4, 0, 0, 02h
+        db      (OPL_FX_CH - OPL_CH_A) & 0FFh, (OPL_FX_CH - OPL_CH_A) & 0FFh
+        db      OPL4_FX_CH - OPL4_CH_A, 0, OPL4_FX_ENABLE, 0
+        dw      0, OPL_FX_CH, OPL_FX_CH, 0, voice_faithful2, opl_regs2
+%if $ - opl_ctx_alt != OPL_CTX_LEN || (OPL_CTX_LEN & 1)
+%error opl_ctx_alt must match opl_ctx, an even length for the swap's words
+%endif
+opl_fx_keyed    equ     opl_ctx_alt + (opl_keyed - opl_ctx) ; the effect voice's key flag
