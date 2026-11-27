@@ -8,8 +8,11 @@ each field means: rebeep-dev's [trace.md](../../rebeep-dev/references/trace.md).
 
 1. Deploy with every VM closed: `rebeep build run --deploy`.
 2. A bench (rebeep-dev's [bench.md](../../rebeep-dev/references/bench.md)) whose load line is
-   `LH D:\REBEEP\REBEEPD /R:0`. Once the profile has rules, add `/G:<SHORT>`: the log then shows
-   what fired too. Then the game's program, `D:\REBEEP\REBEEPD /D`, and the offer to play again.
+   `LH D:\REBEEP\REBEEPD`, without `/R:0`: `/R:0` mutes the sound ReBeep can't play as a note, and
+   the log then shows none of it. Tell the user to expect clicks. Once the profile has rules, add
+   `/G:<SHORT>`: the log then shows what fired too. Then whatever sets the game to the PC speaker
+   ([plan.md](plan.md#the-game-in-the-lab)), the game's program, `D:\REBEEP\REBEEPD /D`, and the
+   offer to play again.
 3. Start the VM and wait for it to close, as bench.md says.
 
 ## What to ask the user to play
@@ -26,8 +29,8 @@ each field means: rebeep-dev's [trace.md](../../rebeep-dev/references/trace.md).
 
 ## After
 
-1. `rebeep disk fetch <vm> REBEEP\RBTRACE.TXT`, then copy it out of `build/` to the user's notes:
-   the next deploy or build may replace it.
+1. `rebeep disk fetch <vm> REBEEP\RBTRACE.TXT`, then copy it out of `build/` to a folder outside
+   the repo, such as the user's project folder: the next fetch replaces it.
 2. `node .claude/skills/game-profile/scripts/trace.mjs parts <log>`: a first look at each dump.
 3. Tell the user in a line or two what each part seems to start with. Then find the events
    ([events.md](events.md)).
@@ -37,4 +40,5 @@ each field means: rebeep-dev's [trace.md](../../rebeep-dev/references/trace.md).
 - A log is only of the program and options it ran with: a different load line, a different log.
 - The BIOS tick in the log stops when a game takes over the timer: its seconds stop with it. The
   order of records still holds.
-- A dump with no records: the program ended before it made a sound, as a launcher does.
+- A dump with no records: the game played through a sound card instead, or the program ended
+  before it made a sound, as a launcher does.

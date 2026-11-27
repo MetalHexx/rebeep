@@ -5,15 +5,15 @@
 //
 //   node code.mjs --game <NAME> --list
 //       The files in the game's zip.
-//   node code.mjs --game <NAME> --file <FILE>
+//   node code.mjs --game <NAME> --file <FILE> [--scan]
 //       What the file is (MZ or COM, packed or not), then every place its code touches the
 //       speaker's ports (42h, 43h, 61h) and the timer's (40h), with the control word written to
-//       43h when a MOV AL comes just before.
+//       43h when a MOV AL comes just before. --scan scans any other file too, such as a driver.
 //   node code.mjs --game <NAME> --file <FILE> --find "B0 B6 E6 43" [--find ...]
 //       Offsets of a byte pattern; ?? matches any byte. A count 0952h is the bytes 52 09.
 //   node code.mjs --game <NAME> --file <FILE> --dis <offset> [--lines 40]
-//       Disassembles from a hex offset with the lab's ndisasm. The image goes to a temporary
-//       folder for ndisasm to read, and is deleted straight after.
+//       Disassembles from a hex offset with ndisasm: REBEEP_NDISASM, else the lab's NASM, else
+//       one on PATH. Only the bytes it reads go to a temporary folder, deleted straight after.
 //
 // Offsets are into the load image: past the MZ header, after unpacking. They are hex.
 import { spawnSync } from 'node:child_process';
@@ -107,7 +107,7 @@ function loadImage(name, bytes) {
     return { image, code: true, what: `an MZ executable, ${image.length} bytes of image` };
   }
   if (/\.COM$/i.test(name)) return { image: bytes, code: true, what: 'a .COM program: it loads at 100h, so add 100h to an offset for its address' };
-  return { image: bytes, code: false, what: 'not a program: data, so no port scan (--find and --dis still work)' };
+  return { image: bytes, code: false, what: 'not an MZ or .COM program, so no port scan unless --scan (a driver or overlay may be code)' };
 }
 
 const PORT_OPS = [
@@ -177,7 +177,9 @@ function findNdisasm() {
   if (process.env.REBEEP_NDISASM) return process.env.REBEEP_NDISASM;
   const exe = process.platform === 'win32' ? 'ndisasm.exe' : 'ndisasm';
   const root = path.join(rebeepHome(), 'tools', 'nasm');
-  const versions = fs.existsSync(root) ? fs.readdirSync(root).sort().reverse() : [];
+  const versions = fs.existsSync(root)
+    ? fs.readdirSync(root).sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
+    : [];
   for (const v of versions) {
     const bin = path.join(root, v, exe);
     if (fs.existsSync(bin)) return bin;
@@ -185,19 +187,23 @@ function findNdisasm() {
   return 'ndisasm'; // a system NASM on Linux and macOS brings it
 }
 
+/** Disassembles `lines` lines from `offset`. Only that slice is written, and always removed. */
 function disassemble(image, offset, lines) {
+  if (offset >= image.length) fail(`offset ${hex(offset, 5)} is past the image's end (${hex(image.length, 5)})`);
+  const slice = image.subarray(offset, Math.min(image.length, offset + lines * 16));
+  const bin = findNdisasm();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rebeep-code-'));
+  let run;
   try {
-    const file = path.join(dir, 'IMAGE.BIN');
-    fs.writeFileSync(file, image);
-    const bin = findNdisasm();
-    const run = spawnSync(bin, ['-b', '16', '-e', String(offset), '-o', String(offset), file],
-      { encoding: 'latin1', maxBuffer: 64 * 1024 * 1024 });
-    if (run.error) fail(`could not run ndisasm (${bin}): ${run.error.message}. Set REBEEP_NDISASM`);
-    console.log(run.stdout.split(/\r?\n/).slice(0, lines).join('\n'));
+    const file = path.join(dir, 'SLICE.BIN');
+    fs.writeFileSync(file, slice);
+    run = spawnSync(bin, ['-b', '16', '-o', String(offset), file], { encoding: 'latin1' });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+  if (run.error) fail(`could not run ndisasm (${bin}): ${run.error.message}. Set REBEEP_NDISASM`);
+  if (run.status !== 0) fail(`ndisasm failed: ${run.stderr.trim() || `exit code ${run.status}`}`);
+  console.log(run.stdout.split(/\r?\n/).slice(0, lines).join('\n'));
 }
 
 function main(argv) {
@@ -211,6 +217,7 @@ function main(argv) {
     else if (a === '--dis') opts.dis = next();
     else if (a === '--lines') opts.lines = next();
     else if (a === '--list') opts.list = true;
+    else if (a === '--scan') opts.scan = true;
     else fail(`unknown option ${a}`);
   }
   if (!opts.game) fail('usage: code.mjs --game <NAME> (--list | --file <FILE> [--find "<bytes>"] [--dis <offset>])');
@@ -225,8 +232,8 @@ function main(argv) {
   console.log(`${entry.name}: ${what}.`);
   if (opts.dis !== undefined) {
     if (!/^[0-9a-f]+h?$/i.test(opts.dis)) fail('--dis takes a hex offset, such as 1A2B');
-    const lines = opts.lines ? parseInt(opts.lines, 10) : 40;
-    disassemble(image, parseInt(opts.dis.replace(/h$/i, ''), 16), lines);
+    if (opts.lines !== undefined && !/^[1-9]\d*$/.test(opts.lines)) fail('--lines takes a number, such as 60');
+    disassemble(image, parseInt(opts.dis.replace(/h$/i, ''), 16), opts.lines ? +opts.lines : 40);
     return;
   }
   if (opts.find.length) {
@@ -237,7 +244,7 @@ function main(argv) {
     }
     return;
   }
-  if (code) scan(image);
+  if (code || opts.scan) scan(image);
 }
 
 main(process.argv.slice(2));

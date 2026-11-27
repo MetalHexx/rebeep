@@ -5,15 +5,18 @@
 //       Per dump: each control word the game wrote and the note that followed it, the counts that
 //       start notes and the jumps most often, and how many profile records there are.
 //   node trace.mjs near <log> <count> [<t>] [--rbg <NAME.RBG>]
-//       Every note start (NOTE) and pitch jump (CHANGE) within t of count (default 40), with the
-//       rule that matched last, grouped. Shows whether a count is unique to one part.
+//       Every note start (NOTE) and pitch jump (CHANGE) within t of count (default a 32nd of it,
+//       about half a semitone), with the rule that matched last, grouped. Shows whether a count is
+//       unique to one part. That rule carries into the next dump while REBEEPD stays loaded.
 //   node trace.mjs hits <log> [--rbg <NAME.RBG>]
 //       The profile's rule, fallbk and effect records in order, named from the .RBG, and the rules
-//       and effects that never fired.
+//       and effects that never fired. An effect whose patch isn't beside the .RBG is dropped at
+//       load, so the effects after it are numbered as ReBeep numbers them.
 //
 // A count is written as in a profile: 0952h is hex, 2386 decimal. Record fields are in
 // .claude/skills/rebeep-dev/references/trace.md.
 import fs from 'node:fs';
+import path from 'node:path';
 
 const PIT_HZ = 1193182;
 const TICKS_PER_SEC = 18.2065;
@@ -97,9 +100,15 @@ function readProfile(file) {
     if (key === 'NAME' || key === 'ID') current[key.toLowerCase()] = value;
     const names = (key === 'PATCH' && (section === 'RULE' || section === 'EFFECT')) ||
       (key === 'DEFAULT' && section === 'PROFILE');
-    if (names) current.slot = slotOf(value);
+    if (names) {
+      current.slot = slotOf(value);
+      current.patch = value.toUpperCase();
+    }
   }
-  return { rules, effects, slots };
+  // ReBeep drops an effect whose patch fails to load, and numbers the rest without it.
+  const present = new Set(fs.readdirSync(path.dirname(path.resolve(file))).map((n) => n.toUpperCase()));
+  const dropped = effects.filter((e) => e.patch && !present.has(`${e.patch}.RBP`));
+  return { rules, effects: effects.filter((e) => !dropped.includes(e)), dropped, slots };
 }
 
 function label(profile, kind, number) {
@@ -162,6 +171,12 @@ function parts(dumps, profile) {
       console.log(`    ${at(dump.recs[c.rec])}  43h=${byte}h  ${then}${tag}`);
     }
     if (controls.length > 40) console.log(`    ... and ${controls.length - 40} more`);
+    if (controls.length) {
+      const byValue = new Map();
+      for (const c of controls) byValue.set(c.value, (byValue.get(c.value) || 0) + 1);
+      console.log(`  control word values: ${[...byValue].map(([v, k]) =>
+        `${v.toString(16).toUpperCase().padStart(2, '0')}h x${k}`).join(', ')}`);
+    }
     const recs = dump.recs;
     console.log(`  note starts, most often: ${tally(recs.filter((r) => r.kind === 'noteon').map((r) => r.div), 10)}`);
     console.log(`  pitch jumps, most often: ${tally(recs.filter((r) => r.kind === 'change').map((r) => r.div), 6)}`);
@@ -175,10 +190,15 @@ function parts(dumps, profile) {
 function near(dumps, count, t, profile) {
   console.log(`Note starts and pitch jumps within ${t} of ${pitch(count)}: ` +
     `${pitch(Math.min(count + t, 0xffff))} to ${pitch(Math.max(count - t, 0))}`);
+  let state = 'no rule yet';
+  let lastSeq = -1;
   dumps.forEach((dump, n) => {
     headline(dump, n);
     const at = secondsFrom(dump);
-    let state = 'no rule yet';
+    // The game's write count runs on while REBEEPD stays loaded, and so does the rule state.
+    if (dump.recs.length && dump.recs[0].seq < lastSeq) state = 'no rule yet';
+    if (dump.recs.length) lastSeq = dump.recs.at(-1).seq;
+    if (state !== 'no rule yet') console.log(`  from the dump before: ${state}`);
     const hits = [];
     dump.recs.forEach((r, i) => {
       if (r.kind === 'rule' || r.kind === 'fallbk') state = label(profile, 'rule', r.before);
@@ -238,6 +258,10 @@ function hits(dumps, profile) {
   const rules = never('rule', profile.rules);
   const effects = never('effect', profile.effects);
   console.log(`\nnever fired: ${[...rules, ...effects].join(', ') || 'none'}`);
+  if (profile.dropped.length) {
+    console.log(`dropped at load, no patch beside the .RBG: ${profile.dropped
+      .map((e) => `effect${e.name ? ` "${e.name}"` : ''} (${e.patch}.RBP)`).join(', ')}`);
+  }
 }
 
 function main(argv) {
@@ -259,7 +283,8 @@ function main(argv) {
   if (command === 'hits') hits(dumps, profile);
   if (command === 'near') {
     if (!rest[0]) fail('near needs a count, such as 0952h');
-    near(dumps, parseCount(rest[0]), rest[1] ? parseCount(rest[1]) : 40, profile);
+    const count = parseCount(rest[0]);
+    near(dumps, count, rest[1] ? parseCount(rest[1]) : Math.max(1, count >> 5), profile);
   }
 }
 

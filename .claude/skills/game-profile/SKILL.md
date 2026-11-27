@@ -1,6 +1,6 @@
 ---
 name: game-profile
-description: Make or change a ReBeep game profile (/G:) for any game, with the user, step by step. Plan which parts of the game get a sound of their own; log the game with REBEEPD and read its code to find the events ReBeep can match (control words, note starts, pitch changes, notes stopping); write the .RBG; check in a listening session that every rule and effect fires where it should; and shape the patches by ear. Use when someone wants a profile for a game, a rule or effect fires in the wrong place or never, a part needs a sound of its own, or a profile's patches need tuning. It grows with each game: it says where to write down what a game taught.
+description: Make or change a ReBeep game profile (/G:) for any game, with the user, step by step. Plan which parts of the game get a sound of their own; log the game with REBEEPD and read its code to find the events ReBeep can match (control words, note starts, pitch changes, notes stopping); write the .RBG; check in a listening session that every rule and effect fires where it should; and shape the patches by ear. Use when someone wants a profile for a game, a rule or effect fires in the wrong place or never, a part needs a sound of its own, or a profile's patches need tuning. It grows with each game, and says where to write down what a game taught.
 ---
 
 # game-profile
@@ -58,21 +58,22 @@ Loop through 3 to 5 until every part switches right. Only then spend the user's 
 
 ## Scripts
 
-Node built-ins only, run from the repo root. Add `--rbg <NAME.RBG>` to a `trace.mjs` command to
-name the rules, effects and patches.
+Node built-ins and the repo's zip reader, run from the repo root. Add `--rbg <NAME.RBG>` to a
+`trace.mjs` command to name the rules, effects and patches.
 
 | Script | Does |
 |---|---|
 | `scripts/trace.mjs parts <log>` | Each control word in a log and the note after it; the commonest notes and jumps |
 | `scripts/trace.mjs near <log> <count> [t]` | Every note start and jump near a count, and the rule matched then: is it unique? |
-| `scripts/trace.mjs hits <log>` | The rules and effects that fired, in order, and those that never did |
+| `scripts/trace.mjs hits <log>` | The rules and effects that fired, in order; with `--rbg`, those that never did |
 | `scripts/code.mjs --game <NAME>` | A game's file read as data: its speaker code, a byte search, disassembly ([code.md](references/code.md)) |
 
 ## Always
 
 - Never run a game's files on the host. Read them as data only ([code.md](references/code.md)).
 - Every hand test is a bench: the user presses Enter, plays, and closes the VM. Never a command.
-- The load line carries every option under test; `/R:0` keeps speaker clicks out of an ear test.
+- The load line carries every option under test. `/R:0` keeps speaker clicks out of an ear test,
+  but also keeps the sound ReBeep can't play as a note out of a log ([listen.md](references/listen.md)).
 - Fetch a VM's logs before any deploy, which rewrites its D:. Logs and benches stay out of the repo.
 - Go by the order of events, never by time: a rule can't wait or measure.
 - ReBeep has no code for one game. A profile that needs ReBeep to change needs a general option,

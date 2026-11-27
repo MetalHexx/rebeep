@@ -28,8 +28,8 @@ entry by itself and can power itself off. No game runs.
 ## A listening session
 
 1. A bench (rebeep-dev's [bench.md](../../rebeep-dev/references/bench.md)) on the game's VM,
-   whose load line is `LH D:\REBEEP\REBEEPD /G:<SHORT> /R:0`, then the game, then
-   `D:\REBEEP\REBEEPD /D`.
+   whose load line is `LH D:\REBEEP\REBEEPD /G:<SHORT> /R:0` (no clicks while the user listens),
+   then the game set to the PC speaker, then `D:\REBEEP\REBEEPD /D`.
 2. Give the user an order to play the parts in, and what each should sound like: each placeholder
    differs, and the fallback means a miss.
 3. Fetch the log, then `trace.mjs hits <log> --rbg <SHORT.RBG>`: each rule and effect that fired,
@@ -40,7 +40,7 @@ entry by itself and can power itself off. No game runs.
 
 | `hits` shows | Likely | Look with |
 |---|---|---|
-| No record at all | It didn't load, or no rule's first step ever came | `GLOAD.TXT`; `trace.mjs parts` |
+| No record at all | It didn't load, the game played through a sound card, or no rule's first step came | `GLOAD.TXT`; `trace.mjs parts` |
 | A rule never fires | A step waits for the wrong kind (a `NOTE` that came as a `CHANGE`), a count outside `t`, or a `WHILE=` rule that never matched | `near` on its count: how it came, what held then |
 | A rule fires in the wrong part | Its signature isn't unique | `near`; then a step before it, a `WHILE=`, a narrower `t` |
 | The fallback, where a rule should fire | That rule missed, and the catch-all took the start | The rule's steps against `parts` |
@@ -52,5 +52,7 @@ entry by itself and can power itself off. No game runs.
 
 - `hits` names records from the `.RBG` you give it. When the log's patch differs from the file's,
   it says so: the file changed after the run, so the names may be wrong.
-- An effect whose patch failed to load is dropped, and the effects after it move up a number.
+- ReBeep drops an effect whose patch fails to load, and numbers the rest without it. `hits` does
+  the same for a patch missing from the profile's folder. A patch that is there but refused drops
+  its effect too: `GLOAD.TXT` names it, and `hits` can't know.
 - A rule that fires once too often can end a `WHILE=` window early: list every rule in `hits`.

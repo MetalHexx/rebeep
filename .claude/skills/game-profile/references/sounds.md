@@ -10,9 +10,9 @@ Get the rules right first: a sound is easier to judge once it plays in the right
 | You write the `.RBP` from the user's words | Most of the time: they describe it, you shape it, they listen |
 | The user shapes it in [ReBeep Studio](../../../../docs/guide/studio.md) | They want their hands on it, playing keys while they turn the knobs |
 
-The studio saves to `D:\REBEEP\PATCHES\USER\`. Collect a patch from there as rebeep-dev's
-[patches.md](../../rebeep-dev/references/patches.md) says, into the profile's folder, under the
-name the profile gives it.
+The studio saves to `D:\REBEEP\PATCHES\USER\`. Fetch it as rebeep-dev's
+[patches.md](../../rebeep-dev/references/patches.md) says, but copy it into the profile's folder,
+under the name the profile gives it, not into the lab's patch set.
 
 ## Writing one
 
@@ -20,6 +20,8 @@ name the profile gives it.
   the top of every `.RBP`, which names its twelve numbers. Start from the factory patch closest to
   the sound, or a lab profile's patch, and change a few numbers.
 - In FM, `OP1` is the modulator: it shapes the tone. `OP2` is the carrier: it is what you hear.
+- **`SL` and `OL` are turned round from the chip's:** in an `.RBP`, bigger is louder. Every other
+  number is the chip's own: a bigger `AR`, `DR` or `RR` is faster.
 - A `[4OP]` voice plays on an OPL3 only, and the required `[2OP]` one everywhere else. Make the
   2-op voice good on its own.
 - Write in the patch's comments what it is meant to sound like, and why: the next change starts
@@ -37,7 +39,8 @@ A starting point, not a recipe: listen, and keep what works.
 | Softer, rounder | The modulator quieter, `FEEDBACK` down |
 | Gritty, distorted | `FEEDBACK` up, to 6 or 7 |
 | Metallic, a bell | The modulator's `MULT` high, 5 or more |
-| Plucked, short | The carrier's `DR` up and `SUS` 0 |
+| Louder, quieter beside the other parts | The carrier's `OL` up or down |
+| Plucked, short | The carrier's `SUS` 0 and `RR` up; a lower `SL` and a higher `DR` drop it sooner |
 | Held, like an organ | The carrier's `SUS` 1 |
 | A softer start | The carrier's `AR` down |
 | Lower, higher | `OCTAVE` down or up: 4 is the game's pitch |

@@ -2,15 +2,21 @@
 
 ## The game in the lab
 
+- **The lab first:** `rebeep env status` shows what is set up. A fresh lab starts at rebeep-dev's
+  [environment.md](../../rebeep-dev/references/environment.md).
 - **Add it:** `rebeep media add game <zip> --name <SHORT>`. `<SHORT>` is up to 8 letters, digits,
-  `-` or `_`, and is also the profile's name. Use it in every path you make: `rebeep repo check`
-  refuses some full game names in a path.
+  `-` or `_`, not only digits, and is also the profile's name. Use it in every path you make:
+  `rebeep repo check` refuses some full game names in a path.
 - **Where it lands:** every deploy writes it to D: as `D:\GAMES\<SHORT>\`, with one wrapper folder
   stripped. `code.mjs --game <SHORT> --list` shows the folders and files.
 - **What to start:** the game's own program, not a launcher or a setup menu: it gets the user in
   faster. Ask the user if it isn't clear from the names.
-- **Which VM:** `mirror-msdos`, unless the game needs a card it lacks (an EGA or Hercules game:
-  the VMs are in rebeep-dev's [vms.md](../../rebeep-dev/references/vms.md)).
+- **The PC speaker, not a sound card.** The VMs have a Sound Blaster, and a game that finds one
+  may never touch the speaker. Find how it picks (a setup program, a command-line switch, a
+  question at start) and have each bench choose the speaker before the game: a deploy rewrites
+  D:, which loses a setup the game saved there.
+- **Which VM:** `mirror-msdos`, whose SVGA card also runs CGA and EGA games. The others are in
+  rebeep-dev's [vms.md](../../rebeep-dev/references/vms.md).
 
 ## The parts
 

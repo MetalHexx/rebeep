@@ -8,9 +8,9 @@ this sound, and what comes just before it? Where does a song's first note come f
 - **Data only.** Never run a game's file on the host. `code.mjs` reads it in memory from the
   game's zip in the lab, and unpacks an EXEPACK program in memory.
 - **Nothing of the game is kept.** Never copy a game's file, or anything unpacked from it, into
-  the repo or the user's notes. `--dis` writes the image to a temporary folder for ndisasm and
-  deletes it straight after. Write down what you learn (an offset, what the code does), never the
-  game's bytes.
+  the repo or the user's notes. `--dis` writes only the bytes it disassembles to a temporary
+  folder, and deletes them straight after. Write down what you learn (an offset, what the code
+  does), never the game's bytes.
 - Tell the user before you read their game's files, in a line.
 
 ## Steps
@@ -19,9 +19,11 @@ this sound, and what comes just before it? Where does a song's first note come f
    Most games have one main program. Some keep code in an overlay (`.OVL`) or a second program.
 2. `--file <FILE>`: what the file is, then each place its code touches the speaker's ports: 42h
    (the pitch), 43h (the control word, with its value when a `MOV AL` sets it), 61h (the
-   speaker's bits) and 40h (the game's own clock).
+   speaker's bits) and 40h (the game's own clock). Add `--scan` for a driver or overlay that is
+   neither an MZ nor a `.COM` file.
 3. `--dis <offset> --lines 60`: the code around a site. Start a little before it: the
-   instructions that load a count or a control word come first.
+   instructions that load a count or a control word come first. It runs the lab's ndisasm; set
+   `REBEEP_NDISASM` to another one's path.
 4. `--find "<bytes>"`: where a value is. A count from the log is two bytes, low first: `0952h` is
    `52 09`. `??` matches any byte.
 

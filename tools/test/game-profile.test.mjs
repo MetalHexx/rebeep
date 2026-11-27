@@ -44,7 +44,8 @@ function withLog(fn) {
   try {
     fs.writeFileSync(path.join(dir, 'RBTRACE.TXT'), LOG);
     fs.writeFileSync(path.join(dir, 'T.RBG'), RBG);
-    fn(path.join(dir, 'RBTRACE.TXT'), path.join(dir, 'T.RBG'));
+    for (const p of ['FALLBK', 'PLAYP', 'OTHER', 'ZAP']) fs.writeFileSync(path.join(dir, `${p}.RBP`), '');
+    fn(path.join(dir, 'RBTRACE.TXT'), path.join(dir, 'T.RBG'), dir);
   } finally {
     removeDir(dir);
   }
@@ -58,6 +59,7 @@ test('trace.mjs parts: each control word, the note after it and the rule it fire
   assert.match(r.out, /control words written to 43h, with the note that followed: 1\n/);
   assert.match(r.out, /43h=B6h {2}then a note at 0952h \(500 Hz\), rule 0 PLAY "Play" fired/);
   assert.match(r.out, /note starts, most often: 0952h \(500 Hz\) x2/);
+  assert.match(r.out, /control word values: B6h x1\n/);
   assert.match(r.out, /pitch jumps, most often: 0400h \(1165 Hz\) x1/);
 }));
 
@@ -68,6 +70,35 @@ test('trace.mjs hits: names from the .RBG, runs collapsed, and what never fired'
   assert.match(r.out, /effect 0 "Zap" -> ZAP {2}x2/);
   assert.match(r.out, /never fired: rule 1 "Never"/);
   assert.doesNotMatch(r.out, /changed since/);
+  assert.doesNotMatch(r.out, /dropped at load/);
+}));
+
+test('trace.mjs hits: an effect whose patch is missing is dropped, and the next takes its number', () => withLog((log, rbg, dir) => {
+  const two = RBG.replace('[EFFECT]', '[EFFECT]\r\nNAME=Gone\r\nPITCH=0200h\r\nPATCH=GONE\r\n[EFFECT]');
+  fs.writeFileSync(rbg, two);
+  // GONE still takes a slot (3), so ReBeep logs Zap, now effect 0, with ZAP's slot 4.
+  fs.writeFileSync(log, LOG.replaceAll('effect  00>03', 'effect  00>04'));
+  const r = run('trace.mjs', ['hits', log, '--rbg', rbg]);
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.out, /effect 0 "Zap" -> ZAP {2}x2/);
+  assert.doesNotMatch(r.out, /changed since/);
+  assert.match(r.out, /dropped at load, no patch beside the \.RBG: effect "Gone" \(GONE\.RBP\)/);
+  assert.ok(fs.existsSync(path.join(dir, 'ZAP.RBP')));
+}));
+
+test('trace.mjs near: an older log\'s pitch records, and the rule carried into the next dump', () => withLog((log, rbg) => {
+  const next = [
+    '# ReBeep x.y.z trace: 1 records kept of 1 offered (capacity 1024)',
+    '0040 0030 1000 pitch   00>00 2F 1 02 0402 17 61=2F 61=2F 61=2F 61=2F 61=2F 61=2F 42=02 42=04',
+  ].join('\r\n');
+  fs.appendFileSync(log, `\r\n${next}\r\n`);
+  const r = run('trace.mjs', ['near', log, '0400h', '8', '--rbg', rbg]);
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.out, /=== dump 2[^\n]*\n {2}from the dump before: rule 0 PLAY "Play"\n/);
+  assert.match(r.out, /CHANGE 0402h \(1163 Hz\) {2}after -, while rule 0 PLAY "Play"/);
+  const reloaded = fs.readFileSync(log, 'latin1').replace('0040 0030', '0001 0030');
+  fs.writeFileSync(log, reloaded);
+  assert.match(run('trace.mjs', ['near', log, '0400h', '8']).out, /0402h \(1163 Hz\) {2}after -, while no rule yet/);
 }));
 
 test('trace.mjs near: how each tone came, and what had matched', () => withLog((log, rbg) => {
@@ -79,17 +110,20 @@ test('trace.mjs near: how each tone came, and what had matched', () => withLog((
   assert.equal(run('trace.mjs', ['parts']).code, 2);
 }));
 
-/** A tiny EXEPACK program: its code, then one fill command that unpacks it to 64 bytes. */
-function exepacked() {
+/**
+ * A tiny EXEPACK program: its code, then one fill command that unpacks it to 64 bytes. `short`
+ * gives the older 16-byte header, which has no skip length.
+ */
+function exepacked(short = false) {
   const code = Buffer.from([0xb0, 0xb6, 0xe6, 0x43, 0xb0, 0x00, 0xe6, 0x42, 0xe6, 0x42, 0xe4, 0x61,
     0x0c, 0x03, 0xe6, 0x61, ...Array(12).fill(0x90)]);
   const fill = 64 - 28;
   const packed = Buffer.concat([code, Buffer.from([0x90, fill & 0xff, fill >> 8, 0xb1])]);
-  const header = Buffer.alloc(18);
+  const header = Buffer.alloc(short ? 16 : 18);
   header.writeUInt16LE(4, 12); // the unpacked length in paragraphs
-  header.writeUInt16LE(1, 14); // no skip
-  header.write('RB', 16, 'latin1');
-  const image = Buffer.concat([packed, header, Buffer.alloc(14)]);
+  if (!short) header.writeUInt16LE(1, 14); // no skip
+  header.write('RB', short ? 14 : 16, 'latin1');
+  const image = Buffer.concat([packed, header, Buffer.alloc(short ? 16 : 14)]);
   const mz = Buffer.alloc(32);
   mz.write('MZ', 0, 'latin1');
   mz.writeUInt16LE(96, 2);
@@ -108,6 +142,8 @@ function withGame(fn) {
     const date = new Date(2000, 0, 1);
     fs.writeFileSync(path.join(games, 'TG.zip'), writeZip([
       { name: 'TG/PROG.EXE', bytes: exepacked(), date },
+      { name: 'TG/OLD.EXE', bytes: exepacked(true), date },
+      { name: 'TG/SOUND.DRV', bytes: Buffer.from([0x90, 0xe6, 0x61]), date },
       { name: 'TG/BEEP.COM', bytes: Buffer.from([0xba, 0x61, 0x00, 0xec]), date },
       { name: 'TG/DATA/TUNE.BIN', bytes: Buffer.from([0x52, 0x09, 0x00, 0x52, 0x09]), date },
     ]));
@@ -129,6 +165,25 @@ test('code.mjs: lists, unpacks EXEPACK in memory and finds the speaker code', ()
   assert.match(r.out, /OUT 42h,AL[^\n]*: 2\n {2}00006\n {2}00008/);
   assert.match(r.out, /IN AL,61h[^\n]*: 1\n {2}0000A/);
   assert.match(r.out, /OUT 61h,AL[^\n]*: 1\n {2}0000E/);
+  const old = run('code.mjs', ['--game', 'TG', '--file', 'OLD.EXE'], env);
+  assert.match(old.out, /packed with EXEPACK, unpacked in memory to 64 bytes/);
+  assert.match(old.out, /00002 {2}MOV AL,B6h: 43h=B6h/);
+}));
+
+test('code.mjs --dis: a failed ndisasm leaves nothing of the game behind', () => withGame((env) => {
+  const temp = makeTempDir('rebeep-tmp-');
+  try {
+    const tmp = { ...env, TEMP: temp, TMP: temp, TMPDIR: temp, REBEEP_NDISASM: path.join(temp, 'none', 'ndisasm') };
+    const r = run('code.mjs', ['--game', 'TG', '--file', 'PROG.EXE', '--dis', '0'], tmp);
+    assert.equal(r.code, 2);
+    assert.match(r.err, /could not run ndisasm/);
+    assert.deepEqual(fs.readdirSync(temp), []);
+    assert.equal(run('code.mjs', ['--game', 'TG', '--file', 'PROG.EXE', '--dis', '0', '--lines', 'x'], tmp).code, 2);
+    assert.equal(run('code.mjs', ['--game', 'TG', '--file', 'PROG.EXE', '--dis', '40'], tmp).code, 2);
+    assert.deepEqual(fs.readdirSync(temp), []);
+  } finally {
+    removeDir(temp);
+  }
 }));
 
 test('code.mjs: a .COM, a data file, a byte search and the refusals', () => withGame((env) => {
@@ -137,7 +192,10 @@ test('code.mjs: a .COM, a data file, a byte search and the refusals', () => with
   assert.match(com.out, /MOV DX,61h[^\n]*: 1\n {2}00000/);
   const data = run('code.mjs', ['--game', 'TG', '--file', 'DATA/TUNE.BIN', '--find', '52 09', '--find', '09 ?? 52'], env);
   assert.equal(data.code, 0, data.err);
-  assert.match(data.out, /not a program/);
+  assert.match(data.out, /not an MZ or \.COM program/);
+  assert.doesNotMatch(data.out, /Candidates/);
+  const drv = run('code.mjs', ['--game', 'TG', '--file', 'SOUND.DRV', '--scan'], env);
+  assert.match(drv.out, /OUT 61h,AL[^\n]*: 1\n {2}00001/);
   assert.match(data.out, /"52 09": 00000 00003/);
   assert.match(data.out, /"09 \?\? 52": 00001/);
   assert.equal(run('code.mjs', ['--game', 'NONE', '--list'], env).code, 2);

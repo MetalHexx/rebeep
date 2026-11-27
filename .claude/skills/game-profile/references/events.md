@@ -10,13 +10,14 @@ A profile matches only what ReBeep sees: the kinds of step in
 | `CHANGE n t` | A `change` record: a sounding note jumps. A move of an eighth or less isn't logged, but a step still sees it |
 | `PITCH n t` | Either of the two |
 | `OFF` | A `noteoff` record |
-| Nothing | `step61` and `steppit`: sound played on the speaker, not as a note. No step matches it |
+| Nothing | `step61` and `steppit`: sound played on the speaker, not as a note. No step matches it, and `/R:0` keeps it out of the log |
 
 ## A signature for each part
 
-1. **How it starts.** `trace.mjs parts` on that part's dump. A control word written just before
-   a part's first note is the strongest start there is: many games write one as a song or a sound
-   begins. Then that first note's count.
+1. **How it starts.** `trace.mjs parts` on that part's dump. A control word makes a good first
+   step when the game writes it only as a song or a sound begins: its tally of values shows how
+   often. One written before every note tells nothing. Without one, a start is what comes before
+   the part's first notes: an `OFF`, then the first two or three notes as steps of their own.
 2. **Is it unique?** `trace.mjs near <log> <count> <t>` over every dump. The count should start
    that part and nothing else. If another part plays it too, add a step before it (the control
    word, an `OFF`, an earlier note), or narrow `t`.
@@ -31,7 +32,7 @@ A profile matches only what ReBeep sees: the kinds of step in
    `fallbk`.
 
 **The tolerance `t`:** the spread the log shows for that count, a little more, and less than half
-the gap to the nearest count of another part.
+the gap to the nearest count of another part. `near` looks a 32nd either side unless told.
 
 ## Write the profile
 
