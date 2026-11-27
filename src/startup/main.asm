@@ -24,7 +24,8 @@ OPT_D           equ 0800h               ; dump the trace
 %else
 OPT_D           equ 0
 %endif
-OPT_CONFIG      equ OPT_F | OPT_P | OPT_V | OPT_K | OPT_L | OPT_R
+OPT_G           equ 1000h               ; a game profile
+OPT_CONFIG      equ OPT_F | OPT_P | OPT_G | OPT_V | OPT_K | OPT_L | OPT_R
 OPT_CONTROL     equ OPT_ON | OPT_OFF | OPT_S | OPT_U | OPT_D
 
 ; Paragraphs kept resident, counted from the PSP: everything below resident_end.
@@ -80,8 +81,16 @@ load_path:
 .slot:
         mov     al, [free_id]
         mov     [rb_amis_id], al
+        mov     word [prof_dst], rules_tbl
         call    crit_on
+        test    word [opt_set], OPT_G
+        jz      .patch
+        call    profile_select          ; a profile with a DEFAULT= sets OPT_P
+        test    word [opt_set], OPT_P
+        jnz     .patched
+.patch:
         call    load_patch
+.patched:
         call    crit_off
         push    cs
         pop     es
@@ -154,6 +163,23 @@ change_path:
         cmp     byte [es:bx + RBS_VERSION], RBS_LAYOUT
         jne     mismatch                ; one release, two layouts: a write would land in the wrong fields
         mov     [res_state], bx
+        mov     al, AMIS_FN_PROFILE
+        call    amis_call
+        xor     dx, dx                  ; DX = the resident profile table, or 0
+        cmp     al, 0FFh
+        jne     .noprof
+        mov     es, [res_seg]
+        cmp     byte [es:bx + PT_LAYOUT], PROF_LAYOUT
+        jne     .noprof
+        mov     dx, bx
+.noprof:
+        mov     [prof_dst], dx
+        or      dx, dx
+        jnz     .prof
+        test    word [opt_set], OPT_G
+        jz      .prof
+        jmp     mismatch                ; a copy that can't take this profile table
+.prof:
         mov     ax, [opt_set]
         test    ax, OPT_U
         jnz     do_unload
@@ -211,9 +237,15 @@ do_status:
 
 do_update:
         test    word [opt_set], OPT_P
-        jz      .apply
+        jz      .profile
         call    crit_on
         call    select_patch
+        call    crit_off
+.profile:
+        test    word [opt_set], OPT_G
+        jz      .apply
+        call    crit_on
+        call    profile_select          ; a profile with a DEFAULT= sets OPT_P
         call    crit_off
 .apply:
         mov     es, [res_seg]
@@ -389,12 +421,29 @@ amis_call:
 ; and nothing else, so a change never resets the fields it did not name. /P: writes the
 ; patch select_patch left in pbuf, the name and the records in one go with interrupts off
 ; (a trapped write must never see half a record), or, when none could be used, the faithful
-; voice and no patch.
+; voice and no patch. The profile table goes in the same go, at prof_dst: /P: or /F ends a
+; profile that is on, and /G: puts profile_select's in its place, so a trapped write never
+; finds a rule that names another profile's patch.
 apply_fields:
         mov     ax, [opt_set]
         pushf
         cli
         cld
+        mov     di, [prof_dst]
+        or      di, di
+        jz      .faithful
+        test    ax, OPT_F | OPT_P       ; the last command wins
+        jz      .profile
+        mov     byte [es:di + PT_ACTIVE], 0
+.profile:
+        test    ax, OPT_G
+        jz      .faithful
+        cmp     byte [prof_ok], 0
+        je      .faithful
+        mov     si, prof_new
+        mov     cx, PT_LEN
+        rep     movsb
+.faithful:
         test    ax, OPT_F
         jz      .patch
         mov     byte [es:bx + RBS_VOICE], 0
@@ -559,6 +608,8 @@ parse_options:
         je      .onoff
         cmp     al, 'p'
         je      .patch
+        cmp     al, 'g'
+        je      .profile
         cmp     al, 'v'
         je      .volume
         cmp     al, 'k'
@@ -618,24 +669,11 @@ parse_options:
         jne     .bad
         jmp     .flag
 
-.patch:                                 ; /P:NAME or /P:FOLDER\NAME, up to a space, a tab or the end
+.patch:                                 ; /P:NAME or /P:FOLDER\NAME
         call    getc
         cmp     al, ':'
         jne     .bad
-        mov     bx, si
-.spec:
-        call    peekc
-        cmp     al, ' '
-        je      .specend
-        cmp     al, 9
-        je      .specend
-        cmp     al, 0Dh
-        je      .specend
-        inc     si
-        jmp     .spec
-.specend:
-        mov     cx, si
-        sub     cx, bx
+        call    opt_word
         push    si
         mov     si, bx
         call    spec_valid
@@ -643,6 +681,25 @@ parse_options:
         jc      .bad
         mov     bx, OPT_P
         jmp     .flag
+
+.profile:                               ; /G:NAME, the profile in PROFILES\NAME
+        call    getc
+        cmp     al, ':'
+        jne     .bad
+        call    opt_word
+        push    si
+        mov     si, bx
+        call    name_valid              ; into spec_buf, which /P: also uses: they never meet
+        jc      .gbad
+        mov     si, spec_buf
+        mov     di, prof_spec
+        call    copy_upper
+        pop     si
+        mov     bx, OPT_G
+        jmp     .flag
+.gbad:
+        pop     si
+        jmp     .bad
 
 .volume:
         call    getc
@@ -682,7 +739,7 @@ parse_options:
         jne     .bad
         jmp     .next
 
-; One control option at a time, none beside a config option, and /F or /P:, not both.
+; One control option at a time, none beside a config option, and one of /F, /P: and /G:.
 .valid:
         mov     ax, [opt_set]
         mov     bx, ax
@@ -695,10 +752,31 @@ parse_options:
         test    ax, OPT_CONFIG
         jnz     .bad
 .exclusive:
-        and     ax, OPT_F | OPT_P
-        cmp     ax, OPT_F | OPT_P
-        je      .bad
+        and     ax, OPT_F | OPT_P | OPT_G
+        mov     cx, ax
+        dec     cx
+        and     cx, ax                  ; nonzero when two of them are set
+        jnz     .bad
         clc
+        ret
+
+; opt_word: SI = an option's value. Out: BX = its start, CX = its length up to a space, a tab
+; or the end of the line, and SI past it.
+opt_word:
+        mov     bx, si
+.next:
+        call    peekc
+        cmp     al, ' '
+        je      .end
+        cmp     al, 9
+        je      .end
+        cmp     al, 0Dh
+        je      .end
+        inc     si
+        jmp     .next
+.end:
+        mov     cx, si
+        sub     cx, bx
         ret
 
 ; getc: the next command-tail character, or CR at the end.
@@ -890,9 +968,9 @@ scan_letter:
         ret
 
 ; print_config: "<voice>, volume <n>." then "Ctrl+Alt+<x> toggles, ..." and the /L and /R
-; lines, from the RB_STATE at ES:BX. A patch is named: "patch USER\BELL", and "(4-OP)" when an
-; OPL3 plays its four-operator variant; the faithful voice names the patch it still holds:
-; "faithful voice (patch USER\BELL loaded)".
+; lines, from the RB_STATE at ES:BX, and a profile that is on, from the table at ES:prof_dst. A
+; patch is named: "patch USER\BELL", and "(4-OP)" when an OPL3 plays its four-operator variant;
+; the faithful voice names the patch it still holds: "faithful voice (patch USER\BELL loaded)".
 print_config:
         push    ax
         push    dx
@@ -951,6 +1029,18 @@ print_config:
         mov     dx, msg_raw_0
 .raw:
         call    print
+        mov     di, [prof_dst]
+        or      di, di
+        jz      .done
+        cmp     byte [es:di + PT_ACTIVE], 0
+        je      .done
+        mov     dx, msg_prof_1
+        call    print
+        add     di, PT_NAME
+        call    print_asciz
+        mov     dx, msg_prof_2
+        call    print
+.done:
         pop     di
         pop     dx
         pop     ax
@@ -1061,16 +1151,21 @@ msg_low_0       db      "Notes below 20 Hz are silent (/L:0).", 13, 10, '$'
 msg_low_1       db      "Notes below 20 Hz are played (/L:1).", 13, 10, '$'
 msg_raw_1       db      "Sounds ReBeep can't translate play on the speaker (/R:1).", 13, 10, '$'
 msg_raw_0       db      "Sounds ReBeep can't translate are muted (/R:0).", 13, 10, '$'
+msg_prof_1      db      "Profile $"
+msg_prof_2      db      " picks the patch from what the game plays. /P: or /F ends it.", 13, 10, '$'
 
 msg_help        db      REBEEP_NAME, " - plays PC-speaker beeps on a Sound Blaster's OPL2/OPL3.", 13, 10
                 db      "Needs a 386 or better and Jemm's QPIEMU (JLOAD QPIEMU.DLL).", 13, 10, 13, 10
 %ifdef REBEEP_TRACE
-                db      "REBEEPD [/F|/P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON|/OFF] [/S] [/U] [/D] [/?]", 13, 10
+                db      "REBEEPD [/F | /P:name | /G:name] [/V:n] [/L:n] [/R:n] [/K:xy]", 13, 10
+                db      "        [/ON | /OFF] [/S] [/U] [/D] [/?]", 13, 10
 %else
-                db      "REBEEP [/F | /P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]", 13, 10
+                db      "REBEEP [/F | /P:name | /G:name] [/V:n] [/L:n] [/R:n] [/K:xy]", 13, 10
+                db      "       [/ON | /OFF] [/S] [/U] [/?]", 13, 10
 %endif
                 db      "  /F       faithful square-wave voice (default)", 13, 10
                 db      "  /P:name  a patch: FOLDER\NAME, or NAME from USER then FACTORY", 13, 10
+                db      "  /G:name  a game profile, PROFILES\name: its rules pick the patch", 13, 10
                 db      "  /V:n     volume 0-15 (default 12)", 13, 10
                 db      "  /L:n     notes below 20 Hz: 0 silent (default), 1 played", 13, 10
                 db      "  /R:n     sounds it can't translate: 1 speaker (default), 0 muted", 13, 10
@@ -1082,7 +1177,7 @@ msg_help        db      REBEEP_NAME, " - plays PC-speaker beeps on a Sound Blast
 %endif
                 db      "  /?       this help", 13, 10
                 db      "/S, /U, /ON and /OFF act only on a loaded copy. Any other option on a", 13, 10
-                db      "loaded copy changes only what it names.", 13, 10, 13, 10
+                db      "loaded copy changes only what it names. /P: or /F ends a profile.", 13, 10, 13, 10
                 db      "Exit codes: 0 ok, 1 bad option, 2 CPU below 386, 3 no QPI, 4 no OPL,", 13, 10
                 db      "5 speaker ports already trapped, 6 version mismatch, 7 not loaded,", 13, 10
                 db      "8 unload refused, 9 other failure.", 13, 10, '$'

@@ -10,10 +10,10 @@
 | `rebeep.asm` | `REBEEP.COM`: the resident part, then `resident_end`, then the startup part |
 | `resident/` | `data.asm`: `RB_STATE` (the loaded patch's records too), saved vectors, the private stack. `amis.asm`: the `INT 2Dh` handler and uninstall |
 | `capture/` | `trap.asm`: QPI trap install and remove, the callback, the port semantics (masking, read view, OPL events). `trace.asm`: REBEEPD's log |
-| `engine/` | `interp.asm` the speaker interpreter, `opl.asm` the OPL render target |
+| `engine/` | `interp.asm` the speaker interpreter, `opl.asm` the OPL render target, `rules.asm` a game profile's rules, their table and the patch switch |
 | `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
-| `startup/` | `main.asm`: options, checks, load, change, unload, messages. `patch.asm`: the `.RBP` parser. `files.asm`: program folder, `RBSTUDIO.CFG`, name rules, patch lookup, an INT 24h fail handler (`crit_on`/`crit_off`) around the file reads. `dump.asm`: `REBEEPD /D`. All freed when going resident |
-| `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [exitcode.inc](include/exitcode.inc): the exit codes. `trace.inc`: REBEEPD's record. None is restated elsewhere |
+| `startup/` | `main.asm`: options, checks, load, change, unload, messages. `patch.asm`: the `.RBP` parser. `files.asm`: program folder, `RBSTUDIO.CFG`, name rules, patch lookup, an INT 24h fail handler (`crit_on`/`crit_off`) around the file reads. `profile.asm`: `/G:`, the `.RBG` parser and loader. `dump.asm`: `REBEEPD /D`. All freed when going resident |
+| `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [profile.inc](include/profile.inc): the profile table and its limits. [exitcode.inc](include/exitcode.inc): the exit codes. `trace.inc`: REBEEPD's record. None is restated elsewhere |
 | `studio/` | `RBSTUDIO.EXE`, ReBeep Studio (the configuration program), in C. Its rules: [studio/AGENTS.md](studio/AGENTS.md) |
 | `diag/` | `qpichk.asm` → `QPICHK.COM`, reports whether QPIEMU is up (run by `BOOT.BAT`). `fdboot.asm` → `FDBOOT.BIN`, the release floppy's boot sector: hands the boot to C:, asks for a key only when C: has none |
 
@@ -46,6 +46,7 @@
   `opl_shutdown`. The hotkey then only updates `RB_STATE`. `/OFF` first undoes any masking; `/ON` resyncs.
 - A command-line change writes only the fields it names (`/P:`: the whole patch block at once, interrupts off). Defaults apply on a plain load alone. `/P:` and `PATCH=` share one name rule (`spec_valid`); a patch that can't be used is a message and the faithful voice, never an exit code.
 - NASM rejects an out-of-range short jump under `cpu 8086`; keep branches local. DOS `09h` returns `AL = '$'`.
+- A profile's table is resident at its full size from the first load, so a later `/G:` always fits: raising a limit costs every player memory, and any change to the table bumps `PROF_LAYOUT`. Its rules see each game event, translation on or off, before `play_event`; a switch keeps a tone that sounds on in the new voice (`capture_voice_changed`).
 
 ## Run / test
 
@@ -56,5 +57,4 @@ rebeep test run --suite vm --probe P_TSR
 
 ## Related
 
-- [tests/AGENTS.md](../tests/AGENTS.md)
-- [tools/AGENTS.md](../tools/AGENTS.md): `build run`
+- [tests/AGENTS.md](../tests/AGENTS.md) · [tools/AGENTS.md](../tools/AGENTS.md): `build run`

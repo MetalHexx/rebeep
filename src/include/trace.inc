@@ -30,12 +30,16 @@ TR_FLAGS        equ 30          ; db RBS_FLAGS
 TR_SPARE        equ 31          ; db 0
 
 ; Record kinds. 1-3 are speaker steps: a write to the real 61h that changes bit 1, or the
-; gate while bit 1 is on. 4-5 are the OPL notes the game's writes start and stop.
+; gate while bit 1 is on. 4-5 are the OPL notes the game's writes start and stop. 6-7 are a
+; profile's rules completing, with TR_BEFORE = the rule's number and TR_AFTER = its slot.
 TK_GAME61       equ 1           ; forwarding the game's 61h write
 TK_GAMEPIT      equ 2           ; the game's 42h/43h write moved the mask
 TK_REBEEP       equ 3           ; ReBeep itself: an apply, the hotkey, /OFF, /U
 TK_NOTE_ON      equ 4
 TK_NOTE_OFF     equ 5
+TK_RULE         equ 6           ; a rule whose last step has a value
+TK_FALLBK       equ 7           ; a catch-all: its last step takes any value
+TK_LAST         equ TK_FALLBK
 
 %ifdef REBEEP_TRACE
 TRACE_RECS      equ REBEEP_TRACE
@@ -52,6 +56,9 @@ TRACE_RECS      equ REBEEP_TRACE
 %macro OUT_REAL_61 0                    ; DX = 61h, BL = byte; as qpi_out
         call    trace_out61
 %endmacro
+%macro TRACE_RULE 0                     ; AL = rule, AH = slot, CH = its RL_FLAGS
+        call    trace_rule
+%endmacro
 
 %else
 %macro TRACE_SITE 1
@@ -59,6 +66,8 @@ TRACE_RECS      equ REBEEP_TRACE
 %macro TRACE_NOTE 0
 %endmacro
 %macro TRACE_EVENT 0
+%endmacro
+%macro TRACE_RULE 0
 %endmacro
 %macro OUT_REAL_61 0
         call    qpi_out

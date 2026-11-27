@@ -13,6 +13,7 @@
         cpu     386
 %include "speaker.inc"
 %include "amis.inc"
+%include "profile.inc"
 %include "trace.inc"
 
 QPI_READ        equ 1A00h               ; DX = port -> BL
@@ -517,6 +518,7 @@ handle_access:
         call    qpi_out
         pop     bx
         pop     ax
+        call    rules_hook
         call    play_event
         TRACE_SITE TK_GAMEPIT
         call    mask_update
@@ -536,7 +538,33 @@ handle_access:
         OUT_REAL_61
         pop     bx
         pop     ax
+        call    rules_hook
         jmp     play_event
+
+; rules_hook: while a profile is on, its rules see each of the game's events, whether translation
+; is on or off, and a rule that picks another patch switches the voice before play_event plays
+; the event: a note that starts here starts in the new voice, and one that sounds on (a pitch
+; change, a control word) restarts in it. The trace build logs each rule that completes.
+; In: AL = event, BX = divisor, DX = port, ES:DI -> the frame. Preserves every register.
+rules_hook:
+        cmp     byte [rules_tbl + PT_ACTIVE], 0
+        je      .ret
+        pusha
+        mov     bp, ax                  ; the event, for after the switch
+        mov     cl, [es:di + IMG_EAX]
+        call    rules_match             ; CF: AL = rule, AH = slot, CH = its flags
+        jnc     .done
+        TRACE_RULE
+        call    rules_switch
+        jnc     .done
+        mov     ax, bp
+        cmp     al, EV_TONE_ON
+        je      .done
+        call    capture_voice_changed
+.done:
+        popa
+.ret:
+        ret
 
 ; forward_access: pass the trapped access through QPI unchanged. An IN stores the value
 ; into the frame's EAX, in the accessed width, leaving the rest of EAX alone.

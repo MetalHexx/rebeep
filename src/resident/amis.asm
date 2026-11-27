@@ -28,6 +28,8 @@ amis_isr:
         je      .hooks
         cmp     al, AMIS_FN_STATE
         je      .state
+        cmp     al, AMIS_FN_PROFILE
+        je      .profile
 %ifdef REBEEP_TRACE
         cmp     al, AMIS_FN_TRACE
         je      .trace
@@ -111,6 +113,11 @@ amis_isr:
         mov     al, 0FFh
         mov     dx, cs
         mov     bx, RB_STATE
+        iret
+.profile:
+        mov     al, 0FFh
+        mov     dx, cs
+        mov     bx, rules_tbl
         iret
 %ifdef REBEEP_TRACE
 .trace:

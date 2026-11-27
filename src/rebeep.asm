@@ -23,6 +23,7 @@ image_start:
 %include "capture/trap.asm"             ; cpu 386
 %include "engine/interp.asm"            ; cpu 8086
 %include "engine/opl.asm"               ; cpu 8086
+%include "engine/rules.asm"             ; cpu 8086: a game profile's rules and table
 %include "hotkey/kbd.asm"
 %include "resident/amis.asm"
 %include "capture/trace.asm"            ; the trace build only
@@ -30,4 +31,10 @@ resident_end:
 %include "startup/main.asm"             ; freed when going resident
 %include "startup/patch.asm"            ; the patch file parser
 %include "startup/files.asm"            ; the program's folder, the settings file, the patch lookup
+%include "startup/profile.asm"          ; /G: the profile file parser and loader
 %include "startup/dump.asm"             ; the trace build only: REBEEPD /D
+
+; A .COM file loads at 100h in one 64 KB segment, with DOS's stack at its top: leave it 512 bytes.
+%if $ - $$ > 10000h - 100h - 512
+%error the image is over 64,768 bytes, with no room left for the stack (a trace build: fewer records)
+%endif

@@ -1,6 +1,7 @@
 ; The trace build's resident part (REBEEPD.COM, REBEEP_TRACE defined; assembled to nothing
-; otherwise). It records every speaker step ReBeep makes on the real 61h, and every OPL
-; note the game's writes start and stop, each with a timestamp and the game's last byte
+; otherwise). It records every speaker step ReBeep makes on the real 61h, every OPL note the
+; game's writes start and stop, and every rule of a profile that completes, each with a
+; timestamp and the game's last byte
 ; OUTs, into a buffer that AMIS 15h hands to "REBEEPD /D". Layout: include/trace.inc.
 ; Resident code (386, like the capture code that calls it). Port 43h goes through QPI;
 ; port 40h is not trapped, so it is read directly. Nothing here calls DOS.
@@ -11,8 +12,8 @@
 %if TRACE_REC != 32
 %error trace_record's shl assumes TRACE_REC = 32
 %endif
-%if TRACE_RECS < 1 || TRACE_RECS * TRACE_REC > 48 * 1024
-%error REBEEP_TRACE must be 1 to 1536 records: the buffer shares one 64 KB segment
+%if TRACE_RECS < 1
+%error REBEEP_TRACE must be at least 1 record; rebeep.asm checks that the image fits
 %endif
 
 ; trace_note: remember one byte the game writes. In: DL = port, AL = byte. Preserves all.
@@ -43,6 +44,19 @@ trace_event:
 .done:
         pop     cx
         pop     ax
+        ret
+
+; trace_rule: record a profile's rule completing. In: AL = rule, AH = slot, CH = its RL_FLAGS.
+; Preserves all.
+trace_rule:
+        push    cx
+        mov     cl, TK_RULE
+        test    ch, RL_F_ANY
+        jz      .rec
+        mov     cl, TK_FALLBK
+.rec:
+        call    trace_record
+        pop     cx
         ret
 
 ; trace_out61: qpi_out to the real 61h, recording a speaker step first when the write
