@@ -1,13 +1,27 @@
 ; ReBeep patch. Edit it in ReBeep Studio or by hand.
-; OPn= AR DR SL RR OL KSL MULT WAVE TREM VIB SUS KSR, decimal, one space apart.
+; OPn= AR DR SL RR OL KSL MULT WAVE TREM VIB SUS KSR, decimal.
 ; SL and OL: bigger is louder. OCTAVE 4 is the game's pitch.
+; The menu song as a heavy metal guitar. OCTAVE 2 with MULT 2 puts the
+; root an octave below the game. On an OPL3, a power chord: the root's
+; pair with the feedback grit, plus a pair a fifth up (MULT 3). Each
+; note starts bright and settles a little darker, for the chug. On an
+; OPL2, the root alone.
 [PATCH]
 FORMAT=1
-OCTAVE=4
+OCTAVE=2
 
 [2OP]
 ; CONNECTION: FM or AM. FEEDBACK 0..7.
 CONNECTION=FM
-FEEDBACK=5
-OP1=14 0 15 11 47 0 1 0 0 0 1 0
-OP2=15 0 15 11 63 0 1 0 0 0 1 0
+FEEDBACK=6
+OP1=15 3 11 8 46 0 2 0 0 0 1 0
+OP2=15 1 14 8 61 0 2 0 0 0 1 0
+
+[4OP]
+; CONNECTION: FM-FM, AM-FM, FM-AM or AM-AM. FEEDBACK 0..7.
+CONNECTION=FM-AM
+FEEDBACK=6
+OP1=15 3 11 8 48 0 2 0 0 0 1 0
+OP2=15 1 14 8 58 0 2 0 0 0 1 0
+OP3=15 3 11 8 44 0 3 0 0 0 1 0
+OP4=15 1 14 8 52 0 3 0 0 0 1 0

@@ -10,7 +10,7 @@ never ship, and `release create` does not read this folder. The format is in
 
 | Profile | Game | Covers |
 |---|---|---|
-| `GPC/` | Grand Prix Circuit | The intro (organ), the menus (brass) and the race (a rough engine), each recognized by `43h=B6` then its first note; the start lights, and the gear chirp and tire squeal, are effects in patches of their own (`LIGHTS`, `SQUEAL`), each in its window (`GRID`, `RACE`); anything else that starts that way falls back to the bell |
+| `GPC/` | Grand Prix Circuit | The intro (a bass guitar), the menus (a distorted guitar) and the race (a rough engine), each recognized by `43h=B6` then its first note; the start lights, and the gear chirp and tire squeal, are effects in patches of their own (`LIGHTS`, `SQUEAL`), each in its window (`GRID`, `RACE`); anything else that starts that way falls back to the bell |
 
 **Working one out with the user:**
 
