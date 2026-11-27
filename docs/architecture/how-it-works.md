@@ -73,10 +73,10 @@ note instead. A change of `/L` on a loaded copy applies to a count the game is h
 
 ## The OPL voice
 
-ReBeep plays one voice on OPL channels 7 and 8 and touches nothing else (a four-operator patch
-uses two channel pairs instead, see [Patches](#patches)). Each new note takes the
-other channel, so the note before it fades out on its own. Starting a note again on the channel
-that is still sounding would restart its wave mid-cycle, which clicks.
+ReBeep plays one voice on OPL channels 7 and 8, a profile's effects on channel 6 ([Game profiles](#game-profiles)),
+and touches nothing else (four-operator patches use channel pairs, see [Patches](#patches)). Each
+new note takes the other channel, so the note before it fades out on its own: starting it again on
+the sounding channel would restart its wave mid-cycle, which clicks.
 
 A divisor `d` is a frequency of 1193182 / `d` Hz. The OPL wants a block `b` and an F-number `n`,
 with `f = n * 49716 / 2^(20-b)`, so
@@ -144,9 +144,9 @@ its file and every patch it names at load, into a table in the resident part.
 
 **Rules go by events, never time.** Each game byte gives at most one event: a note start, a pitch
 change or a note stop, with the divisor, or a byte written to `43h`, the timer's control word. A
-step matches the next event of its kind; a value that doesn't fit sends the rule back to its first
-step, which the same event may start again, and other kinds pass by. The first rule in the file to
-complete wins, and every rule starts over. Games reprogram the timer, so no rule waits on a clock.
+step matches the next event of its kind, a tone step a note start or a pitch change. A value that
+doesn't fit sends the rule back to its first step, which the same event may start again; other
+kinds pass by. The first rule to complete wins, and all start over. Games reprogram the timer.
 
 **The switch.** The winning patch is copied into `RB_STATE`, so `/S`, Ctrl+Alt+N and a change all
 see it, and the voice changes before the event plays: a note that starts on it starts in the new
@@ -154,10 +154,23 @@ voice, and one that sounds on restarts in it. It plays the patch voice, as `/P:`
 faithful voice picked with Ctrl+Alt+N. The same patch twice writes nothing. The rules run with
 translation on or off.
 
-**Fixed size.** The table holds 16 rules of 4 steps and 8 patches, 821 bytes, from the first load,
-so a later `/G:` always fits. With the code it adds 1,168 bytes: ReBeep is 4,896 bytes resident,
-profile or not. With no profile on, a trapped write costs a call, a compare and a return more, too
-little to show in `P_BENCH`.
+**A state, not a clock.** `WHILE=` makes a rule or an effect count only while a named rule is the
+last to have fired: the part of the game the player is in, set by events alone. Grand Prix
+Circuit's start lights share a pitch with its engine, and only the race's first seconds tell them apart.
+
+**Effects.** An effect plays a sound that shares the speaker with music or an engine in a patch of
+its own, on a second voice: channel 6, or bank 1's free pair 2+5 for a four-operator patch on an
+OPL3. While a tone is in an effect's range the main voice keys off and the effect voice plays it,
+until a tone outside every effect goes back to the main voice. A switch is a key off and a key on;
+a channel is reprogrammed only for another effect patch, never while it sounds. One copy of the OPL
+code serves both voices: the effect code swaps the other voice's state in for a call. No effect
+plays in the faithful voice.
+
+**Fixed size.** The table holds 16 rules of 4 steps, 8 effects and 8 patches, 872 bytes, from the
+first load, so a later `/G:` always fits. ReBeep is 5,120 bytes resident, profile or not: effects
+cost 390 bytes, 155 of them paid by moving startup-only and test-only code out of the resident
+part. The build stops if it grows past that, so growth is a decision. With no profile on, a
+trapped write costs a call, a compare and a return more, too little to show in `P_BENCH`.
 
 ## Residency, AMIS and the hotkey
 

@@ -190,17 +190,31 @@ it. A profile is a text file such as this one:
   FORMAT=1
   DEFAULT=MENU
   [RULE]
+  ID=RACE
   STEP=CTRL B6h
-  STEP=NOTE 1922h 40
-  PATCH=INTRO
+  STEP=NOTE C22Eh 40
+  PATCH=ENGINE
+  [EFFECT]
+  WHILE=RACE
+  TONE=0950h 50
+  PATCH=SQUEAL
 
 DEFAULT= names the patch that plays first, MENU.RBP in the profile's
 folder; it wins over RBSTUDIO.CFG's PATCH= line. Each [RULE], up to 16, is
 tried in order, and the first to match picks its PATCH=, which plays until
 another rule picks a different one. A rule has up to 4 STEP= lines, each
 matching the next event of its kind: NOTE n t, a note starts within t of
-the count n; PITCH n t, a sounding note changes to that count; OFF, a note
-stops; CTRL n, the game writes n to port 43h. Leave out n to take any.
+the count n; PITCH n t, a sounding note changes to that count; TONE n t,
+either; OFF, a note stops; CTRL n, the game writes n to port 43h. Leave out
+n to take any.
+
+An [EFFECT], up to 8, gives a sound effect a patch of its own: while a note
+is within t of the count n in TONE=n t (n - t at least 193), it plays in
+the effect's PATCH= on an FM channel of its own, then the rule's patch
+takes it back. Effects don't play in the faithful voice. ID= names a rule
+(1 to 8 letters, digits, _ or -, not only digits), and WHILE=ID makes a rule
+or an effect count only while that rule is the last to have matched. NAME=
+gives any section a name of 1 to 24 characters, for a menu later.
 
 A profile has up to 8 patches and 2048 bytes. Numbers are decimal, or hex
 with a trailing h, and lines starting with ; are comments. A rule's patch

@@ -9,6 +9,9 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 - **Game profiles:** `REBEEP /G:name` gives each part of a game its own patch, such as one for the
   title music and another for the menus, told apart by what the game sends the speaker
   ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#game-profiles)).
+- **Sound effects in patches of their own:** a profile can give a game's effects, such as a race's
+  start lights or a tire squeal, their own patch, taking turns with the engine or the music as in the game
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#game-profiles)).
 
 ## [0.2.0] - 2026-11-26
 

@@ -12,9 +12,12 @@ there. The other executables may differ. The settings to play it with are in
 The race driver runs on the game's 100 Hz timer tick and loops a fixed 60 ms pattern:
 
 1. 40 ms of the engine pitch, taken from the RPM, about 24 to 391 Hz.
-2. 20 ms of count `FFFFh` (18.2 Hz), used as a rest. Tyre squeal (about 500 Hz), driving off the
-   road (119 Hz) or a gear-change chirp (about 1 to 1.1 kHz) take this slot when they sound. So do
-   the start lights: 261 Hz for red and for yellow, 1049 Hz for green.
+2. 20 ms of count `FFFFh` (18.2 Hz), used as a rest. Tire squeal (501 Hz), driving off the road
+   (119 Hz) or a gear-change chirp (1018 to 1115 Hz, gliding) take this slot when they sound.
+
+The start lights break the pattern: each is one tone held about 0.4 s, 261 Hz for red and for
+yellow, 1049 Hz for green. A light starts as a new note or as a change of the engine's, whichever
+slot it lands in.
 
 Each slot loads a new count into PIT channel 2, then sets port `61h` bits 0 and 1 together. The
 driver never writes the control port `43h`, and the gate stays on while driving. Only the race's
@@ -23,7 +26,11 @@ start does, as each song's does ([below](#telling-the-screens-apart)).
 **What ReBeep does.** The engine pitch and the effects are tones, so they play on the OPL. The
 `FFFFh` slot is a rest: the OPL keys off and the speaker stays still, so the engine starts a new
 note every 60 ms. An effect fills the rest instead, so ReBeep hears a pitch change on the engine's
-note, not a new note: the effects glide in the engine's voice, as they share its one speaker.
+note, not a new note. The lab profile plays the effects in patches of their own, on the effect
+voice. The lights count from the race's start until the green light ends, because red and yellow
+share a pitch with the engine's revs: the rule that ends that window takes the green light as a
+note or a pitch (`STEP=TONE`). Then the chirp and the squeal count. Driving off the road stays in
+the engine's patch.
 
 **The difference.** On a real PC a new count takes over only at the end of the current half-cycle.
 At 18.2 Hz that is about 27 ms, so the real rest runs a little longer than ReBeep's 20 ms, and the
