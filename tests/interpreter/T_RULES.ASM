@@ -40,11 +40,17 @@
 %endmacro
 
 ; TABLE label, rules: a table's header, its rules to follow, then ENDTABLE and its blocks.
+%if PT_LAYOUT != 0 || PT_ACTIVE != 1 || PT_CUR != 2 || PT_COUNT != 3 || PT_STATE != 4
+%error TABLE writes layout, active, current, count, state, effects, effect slot, then the name
+%endif
+%if PT_FXCOUNT != 5 || PT_FXSLOT != 6 || PT_NAME != 7 || PT_RULES != PT_NAME + 9
+%error TABLE writes layout, active, current, count, state, effects, effect slot, then the name
+%endif
 %macro TABLE 2
 %push table
 %1:
 %$start:
-        db      PROF_LAYOUT, 1, PT_NONE, %2
+        db      PROF_LAYOUT, 1, PT_NONE, %2, 0, 0, PT_NONE
         db      "TEST", 0, 0, 0, 0, 0
 %endmacro
 %macro BLOCKS 0
@@ -98,6 +104,24 @@ TABLE   t_kinds, 3
         STEP    SK_OFF | SK_ANY, 0, 0FFFFh
         ENDRULE
         BLOCKS
+ENDTABLE
+
+; A race: GRID at its start, then RACE only while GRID is the last to have fired, at a tone
+; (a note start or a pitch) and its stop; both play slot 0. WHILE = (the rule's number + 1) * 2:
+; GRID is rule 0.
+W_GRID          equ     (0 + 1) * 2
+W_RACE          equ     (1 + 1) * 2
+TABLE   t_while, 2
+        RULE    0, 0, 2
+        STEP    SK_CTRL, 0B6h, 0B6h
+        STEP    SK_NOTE, 0C22Eh - 40, 0C22Eh + 40
+        ENDRULE
+        RULE    0, W_GRID, 2
+        STEP    SK_TONE, 0471h - 30, 0471h + 30
+        STEP    SK_OFF | SK_ANY, 0, 0FFFFh
+        ENDRULE
+        BLOCKS
+        BLOCK   "T\ENGINE", RBS_PF_LOADED, 22h, 21h, 18h, 08h, 0F0h, 0F0h, 0Ch, 0Ch, 00h, 00h, 01h
 ENDTABLE
 
 ; load_tbl: SI = a table image, copied over rules_tbl.
@@ -408,6 +432,60 @@ start:
         FIRES   1, 2, 0
         OFF
         FIRES   2, 3, RL_F_ANY
+        ENDCASE
+
+        CASE    "while_holds_a_rule_until_its_rule_fires"
+        mov     si, t_while
+        call    load_tbl
+        NOTE    0471h                   ; RACE's steps, before GRID: nothing
+        NOFIRE
+        OFF
+        NOFIRE
+        CTRLW   0B6h
+        NOTE    0C22Eh
+        FIRES   0, 0, 0
+        mov     al, [rules_tbl + PT_STATE]
+        xor     ah, ah
+        mov     cx, W_GRID
+        call    t_check
+        NOTE    0471h
+        NOFIRE
+        OFF
+        FIRES   1, 0, W_GRID
+        mov     al, [rules_tbl + PT_STATE] ; set although the slot stays: rules_switch does not
+        xor     ah, ah
+        mov     cx, W_RACE
+        call    t_check
+        NOTE    0471h                   ; RACE is the state now, not GRID
+        NOFIRE
+        OFF
+        NOFIRE
+        ENDCASE
+
+        CASE    "a_tone_step_takes_a_pitch_too_but_no_stop"
+        mov     si, t_while
+        call    load_tbl
+        CTRLW   0B6h
+        NOTE    0C22Eh
+        FIRES   0, 0, 0
+        OFF                             ; another kind than TONE: RACE stays at its first step
+        NOFIRE
+        PITCH   0471h                   ; the green light, as the engine's note changes to it
+        NOFIRE
+        PITCH   2828h                   ; another kind than OFF: kept
+        NOFIRE
+        OFF
+        FIRES   1, 0, W_GRID
+        ENDCASE
+
+        CASE    "a_rule_left_out_by_its_while_does_not_move"
+        mov     si, t_while
+        call    load_tbl
+        NOTE    0471h
+        mov     al, [rules_tbl + PT_RULES + RULE_LEN + RL_AT]
+        xor     ah, ah
+        xor     cx, cx
+        call    t_check
         ENDCASE
 
         CASE    "match_keeps_registers"
