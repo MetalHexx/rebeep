@@ -10,7 +10,7 @@ never ship, and `release create` does not read this folder. The format is in
 
 | Profile | Game | Covers |
 |---|---|---|
-| `GPC/` | Grand Prix Circuit | The intro (organ) and the menus (brass), each recognized by `43h=B6` then its song's first note; anything else that starts that way, such as the race, falls back to the bell |
+| `GPC/` | Grand Prix Circuit | The intro (organ), the menus (brass) and the race (a rough engine), each recognized by `43h=B6` then its first note; the start lights, and the gear chirp and tire squeal, are effects in patches of their own (`LIGHTS`, `SQUEAL`), each in its window (`GRID`, `RACE`); anything else that starts that way falls back to the bell |
 
 **Working one out with the user:**
 
@@ -18,8 +18,9 @@ never ship, and `release create` does not read this folder. The format is in
    code, never a guess. A rule goes by the order of events, never by time.
 2. While testing, make the default and the catch-all a patch nobody would mistake, so a fallback is
    heard.
-3. Deploy with every VM closed, then the user runs `REBEEP /U` and `D:\REBEEP\REBEEPD /G:NAME`,
-   plays the parts, quits to DOS and runs `REBEEPD /D`. Each rule that completes is a `rule`
+3. Deploy with every VM closed and set up a bench ([bench.md](bench.md)) that loads
+   `REBEEPD /G:NAME`, runs the game, then `REBEEPD /D`; the user plays the parts and closes the
+   VM. Each rule that completes is a `rule`
    record, a catch-all `fallbk`, with `before>after` = the rule's number > its slot (slots in the
    order the file first names each patch, `DEFAULT=` included).
 

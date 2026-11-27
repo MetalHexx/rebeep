@@ -1,29 +1,83 @@
-; ReBeep game profile: Grand Prix Circuit, the intro and the menus.
+; ReBeep game profile: Grand Prix Circuit, the intro, the menus and the
+; race, with the race's effects in patches of their own.
 ; A lab profile, for testing.
 ; Each song, and the race, starts with the timer control word 43h=B6,
 ; then its first note. That note plays about 20 counts high, so each
 ; opening gets a tolerance of 40.
 [PROFILE]
 FORMAT=1
+NAME=Grand Prix Circuit
 ; The bell plays until a rule picks a patch, and for any sound the
 ; rules don't know.
 DEFAULT=FALLBK
 
 [RULE]
 ; The intro song: Accolade, the title, DSI. The trophy screen too.
+NAME=Intro
 STEP=CTRL B6h
 STEP=NOTE 1922h 40
 PATCH=INTRO
 
 [RULE]
 ; The menu song: game type, track, car.
+NAME=Menus
 STEP=CTRL B6h
 STEP=NOTE 1521h 40
 PATCH=MENU
 
 [RULE]
-; Anything else that starts this way, such as the race: the fallback,
-; logged as fallbk.
+; The race starts on the engine's idle, 24 Hz. GRID holds until the
+; green light ends: the red and yellow lights share a pitch with the
+; engine's revs, so they count only here.
+ID=GRID
+NAME=Race start
+STEP=CTRL B6h
+STEP=NOTE C22Eh 40
+PATCH=ENGINE
+
+[RULE]
+; The rest after the green light: racing. The light starts as a note or
+; as a change of the engine's, so TONE. Off the road, 119 Hz, stays in
+; the engine's patch.
+ID=RACE
+NAME=Racing
+WHILE=GRID
+STEP=TONE 0471h 8
+STEP=OFF
+PATCH=ENGINE
+
+[RULE]
+; Anything else that starts this way: the fallback, logged as fallbk.
+NAME=Other sounds
 STEP=CTRL B6h
 STEP=NOTE
 PATCH=FALLBK
+
+; Each light is one tone held about 0.4 s, at the same count each time.
+; The chirp and the squeal take the engine's rest slot, 20 ms in 60.
+
+[EFFECT]
+NAME=Red and yellow lights
+WHILE=GRID
+TONE=11D6h 8
+PATCH=LIGHTS
+
+[EFFECT]
+NAME=Green light
+WHILE=GRID
+TONE=0471h 8
+PATCH=LIGHTS
+
+[EFFECT]
+; 1018 to 1115 Hz in the log, gliding.
+NAME=Gear chirp
+WHILE=RACE
+TONE=0461h 64
+PATCH=SQUEAL
+
+[EFFECT]
+; 501 Hz.
+NAME=Tire squeal
+WHILE=RACE
+TONE=094Ch 40
+PATCH=SQUEAL
