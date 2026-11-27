@@ -56,8 +56,8 @@ static void usage(void)
     printf("Usage: RBSTUDIO [/VIEW:MONO] [/TRACE] [/BENCH] [/DUMP:<screen> /O:<file>]\n");
     printf("  /VIEW:MONO  force the mono view (a monochrome display is noticed without it)\n");
     printf("  /TRACE      log every OPL register write and key event to RBSTUDIO.LOG\n");
-    printf("  /BENCH      time the synth screen and the patch list, print the figures and write %s\n", BENCH_FILE);
-    printf("  /DUMP:name  draw a reference screen with its sample data; /O:file is the text screen written\n");
+    printf("  /BENCH      time the synth screen and the patch list, and write %s\n", BENCH_FILE);
+    printf("  /DUMP:name  draw a reference screen with sample data; /O:file receives it\n");
     printf("  /?          show this help\n");
 }
 

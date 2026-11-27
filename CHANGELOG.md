@@ -24,7 +24,7 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 ### Fixed
 
 - **Long lines on a DOS screen:** ReBeep's longer messages, such as why a patch wasn't used, now
-  break into lines that fit 80 columns, and so does the comment at the top of a patch file
+  break into lines that fit 80 columns, and so do `RBSTUDIO /?` and the comment at the top of a patch file
   ([troubleshooting](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/troubleshooting.md#a-patch-was-not-used)).
 
 ## [0.2.0] - 2026-11-26
