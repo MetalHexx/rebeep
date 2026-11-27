@@ -1,7 +1,8 @@
 @ECHO OFF
 REM Installs or updates ReBeep in a folder, over any copy already there. It
 REM never edits CONFIG.SYS, AUTOEXEC.BAT, FDCONFIG.SYS or FDAUTO.BAT, and it
-REM never touches the PATCHES folder or an RBSTUDIO.CFG already there.
+REM never touches your PATCHES and PROFILES folders, or an RBSTUDIO.CFG
+REM already there. It replaces what ReBeep ships in the FACTORY folder.
 REM Usage: INSTALL [/I or /U] [folder]. The default folder is C:\REBEEP.
 REM With no /I or /U it shows a menu, which needs CHOICE: MS-DOS 6 or later,
 REM Windows 95 or 98, or FreeDOS.
@@ -51,12 +52,29 @@ COPY RBSTUDIO.EXE %RBDIR%
 COPY SPLASH.ANS %RBDIR%
 COPY MENU.ANS %RBDIR%
 IF NOT EXIST %RBDIR%\FACTORY\NUL MD %RBDIR%\FACTORY
+REM Version 0.2 and earlier kept the factory patches in FACTORY itself.
 IF EXIST %RBDIR%\FACTORY\*.RBP DEL %RBDIR%\FACTORY\*.RBP
-COPY FACTORY\*.RBP %RBDIR%\FACTORY
+REM From here a command names the folder once, so that a long install
+REM folder still fits DOS's command line.
+IF EXIST %RBDIR%\FACTORY\PATCHES\NUL GOTO PATDIR
+MD %RBDIR%\FACTORY\PATCHES
+:PATDIR
+FOR %%F IN (%RBDIR%\FACTORY\PATCHES\*.RBP) DO DEL %%F
+COPY FACTORY\PATCHES\*.RBP %RBDIR%\FACTORY\PATCHES
+IF EXIST %RBDIR%\FACTORY\PROFILES\NUL GOTO PRODIR
+MD %RBDIR%\FACTORY\PROFILES
+:PRODIR
+IF EXIST %RBDIR%\FACTORY\PROFILES\GPC\NUL GOTO GPCDIR
+MD %RBDIR%\FACTORY\PROFILES\GPC
+:GPCDIR
+FOR %%F IN (%RBDIR%\FACTORY\PROFILES\GPC\*.RB?) DO DEL %%F
+COPY FACTORY\PROFILES\GPC\*.RB? %RBDIR%\FACTORY\PROFILES\GPC
 COPY RBPLAY.BAT %RBDIR%
 COPY README.TXT %RBDIR%
 COPY CHANGES.TXT %RBDIR%
 IF NOT EXIST %RBDIR%\REBEEP.COM GOTO FAILED
+IF NOT EXIST %RBDIR%\FACTORY\PATCHES\BELL.RBP GOTO FAILED
+IF NOT EXIST %RBDIR%\FACTORY\PROFILES\GPC\GPC.RBG GOTO FAILED
 ECHO.
 IF "%RBMODE%"=="U" GOTO UPDATED
 ECHO ReBeep @VERSION@ is in %RBDIR%
@@ -103,8 +121,9 @@ ECHO ReBeep isn't in %RBDIR%, so there is nothing to update. Type INSTALL /I
 ECHO to install it there.
 GOTO DONE
 :FAILED
-ECHO REBEEP.COM did not reach %RBDIR%. Copy the files by hand, as README.TXT
-ECHO shows.
+ECHO Not every file reached %RBDIR%. Copy the files by hand, as
+ECHO README.TXT shows. DOS commands have a length limit, so a shorter folder
+ECHO path may help.
 :DONE
 SET RBMODE=
 SET RBDIR=

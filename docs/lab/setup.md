@@ -152,6 +152,7 @@ The repo ships skills for AI coding assistants, such as Claude Code, which picks
 | [`release`](../../.claude/skills/release/SKILL.md) | Cuts a release: the changelog from the branch's commits, your review of the notes, the checks, the merge and the publish |
 | [`drive-dos-app`](../../.claude/skills/drive-dos-app/SKILL.md) | Drives a DOS program in a real DOSBox-X window, or a lab VM in 86Box, with typed keys and screenshots, for flows the headless checks cannot reach |
 | [`update-site`](../../.claude/skills/update-site/SKILL.md) | Changes the product page with a live three-width preview, and retakes the ReBeep Studio screenshots |
+| [`game-profile`](../../.claude/skills/game-profile/SKILL.md) | Makes or changes a game profile with you: logs the game, finds the events that tell its parts apart, checks that each rule fires, shapes the patches by ear |
 
 For this page, its [environment](../../.claude/skills/rebeep-dev/references/environment.md) and
 [VMs](../../.claude/skills/rebeep-dev/references/vms.md) references cover setup, media and first

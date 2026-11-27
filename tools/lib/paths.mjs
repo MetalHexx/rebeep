@@ -107,5 +107,7 @@ export function repoLayout(root = repoRoot()) {
     toolsTest: path.join(root, 'tools', 'test'),
     /** The lab's patch set, kept with the rebeep-dev skill: on every D:, never in a release. */
     labPatches: path.join(root, '.claude', 'skills', 'rebeep-dev', 'patches'),
+    /** The lab's game profiles, a folder each, kept with the rebeep-dev skill: on every D:, never in a release. */
+    labProfiles: path.join(root, '.claude', 'skills', 'rebeep-dev', 'profiles'),
   };
 }

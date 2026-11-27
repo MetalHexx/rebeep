@@ -45,11 +45,24 @@ static void write_text(const char *path, const char *text)
     }
 }
 
+/* The longest line of a CRLF text, in characters. */
+static int widest_line(const char *text)
+{
+    int widest = 0;
+    int n = 0;
+
+    for (; *text != '\0'; text++) {
+        if (*text == '\n') n = 0;
+        else if (*text != '\r' && ++n > widest) widest = n;
+    }
+    return widest;
+}
+
 static void check_factory(const char *file, const char *name, int conn, int fb, int sl1, int ar1, int ol2)
 {
     char path[40];
 
-    sprintf(path, "FACTORY\\%s", file);
+    sprintf(path, "FACTORY\\PATCHES\\%s", file);
     t_case(file);
     t_checkl(patch_read(path, &patch, err, sizeof err), 0, "the shipped file parses");
     t_check(strcmp(patch.name, name) == 0, "named after the file");
@@ -88,6 +101,7 @@ int main(void)
     }
     t_checkl(i, n, "every line end is CRLF");
     t_check(buf[0] == ';', "starts with a comment");
+    t_check(widest_line(buf) <= 78, "every line fits a DOS screen");
     t_checkl(patch_parse(buf, (unsigned)n, &again, err, sizeof err), 0, "reparses");
     t_check(patch_equal(&patch, &again), "equal after the round trip");
     t_checkl(patch_format(&patch, buf, 100), -1, "a short buffer is refused");
@@ -159,7 +173,7 @@ int main(void)
     t_checkl(patch_read("NOFILE.RBP", &patch, err, sizeof err), -1, "a missing file is refused");
 
     t_case("patch_write: safe save, folder creation, overwrite");
-    patch_read("FACTORY\\BELL.RBP", &patch, err, sizeof err);
+    patch_read("FACTORY\\PATCHES\\BELL.RBP", &patch, err, sizeof err);
     t_checkl(patch_write("PFTMP\\USER\\X.RBP", &patch), 0, "creates the folders and saves");
     t_checkl(patch_read("PFTMP\\USER\\X.RBP", &again, err, sizeof err), 0, "reads back");
     t_check(patch_equal(&patch, &again) && strcmp(again.name, "X") == 0, "equal, named X");
@@ -170,7 +184,7 @@ int main(void)
     t_check(!dos_is_file("PFTMP\\USER\\X.BAK") && !dos_is_file("PFTMP\\USER\\X.$$$"), "no .BAK or .$$$ left");
 
     t_case("patch_equal ignores the name");
-    patch_read("FACTORY\\BELL.RBP", &patch, err, sizeof err);
+    patch_read("FACTORY\\PATCHES\\BELL.RBP", &patch, err, sizeof err);
     again = patch;
     strcpy(again.name, "OTHER");
     t_check(patch_equal(&patch, &again), "same values, other name");

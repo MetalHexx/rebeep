@@ -11,3 +11,7 @@ IF EXIST D:\ENV\QPICHK.COM D:\ENV\QPICHK.COM
 REM Load ReBeep only when the deploy marked it ready to autoload.
 IF EXIST D:\REBEEP\AUTOLOAD.FLG LH D:\REBEEP\REBEEP.COM
 :END
+REM A hand test set up for the user, on either menu entry. It is put
+REM there by "rebeep disk add <vm> BENCH.BAT --to ENV", and the next
+REM deploy removes it.
+IF EXIST D:\ENV\BENCH.BAT CALL D:\ENV\BENCH.BAT

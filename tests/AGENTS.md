@@ -14,13 +14,11 @@
 ## Rules
 
 - Interpreter test programs are `tests/interpreter/T_*.ASM`. `rebeep test run --suite interpreter`
-  assembles each one and runs it headless in DOSBox-X.
-- A DOS program's exit code never reaches the host, so each program writes `RESULT.TXT`:
-  - `PASS <case>` for each passing case
-  - `FAIL <case>: <detail>` for each failure (any line starting with `FAIL` counts)
-  - `DONE <n>` as the **last** line, where n is the number of PASS and FAIL lines
-
-  A missing or miscounted `DONE`, any `FAIL`, no results, or hitting the time limit fails the run.
+  assembles each into its own folder, `build/tests/<NAME>/`, then runs them headless in DOSBox-X, up to 4 at once (`--jobs`).
+- A DOS program's exit code never reaches the host, so each program writes `RESULT.TXT`: `PASS <case>`
+  per passing case, `FAIL <case>: <detail>` per failure (any line starting with `FAIL` counts), and
+  `DONE <n>` **last**, n the number of PASS and FAIL lines. A missing or miscounted `DONE`, any
+  `FAIL`, no results, or hitting the time limit fails the run.
 - `interpreter/testlib.inc` is the shared helper library: `CASE "name"` ... `ENDCASE` brackets a
   case, `t_check` (AX = CX) and `t_checkd` (also BX = SI) record the first mismatch (reported with its
   step number), and `t_done` prints `DONE <n>` last and exits.
@@ -30,8 +28,10 @@
   against the formula, and, through a recording sink, the key bit, notes alternating over channels 7 and 8, `C0h`, volume,
   shutdown, a patch block's record (`E0h` held to 0-3 on an OPL2), octave shift and (OPL3) 4-OP voices; as an OPL2 and as an OPL3. Every routine must preserve its registers and use at most 16 bytes of stack (depths print as an `INFO` line).
 - `interpreter/T_PATCH.ASM` (`T_PATCH.COM`) covers the startup part's `.RBP` parser, name rules, `RBSTUDIO.CFG` reader,
-  patch lookup and INT 24h handler, on text buffers and on `FACTORY\` (the suite stages the factory files). Its cases are `patch.c`'s: both parsers take and refuse the same files.
-- Listening check: `T_OPL /L` plays the faithful voice, then the four factory records and, on an OPL3, a 4-OP patch, a second each. Run `build/tests/T_OPL.COM /L`
+  patch lookup and INT 24h handler, on text buffers and on `FACTORY\PATCHES\` (the suite stages the factory files). Its cases are `patch.c`'s: both parsers take and refuse the same files.
+- `interpreter/T_RULES.ASM` covers a game profile's rules (`engine/rules.asm`, `WHILE` too) and the patch switch; `T_FX.ASM` its effects (`engine/fx.asm`) through
+  `oplsink.inc`, T_OPL's recording sink: the turns between the voices, 2-OP and 4-OP, no stray register, the main voice current after each call, at most 22 bytes of stack; `T_PROF.ASM` the `.RBG` parser (`startup/profile.asm`) on text buffers: its numbers, reasons and limits. `T_FACT.ASM` loads every staged profile in `FACTORY\PROFILES\` as `/G:` does, and fails, naming it, on a profile or patch that can't be used.
+- Listening check: `T_OPL /L` plays the faithful voice, then the four factory records and, on an OPL3, a 4-OP patch, a second each. Run `build/tests/T_OPL/T_OPL.COM /L`
   in DOSBox-X with sound on, once per `oplmode` (`-set "sblaster oplmode=opl2"`, then `opl3`; one space-separated argument).
 - `RBTEST.COM` plays speaker cases for listening, runs PASS/FAIL checks (with `/R`, against ReBeep's state through AMIS), probes free
   memory and times a trapped write. `P_EXER` tests it without ReBeep, `P_CAPT` with it, `P_TRACE` under REBEEPD, `P_BENCH` times it (`docs/architecture/how-it-works.md`); `RBTEST /?`.
@@ -44,8 +44,8 @@
   block first, or `AH=48h` would report about 0 free.
 - The suite runs DOSBox-X with `-set "mixer nosound=true"`, not `-silent`: `-silent` removes the Sound
   Blaster, so no OPL is found at `388h`.
-- CI runs the interpreter and studio suites on `windows-latest` only, with `SDL_VIDEODRIVER` and
-  `SDL_AUDIODRIVER` set to `dummy`. Locally they open a DOSBox-X window briefly.
+- The suites run DOSBox-X with SDL's dummy video and audio drivers, `-fastlaunch` and `cycles=max`:
+  no window opens. CI runs the interpreter and studio suites on `windows-latest` only.
 
 ## Run / test
 

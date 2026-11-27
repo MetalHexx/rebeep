@@ -82,7 +82,7 @@ static void check_factory(const char *file, const unsigned char *want)
     unsigned char rec[11];
     int i;
 
-    sprintf(path, "FACTORY\\%s", file);
+    sprintf(path, "FACTORY\\PATCHES\\%s", file);
     t_case(file);
     t_checkl(patch_read(path, &p, err, sizeof err), 0, "the file parses");
     opl_regs2(&p.v2, 3, rec);

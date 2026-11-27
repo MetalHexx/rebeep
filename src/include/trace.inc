@@ -30,12 +30,23 @@ TR_FLAGS        equ 30          ; db RBS_FLAGS
 TR_SPARE        equ 31          ; db 0
 
 ; Record kinds. 1-3 are speaker steps: a write to the real 61h that changes bit 1, or the
-; gate while bit 1 is on. 4-5 are the OPL notes the game's writes start and stop.
+; gate while bit 1 is on. 4-5 are the OPL notes the game's writes start and stop. 6-7 are a
+; profile's rules completing, with TR_BEFORE = the rule's number and TR_AFTER = its slot.
+; 8 is a pitch change on a sounding note that moves the count by more than an eighth of the
+; larger count, against the last note on or change record: an effect cutting into a tone, not
+; a song's vibrato, which rewrites the count every tick and would fill the buffer. 9 is a tone
+; moving onto the effect voice (engine/fx.asm), TR_BEFORE = the effect's number and TR_AFTER
+; = its slot; its glides are not recorded.
 TK_GAME61       equ 1           ; forwarding the game's 61h write
 TK_GAMEPIT      equ 2           ; the game's 42h/43h write moved the mask
 TK_REBEEP       equ 3           ; ReBeep itself: an apply, the hotkey, /OFF, /U
 TK_NOTE_ON      equ 4
 TK_NOTE_OFF     equ 5
+TK_RULE         equ 6           ; a rule whose last step has a value
+TK_FALLBK       equ 7           ; a catch-all: its last step takes any value
+TK_CHANGE       equ 8           ; a pitch jump on a sounding note
+TK_EFFECT       equ 9           ; a profile's effect takes the tone
+TK_LAST         equ TK_EFFECT
 
 %ifdef REBEEP_TRACE
 TRACE_RECS      equ REBEEP_TRACE
@@ -52,13 +63,23 @@ TRACE_RECS      equ REBEEP_TRACE
 %macro OUT_REAL_61 0                    ; DX = 61h, BL = byte; as qpi_out
         call    trace_out61
 %endmacro
+%macro TRACE_RULE 0                     ; AL = rule, AH = slot, CH = its RL_FLAGS
+        call    trace_rule
+%endmacro
+%macro TRACE_FX 0                       ; SI = the effect, AH = its slot
+        call    trace_fx
+%endmacro
 
 %else
+%macro TRACE_FX 0
+%endmacro
 %macro TRACE_SITE 1
 %endmacro
 %macro TRACE_NOTE 0
 %endmacro
 %macro TRACE_EVENT 0
+%endmacro
+%macro TRACE_RULE 0
 %endmacro
 %macro OUT_REAL_61 0
         call    qpi_out

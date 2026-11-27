@@ -21,6 +21,7 @@ GPC_ENGINE      equ 0BB8h       ; 3000, about 398 Hz: an engine pitch
 
         jmp     start
 
+%define INTERP_RESET                    ; the tests start each case from interp_reset
 %include "engine/interp.asm"
 %include "testlib.inc"
 

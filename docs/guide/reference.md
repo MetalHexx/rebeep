@@ -7,13 +7,15 @@ and [ReBeep Studio](studio.md).
 ## Options
 
 ```
-REBEEP [/F | /P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
+REBEEP [/F | /P:name | /G:name] [/V:n] [/L:n] [/R:n] [/K:xy]
+       [/ON | /OFF] [/S] [/U] [/?]
 ```
 
 | Option | Does |
 |---|---|
 | `/F` | Faithful square-wave voice (default) |
 | `/P:name` | A patch: `BANK\NAME`, or `NAME` from `USER` then `FACTORY` |
+| `/G:name` | A [game profile](playing.md#game-profiles), yours or one that comes with ReBeep: its rules pick the patch |
 | `/V:n` | Volume, 0 to 15 (default 12) |
 | `/L:n` | Notes below 20 Hz: 0 silent (default), 1 played as a low FM note |
 | `/R:n` | Sounds ReBeep can't translate: 1 on the real speaker (default), 0 muted |
@@ -28,9 +30,11 @@ REBEEP [/F | /P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
 - On a loaded copy, any other option changes only what it names: `REBEEP /V:8` leaves the voice
   alone.
 - On a fresh load, options you leave out take their defaults, except the patch: with neither `/F`
-  nor `/P:`, a `PATCH=` line in [`RBSTUDIO.CFG`](studio.md#the-settings-file) picks it.
+  nor `/P:`, a `PATCH=` line in [`RBSTUDIO.CFG`](studio.md#the-settings-file) picks it, unless a
+  profile's `DEFAULT=` does.
 - A patch ReBeep can't use is a message, and the faithful voice plays
   ([troubleshooting](troubleshooting.md#a-patch-was-not-used)).
+- Give one of `/F`, `/P:` and `/G:` at a time. On a loaded copy, `/P:` or `/F` ends a profile.
 
 ## Hotkeys
 

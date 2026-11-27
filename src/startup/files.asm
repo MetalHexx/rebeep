@@ -1,5 +1,6 @@
 ; The startup part's files: the program's own folder, the settings file RBSTUDIO.CFG, the
-; name rules and the patch lookup by name. Uses patch.asm's parser and line helpers.
+; name rules, the patches and profiles folders and the patch lookup by name. Uses patch.asm's
+; parser and line helpers.
 ; 8086. Included after resident_end, so it is freed when going resident. DS is this module's
 ; segment. ReBeep only ever reads these files; it never writes the settings file.
 ; SPDX-License-Identifier: MIT
@@ -11,6 +12,7 @@ PATH_MAX        equ     64              ; a PATCHES= value
 CFG_MAX         equ     2048            ; the settings file is read this far
 CFG_PATCHES_LEN equ     PATH_MAX + 1    ; one more than valid, so a longer value stays invalid
 CFG_PATCH_LEN   equ     40
+FACTORY_LEN     equ     8               ; "FACTORY\"
 
 FP_LOADED       equ     0               ; try_cand's answers
 FP_MISSING      equ     1
@@ -266,14 +268,15 @@ dos_char:
         clc
         ret
 
-; cfg_parse: the settings file's text, SI = the text, CX = its length. Takes PATCHES= and
-; PATCH=: keys in any case, spaces and tabs around the key and the value trimmed, the first
-; occurrence of a key counts, a ';' line is a comment, any other line is ignored.
-; Out: cfg_patches and cfg_patch = the values (ASCIZ, "" when absent; one that is too long
-; for its buffer is cut, and fails its check). Clobbers AX, BX, CX, DX, SI and DI.
+; cfg_parse: the settings file's text, SI = the text, CX = its length. Takes PATCHES=, PATCH=
+; and PROFILES=: keys in any case, spaces and tabs around the key and the value trimmed, the
+; first occurrence of a key counts, a ';' line is a comment, any other line is ignored.
+; Out: cfg_patches, cfg_patch and cfg_profiles = the values (ASCIZ, "" when absent; one that is
+; too long for its buffer is cut, and fails its check). Clobbers AX, BX, CX, DX, SI and DI.
 cfg_parse:
         mov     byte [cfg_patches], 0
         mov     byte [cfg_patch], 0
+        mov     byte [cfg_profiles], 0
         mov     byte [cfg_seen], 0
         mov     [pf_pos], si
         add     cx, si
@@ -297,10 +300,18 @@ cfg_parse:
 .single:
         mov     bx, w_patchkey
         call    key_is
-        jc      .line
+        jc      .profiles
         mov     al, 2
         mov     di, cfg_patch
         mov     cx, CFG_PATCH_LEN
+        jmp     .take
+.profiles:
+        mov     bx, w_profiles
+        call    key_is
+        jc      .line
+        mov     al, 4
+        mov     di, cfg_profiles
+        mov     cx, CFG_PATCHES_LEN
 .take:
         test    [cfg_seen], al
         jnz     .line                   ; the first occurrence counts
@@ -375,17 +386,25 @@ starts_with:
 ; Out: CF set when a PATCHES= was given and is not a plain DOS path (the default is used);
 ; patches_explicit = 1 when PATCHES= is the folder. Clobbers ES.
 patches_resolve:
+        mov     si, cfg_patches
+        mov     di, patches_dir
+        mov     bx, s_patches
+        call    dir_resolve
+        mov     [patches_explicit], al
+        ret
+
+; dir_resolve: a folder setting. In: SI = its value (ASCIZ, "" when absent), DI = where the
+; folder goes, BX = the default folder's name beside the program. Out: as patches_resolve, with
+; AL = 1 when the value is the folder, 0 for the default. Clobbers ES.
+dir_resolve:
         push    ds
         pop     es
         cld
-        mov     byte [patches_explicit], 0
-        mov     di, patches_dir
-        mov     si, cfg_patches
+        mov     dx, di
         cmp     byte [si], 0
         je      .default
         call    path_valid
         jc      .invalid
-        mov     byte [patches_explicit], 1
         cmp     byte [si + 1], ':'
         je      .value                  ; a drive: absolute
         cmp     byte [si], '\'
@@ -396,17 +415,19 @@ patches_resolve:
         pop     si
 .value:
         call    copy_upper
+        mov     al, 1
         jmp     .tidy
 .invalid:
         call    .default
         stc
         ret
 .default:
-        mov     di, patches_dir
+        mov     di, dx
         mov     si, prog_dir
         call    copy_upper
-        mov     si, s_patches
+        mov     si, bx
         call    copy_upper
+        xor     al, al
 .tidy:
         cmp     byte [di - 1], '\'
         jne     .done
@@ -574,10 +595,10 @@ print_text:
         pop     ax
         ret
 
-; find_patch: loads the patch spec_buf names. FOLDER\NAME is that file alone (FACTORY is
-; beside the program, any other folder is under the patches folder); a bare NAME is USER\NAME,
-; then FACTORY\NAME, and the first file that exists decides. Needs the settings read first
-; for a folder other than FACTORY (settings_ensure).
+; find_patch: loads the patch spec_buf names. FOLDER\NAME is that file alone (FACTORY's are
+; in FACTORY\PATCHES beside the program, any other folder's under the patches folder); a bare
+; NAME is USER\NAME, then FACTORY\NAME, and the first file that exists decides. Needs the
+; settings read first for a folder other than FACTORY (settings_ensure).
 ; Out: CF clear: pbuf = the name field and the patch block. CF set: fail_who (0, or an ASCIZ
 ; to print before the reason) and fail_reason (a '$' string) say why. Clobbers ES.
 find_patch:
@@ -649,14 +670,17 @@ try_cand:
         jne     .patches
         mov     si, prog_dir
         call    copy_upper
+        mov     si, s_factorypats
+        call    copy_upper
+        mov     si, cand_name + FACTORY_LEN
         jmp     .name
 .patches:
         mov     si, patches_dir
         call    copy_upper
         mov     byte [di], '\'
         inc     di
-.name:
         mov     si, cand_name
+.name:
         call    copy_upper
         mov     si, s_ext
         call    copy_upper
@@ -697,14 +721,17 @@ try_cand:
 
 s_user          db      "USER\", 0
 s_factory       db      "FACTORY\", 0
+s_factorypats   db      "FACTORY\PATCHES\", 0   ; the FACTORY bank, beside the program
 s_patches       db      "PATCHES", 0
 s_cfg           db      "RBSTUDIO.CFG", 0
 s_ext           db      ".RBP", 0
 w_patches       db      "PATCHES", 0
 w_patchkey      db      "PATCH", 0
+s_profiles:                             ; the folder's default name and the settings key
+w_profiles      db      "PROFILES", 0
 
 s_badpatches_1  db      "PATCHES=$"
-s_badpatches_2  db      " ignored: not a plain DOS path. Using the default folder.", 13, 10, '$'
+s_badpatches_2  db      13, 10, "ignored: not a plain DOS path. Using the default folder.", 13, 10, '$'
 
 r_notfound      db      "not found$"
 r_notfound2     db      "not found in USER or FACTORY$"
@@ -718,6 +745,7 @@ cand_name       times 18 db 0
 spec_buf        times 18 db 0
 cfg_patches     times CFG_PATCHES_LEN + 1 db 0
 cfg_patch       times CFG_PATCH_LEN + 1 db 0
+cfg_profiles    times CFG_PATCHES_LEN + 1 db 0
 cfg_seen        db      0
 patches_explicit db     0
 patches_missing db      0

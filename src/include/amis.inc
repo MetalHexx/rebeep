@@ -18,6 +18,7 @@ AMIS_FN_TRAPS_ON  equ 12h       ; AL = FFh, or AL = 00h and BL = exit code; a no
 AMIS_FN_TRAPS_OFF equ 13h       ; the same, releasing the OPL
 AMIS_FN_UNINSTALL equ 14h       ; AL = FFh and BX = PSP segment to free, or AL = 00h and BL = 8
 AMIS_FN_TRACE   equ 15h         ; trace build only: AL = FFh, DX:BX -> the trace buffer (trace.inc)
+AMIS_FN_PROFILE equ 16h         ; AL = FFh, DX:BX -> the profile table (profile.inc)
 
 ; RB_STATE, layout version 2: byte offsets.
 RBS_VERSION     equ 0           ; db layout version

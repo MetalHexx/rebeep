@@ -290,7 +290,7 @@ static void scan_all(Library *lib, int counting)
     int files;
     int i;
 
-    sprintf(dir, "%sFACTORY", lib->progdir);
+    sprintf(dir, "%s" FACTORY_DIR, lib->progdir);
     lib->factory = scan_folder(lib, dir, FACTORY_FOLDER, counting);
     sprintf(dir, "%s\\USER", lib->patchdir);
     lib->user = scan_folder(lib, dir, USER_FOLDER, counting);
@@ -624,7 +624,7 @@ int lib_path(const Library *lib, int i, char *path, unsigned len)
     _fstrcpy(folder, e->folder);
     _fstrcpy(name, e->name);
     if (strcmp(folder, FACTORY_FOLDER) == 0) {
-        n = snprintf(path, len, "%s%s\\%s" EXT_RBP, lib->progdir, folder, name);
+        n = snprintf(path, len, "%s" FACTORY_DIR "\\%s" EXT_RBP, lib->progdir, name);
     } else {
         n = snprintf(path, len, "%s\\%s\\%s" EXT_RBP, lib->patchdir, folder, name);
     }

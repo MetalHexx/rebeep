@@ -476,13 +476,13 @@ describe('build run and build clean', () => {
   describe('data files', () => {
     const FILES = [
       { source: 'studio/data/SPLASH.ANS', deploy: 'REBEEP' },
-      { source: 'studio/data/FACTORY/ORGAN.RBP', deploy: 'REBEEP/FACTORY' },
+      { source: 'factory/profiles/DEMO/ORGAN.RBP', deploy: 'REBEEP/FACTORY/PROFILES/DEMO' },
     ];
 
     /** A repo whose targets.json carries `files`, with the sources of FILES on disk. */
     function makeFilesRepo(files = FILES) {
       const root = makeRepo({ targets: { ...DEFAULT_TARGETS, files } });
-      for (const [rel, text] of [['studio/data/SPLASH.ANS', 'art'], ['studio/data/FACTORY/ORGAN.RBP', 'patch']]) {
+      for (const [rel, text] of [['studio/data/SPLASH.ANS', 'art'], ['factory/profiles/DEMO/ORGAN.RBP', 'patch']]) {
         fs.mkdirSync(path.dirname(path.join(root, 'src', rel)), { recursive: true });
         fs.writeFileSync(path.join(root, 'src', rel), text);
       }
@@ -494,11 +494,11 @@ describe('build run and build clean', () => {
       const { result } = run(root, ['build', 'run']);
       assert.equal(result.code, 0, result.stderr);
       assert.equal(fs.readFileSync(path.join(root, 'build', 'files', 'REBEEP', 'SPLASH.ANS'), 'utf8'), 'art');
-      assert.equal(fs.readFileSync(path.join(root, 'build', 'files', 'REBEEP', 'FACTORY', 'ORGAN.RBP'), 'utf8'), 'patch');
+      assert.equal(fs.readFileSync(path.join(root, 'build', 'files', 'REBEEP', 'FACTORY', 'PROFILES', 'DEMO', 'ORGAN.RBP'), 'utf8'), 'patch');
       const built = JSON.parse(fs.readFileSync(path.join(root, 'build', 'build.json'), 'utf8'));
       assert.deepEqual(built.files, [
         { name: 'SPLASH.ANS', deploy: 'REBEEP', size: 3, sha256: sha256(Buffer.from('art')) },
-        { name: 'ORGAN.RBP', deploy: 'REBEEP/FACTORY', size: 5, sha256: sha256(Buffer.from('patch')) },
+        { name: 'ORGAN.RBP', deploy: 'REBEEP/FACTORY/PROFILES/DEMO', size: 5, sha256: sha256(Buffer.from('patch')) },
       ]);
       removeDir(root);
     });
@@ -520,10 +520,10 @@ describe('build run and build clean', () => {
         [[{ source: '../src/SPLASH.ANS', deploy: 'REBEEP' }], /source must be a path inside src/],
         [[{ source: path.resolve('SPLASH.ANS'), deploy: 'REBEEP' }], /source must be a path inside src/],
         [[{ source: '', deploy: 'REBEEP' }], /source must be a path inside src/],
-        [[{ source: 'studio/data/SPLASH.ANS', deploy: 'rebeep' }], /deploy must be one or two 8\.3/],
-        [[{ source: 'studio/data/SPLASH.ANS', deploy: 'A/B/C' }], /deploy must be one or two 8\.3/],
-        [[{ source: 'studio/data/SPLASH.ANS', deploy: '/REBEEP' }], /deploy must be one or two 8\.3/],
-        [[{ source: 'studio/data/SPLASH.ANS' }], /deploy must be one or two 8\.3/],
+        [[{ source: 'studio/data/SPLASH.ANS', deploy: 'rebeep' }], /deploy must be one to four 8\.3/],
+        [[{ source: 'studio/data/SPLASH.ANS', deploy: 'A/B/C/D/E' }], /deploy must be one to four 8\.3/],
+        [[{ source: 'studio/data/SPLASH.ANS', deploy: '/REBEEP' }], /deploy must be one to four 8\.3/],
+        [[{ source: 'studio/data/SPLASH.ANS' }], /deploy must be one to four 8\.3/],
         [[FILES[0], FILES[0]], /duplicate file REBEEP\/SPLASH\.ANS/],
         [[{ source: 'studio/data/MISSING.ANS', deploy: 'REBEEP' }], /MISSING\.ANS does not exist/],
         ['SPLASH.ANS', /"files" must be an array/],

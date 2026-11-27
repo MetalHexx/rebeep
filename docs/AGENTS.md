@@ -9,7 +9,8 @@
 | `guide/getting-started.md` | Guide | What ReBeep is, what you need, which setup to follow |
 | `guide/real-pc.md` | Guide | Jemm, install, the boot menu entry, check, undo. `release/README.TXT` section 3 follows it |
 | `guide/86box.md` | Guide | A player's own 86Box VM, then the real PC steps |
-| `guide/playing.md` | Guide | Everyday use: RBPLAY, voices, muting, hotkeys, `/OFF`, unload |
+| `guide/playing.md` | Guide | Everyday use: RBPLAY, voices, loading a game profile, muting, hotkeys, `/OFF`, unload |
+| `guide/profiles.md` | Guide | Writing a game profile, and changing one ReBeep comes with: its folder, the `.RBG` file, how rules and effects match, the limits |
 | `guide/troubleshooting.md` | Guide | By symptom, then every message |
 | `guide/compatibility.md` | Guide | Tested games (with game notes) and machines, conflicts with the command to run |
 | `guide/studio.md` | Guide | ReBeep Studio for players: a showcase on top (the animated synth screen, a gallery of every screen), then the screens, keys, banks, the Save dialog, the settings file |
@@ -27,9 +28,8 @@
 ## Rules
 
 **Who reads these docs, and how we write for them.**
-- **Guide:** a DOS gamer who is a little technical, as every DOS user was, but has never heard of
-  QPIEMU. Memory managers, `CONFIG.SYS` and `AUTOEXEC.BAT` are part of the ticket, so teach them
-  fully: whole examples, each line explained, how to undo.
+- **Guide:** a DOS gamer who is a little technical, as every DOS user was, but has never heard of QPIEMU. Memory
+  managers, `CONFIG.SYS` and `AUTOEXEC.BAT` are part of the ticket, so teach them fully: whole examples, each line explained, how to undo.
 - **Architecture:** the curious. Technical and exact: the design and its measured cost.
 - **Lab:** contributors. Commands, the `rebeep` CLI, the VMs.
 - **The voice:** concise and high signal. Steps first; tables and code blocks over prose; no filler;

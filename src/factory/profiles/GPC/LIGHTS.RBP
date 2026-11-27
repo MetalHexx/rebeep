@@ -1,0 +1,15 @@
+; ReBeep patch. Edit it in ReBeep Studio or by hand.
+; OPn= AR DR SL RR OL KSL MULT WAVE TREM VIB SUS KSR, decimal.
+; SL and OL: bigger is louder. OCTAVE 4 is the game's pitch.
+; The start lights: a racing game's start beep, an octave up. A clean,
+; bright tone: instant attack, a short decay, little modulation.
+[PATCH]
+FORMAT=1
+OCTAVE=5
+
+[2OP]
+; CONNECTION: FM or AM. FEEDBACK 0..7.
+CONNECTION=FM
+FEEDBACK=0
+OP1=15 3 12 8 38 0 2 0 0 0 1 0
+OP2=15 2 13 9 63 0 1 0 0 0 1 0

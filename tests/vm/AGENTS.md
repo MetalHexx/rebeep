@@ -9,7 +9,8 @@
 | `P_*.BAT` | One probe each: CRLF, 8.3 name. `rebeep test run --suite vm` runs them in name order |
 | `P_FLOPPY.BAT` | Runs ReBeep and RBTEST from the release floppy mounted as A: |
 | `P_PATCH.BAT` | Patches by name: the settings file, `/P:` (USER override, exact FACTORY, a bank), the fallbacks. Builds its fixtures on D: (`ECHO`, `MD`, `COPY`), reads `REBEEP /S` output with `FIND` |
-| `P_SAMPLE.BAT`, `S_SAMP2.BAT` | Two stages: install from the floppy, copy the FreeDOS samples over C:, `FDAPM WARMBOOT`. Stage 2 runs on the sample config, reached by a line appended to `C:\FDAUTO.BAT` |
+| `P_PROFIL.BAT` | Game profiles: `/G:` at load and on a loaded copy, RBTEST's checks while the rules switch patches (also at `/R:0`), `/P:` ending it, the messages, an effect (and one whose patch is missing), REBEEPD's `rule`, `fallbk` and `effect` records, the factory's GPC and a player's copy of it. Builds its profiles on D: |
+| `P_SAMPLE.BAT`, `S_SAMP2.BAT` | Two stages: install and update from the floppy (`FACTORY\` replaced, the player's folders kept), the manual's `XCOPY`, copy the FreeDOS samples over C:, `FDAPM WARMBOOT`. Stage 2 runs on the sample config, reached by a line appended to `C:\FDAUTO.BAT` |
 
 ## Rules
 
@@ -45,6 +46,7 @@
 
 - The VM must never keep the probe D:. The suite redeploys in a `finally`; if a run is cut short,
   run `rebeep disk deploy mirror-freedos`.
+- Keep every line short, `REM` included: a 259-character line hung FreeDOS's shell before the probe wrote anything.
 
 ## Run / test
 

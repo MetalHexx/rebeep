@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { after, before, describe, test } from 'node:test';
 import { interpreterPrograms, parseResults, studioPrograms, toolTestFiles } from '../lib/suites.mjs';
@@ -17,21 +18,83 @@ fs.copyFileSync(args[args.length - 1], args[args.indexOf('-o') + 1]);
 `;
 
 /**
- * A fake DOSBox-X: logs its arguments, then copies FAKE_DOSBOX_RESULT_FILE into the mounted
- * folder as RESULT.TXT, which is what a DOS program would have written.
+ * A fake DOSBox-X: prints a line naming its command, appends one line to FAKE_DOSBOX_LOG (its arguments, the SDL drivers
+ * it got and the files under FACTORY in the folder mounted as C:), then copies FAKE_DOSBOX_RESULT_FILE into that folder as
+ * RESULT.TXT, which is what a DOS program would have written. With FAKE_DOSBOX_GATE, a run of the program FAKE_DOSBOX_HOLD
+ * names finishes only after a run of another program has; if none does in 15 s, it writes no result. With
+ * FAKE_DOSBOX_EVENTS it appends "start <command>" and "end <command>" there, FAKE_DOSBOX_DELAY ms or more apart.
  */
 const FAKE_DOSBOX = `import fs from 'node:fs';
 import path from 'node:path';
 const args = process.argv.slice(2);
-fs.appendFileSync(process.env.FAKE_DOSBOX_LOG, JSON.stringify(args) + '\\n');
+const command = args[args.length - 1];
 const mount = args.find((a) => a.startsWith('MOUNT C '));
 const dir = mount.slice('MOUNT C '.length).replace(/^"|"$/g, '');
-if (process.env.FAKE_DOSBOX_LISTING) {
-  const factory = path.join(dir, 'FACTORY');
-  fs.writeFileSync(process.env.FAKE_DOSBOX_LISTING, fs.existsSync(factory) ? fs.readdirSync(factory).join(',') : 'none');
+const { FAKE_DOSBOX_GATE: gate, FAKE_DOSBOX_HOLD: hold } = process.env;
+const held = Boolean(gate) && command.startsWith(hold + ' ');
+const { FAKE_DOSBOX_EVENTS: events, FAKE_DOSBOX_DELAY: delay } = process.env;
+const event = (what) => events && fs.appendFileSync(events, what + ' ' + command.split(' > ')[0] + '\\n');
+event('start');
+if (delay) await new Promise((r) => setTimeout(r, Number(delay)));
+let result = process.env.FAKE_DOSBOX_RESULT_FILE;
+if (held) {
+  const until = Date.now() + 15000;
+  while (!fs.existsSync(gate) && Date.now() < until) await new Promise((r) => setTimeout(r, 20));
+  if (!fs.existsSync(gate)) result = '';
 }
-if (process.env.FAKE_DOSBOX_RESULT_FILE) fs.copyFileSync(process.env.FAKE_DOSBOX_RESULT_FILE, path.join(dir, 'RESULT.TXT'));
+console.log('dosbox ran ' + command);
+const root = path.join(dir, 'FACTORY');
+const factory = fs.existsSync(root)
+  ? fs.readdirSync(root, { recursive: true }).filter((n) => fs.statSync(path.join(root, n)).isFile())
+  : [];
+fs.appendFileSync(process.env.FAKE_DOSBOX_LOG, JSON.stringify({
+  args,
+  drivers: [process.env.SDL_VIDEODRIVER, process.env.SDL_AUDIODRIVER],
+  factory: factory.map((n) => n.split(path.sep).join('/')).sort().join(','),
+}) + '\\n');
+if (result) fs.copyFileSync(result, path.join(dir, 'RESULT.TXT'));
+if (gate && !held) fs.writeFileSync(gate, '');
+event('end');
 `;
+
+/** A repo's factory defaults for the fake suites, one patch and one profile, and what a test program finds of them. */
+const FACTORY_SOURCES = {
+  'factory/patches/ORGAN.RBP': 'REBEEP/FACTORY/PATCHES',
+  'factory/profiles/DEMO/DEMO.RBG': 'REBEEP/FACTORY/PROFILES/DEMO',
+};
+const FACTORY_STAGED = 'PATCHES/ORGAN.RBP,PROFILES/DEMO/DEMO.RBG';
+const factoryFiles = Object.entries(FACTORY_SOURCES).map(([source, deploy]) => ({ source, deploy }));
+const putFactory = (root) => {
+  for (const source of Object.keys(FACTORY_SOURCES)) {
+    const file = path.join(root, 'src', source);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `contents of ${path.basename(file)}`);
+  }
+};
+
+/** The JSON lines a fake tool appended to `file`; none when it never ran. */
+const logLines = (file) =>
+  fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
+
+/** The logged DOSBox-X call that ran `command` (`T_ADD.COM`, `T_ALPHA.EXE /OPL2`). */
+const callOf = (calls, command) => {
+  const found = calls.find((c) => c.args.includes(`${command} > RESULT.TXT`));
+  assert.ok(found, `no DOSBox-X run of ${command}`);
+  return found;
+};
+
+const textLines = (file) => fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
+
+/** The most DOSBox-X runs going at once, from the fake's start and end lines. */
+const mostAtOnce = (events) => {
+  let running = 0;
+  return Math.max(...events.map((line) => (running += line.startsWith('start ') ? 1 : -1)));
+};
+
+const programNames = (stdout) => {
+  const parsed = JSON.parse(stdout);
+  return (parsed.data ?? parsed.error.data).suites[0].programs.map((p) => p.program);
+};
 
 /** A fake wcl: logs its arguments, can fail, and writes the `-fe=` path as the output (wcl runs in the output's folder). */
 const FAKE_WCL = `import fs from 'node:fs';
@@ -141,6 +204,22 @@ describe('test run', () => {
     assert.deepEqual(JSON.parse(json.stdout).data.suites, [{ suite: 'studio', ok: true, programs: [] }]);
   });
 
+  test('--jobs is refused for the tools and vm suites, and for anything but a whole number from 1 up', () => {
+    const root = makeTempDir('rebeep-jobs-tests-');
+    dirs.push(root);
+    const run = (...args) => runRebeep(['test', 'run', ...args], { env: { REBEEP_REPO_ROOT: root } });
+    for (const suite of ['tools', 'vm']) {
+      const result = run('--suite', suite, '--jobs', '2');
+      assert.equal(result.code, 2, suite);
+      assert.match(result.stderr, /--jobs only applies to the interpreter and studio suites/, suite);
+    }
+    for (const value of ['0', 'two', '1.5', '', '04']) {
+      const result = run('--suite', 'interpreter', `--jobs=${value}`);
+      assert.equal(result.code, 2, value);
+      assert.match(result.stderr, /--jobs must be a whole number from 1 up/, value);
+    }
+  });
+
   test('the tools suite and all are refused inside a node test (recursion guard)', () => {
     const root = makeTempDir('rebeep-guard-tests-');
     dirs.push(root);
@@ -171,12 +250,9 @@ describe('test run --suite interpreter, with fake NASM and DOSBox-X', () => {
     fs.mkdirSync(path.join(root, 'src', 'include'), { recursive: true });
     fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'x', version: '0.1.0' }));
     fs.writeFileSync(path.join(root, 'tests', 'interpreter', 't_add.asm'), 'org 100h\n');
-    fs.mkdirSync(path.join(root, 'src', 'studio', 'data', 'FACTORY'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'src', 'studio', 'data', 'FACTORY', 'ORGAN.RBP'), 'patch');
-    fs.writeFileSync(
-      path.join(root, 'src', 'targets.json'),
-      JSON.stringify({ targets: [], files: [{ source: 'studio/data/FACTORY/ORGAN.RBP', deploy: 'REBEEP/FACTORY' }] }),
-    );
+    fs.writeFileSync(path.join(root, 'tests', 'interpreter', 't_sub.asm'), 'org 100h\n');
+    putFactory(root);
+    fs.writeFileSync(path.join(root, 'src', 'targets.json'), JSON.stringify({ targets: [], files: factoryFiles }));
   });
 
   after(() => {
@@ -184,11 +260,11 @@ describe('test run --suite interpreter, with fake NASM and DOSBox-X', () => {
     removeDir(base);
   });
 
-  const runInterp = (results, args = ['test', 'run', '--suite', 'interpreter']) => {
+  const runInterp = (results, args = [], extraEnv = {}) => {
     const resultFile = path.join(fakes, `result-${++logCount}.txt`);
     const log = path.join(fakes, `dosbox-${logCount}.log`);
     fs.writeFileSync(resultFile, results);
-    const result = runRebeep(args, {
+    const result = runRebeep(['test', 'run', '--suite', 'interpreter', ...args], {
       env: {
         REBEEP_REPO_ROOT: root,
         REBEEP_NASM: process.execPath,
@@ -197,25 +273,87 @@ describe('test run --suite interpreter, with fake NASM and DOSBox-X', () => {
         REBEEP_DOSBOX_PREFIX_ARGS: JSON.stringify([path.join(fakes, 'fake-dosbox.mjs')]),
         FAKE_DOSBOX_RESULT_FILE: resultFile,
         FAKE_DOSBOX_LOG: log,
+        ...extraEnv,
       },
     });
-    const calls = fs.existsSync(log) ? fs.readFileSync(log, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
-    return { result, calls };
+    return { result, calls: logLines(log) };
   };
 
-  test('runs DOSBox-X with a quoted MOUNT on a folder with a space, and passes when all cases pass', () => {
+  test('each program runs in its own folder, mounted quoted on a path with a space, and passes when all cases pass', () => {
     const { result, calls } = runInterp('PASS add\r\nPASS sub\r\nDONE 2\r\n');
     assert.equal(result.code, 0, result.stderr);
     assert.match(result.stdout + result.stderr, /interpreter tests passed/);
-    const out = path.join(root, 'build', 'tests');
-    assert.ok(calls[0].includes(`MOUNT C "${out}"`), JSON.stringify(calls[0]));
-    assert.ok(calls[0].includes('T_ADD.COM > RESULT.TXT'));
+    assert.equal(calls.length, 2);
+    for (const name of ['T_ADD', 'T_SUB']) {
+      const folder = path.join(root, 'build', 'tests', name);
+      const call = callOf(calls, `${name}.COM`);
+      assert.ok(call.args.includes(`MOUNT C "${folder}"`), JSON.stringify(call.args));
+      assert.ok(fs.existsSync(path.join(folder, `${name}.COM`)), name);
+    }
   });
 
-  test('stages the factory patches as FACTORY beside the programs', () => {
-    const { result } = runInterp('PASS add\nDONE 1\n');
+  test('stages the factory patches and profiles under FACTORY beside each program', () => {
+    const { result, calls } = runInterp('PASS add\nDONE 1\n');
     assert.equal(result.code, 0, result.stderr);
-    assert.equal(fs.readFileSync(path.join(root, 'build', 'tests', 'FACTORY', 'ORGAN.RBP'), 'utf8'), 'patch');
+    for (const call of calls) assert.equal(call.factory, FACTORY_STAGED);
+    for (const name of ['T_ADD', 'T_SUB']) {
+      const file = path.join(root, 'build', 'tests', name, 'FACTORY', 'PROFILES', 'DEMO', 'DEMO.RBG');
+      assert.equal(fs.readFileSync(file, 'utf8'), 'contents of DEMO.RBG');
+    }
+  });
+
+  test('every run is headless on any host, starts fast and runs at full speed', () => {
+    const { result, calls } = runInterp('PASS add\nDONE 1\n', [], { SDL_VIDEODRIVER: 'windows', SDL_AUDIODRIVER: 'directsound' });
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(calls.length, 2);
+    for (const { args, drivers } of calls) {
+      assert.deepEqual(drivers, ['dummy', 'dummy']);
+      assert.ok(args.includes('-fastlaunch'));
+      assert.equal(args[args.indexOf('cpu cycles=max') - 1], '-set', 'one argument after -set');
+    }
+  });
+
+  test('--jobs 4 runs programs at once and reports them in their order, whichever finishes first', () => {
+    const gate = path.join(fakes, 'interp-gate');
+    const { result } = runInterp('PASS add\nDONE 1\n', ['--jobs', '4', '--json'], {
+      FAKE_DOSBOX_GATE: gate,
+      FAKE_DOSBOX_HOLD: 'T_ADD.COM',
+    });
+    assert.equal(result.code, 0, result.stdout);
+    assert.deepEqual(programNames(result.stdout), ['T_ADD', 'T_SUB']);
+  });
+
+  test('no more programs run at once than --jobs says, and no more than 4 without it', () => {
+    const extra = [1, 2, 3, 4].map((n) => path.join(root, 'tests', 'interpreter', `t_more${n}.asm`));
+    for (const file of extra) fs.writeFileSync(file, 'org 100h\n');
+    try {
+      const cases = [[['--jobs', '1'], 1], [[], Math.min(4, os.availableParallelism())]];
+      for (const [i, [args, most]] of cases.entries()) {
+        const events = path.join(fakes, `events-jobs-${i}.log`);
+        const { result } = runInterp('PASS add\nDONE 1\n', args, { FAKE_DOSBOX_EVENTS: events, FAKE_DOSBOX_DELAY: '300' });
+        assert.equal(result.code, 0, result.stderr);
+        assert.equal(textLines(events).length, 12, 'six programs ran');
+        const peak = mostAtOnce(textLines(events));
+        assert.ok(peak <= most, `${args.join(' ') || 'by default'}: ${peak} at once, over ${most}`);
+      }
+    } finally {
+      for (const file of extra) fs.rmSync(file);
+    }
+  });
+
+  test("--jobs 1 streams DOSBox-X's output; above 1 only a failed run's is printed", () => {
+    const streamed = runInterp('PASS add\nDONE 1\n', ['--jobs', '1']);
+    assert.equal(streamed.result.code, 0, streamed.result.stderr);
+    assert.match(streamed.result.stdout, /dosbox ran T_ADD\.COM/);
+
+    const quiet = runInterp('PASS add\nDONE 1\n', ['--jobs', '2']);
+    assert.equal(quiet.result.code, 0, quiet.result.stderr);
+    assert.doesNotMatch(quiet.result.stdout, /dosbox ran/);
+
+    const failed = runInterp('FAIL add: no\nDONE 1\n', ['--jobs', '2']);
+    assert.equal(failed.result.code, 1);
+    assert.match(failed.result.stdout, /dosbox ran T_ADD\.COM/);
+    assert.match(failed.result.stdout, /dosbox ran T_SUB\.COM/);
   });
 
   test('a FAIL line fails the run and names an unnamed case', () => {
@@ -253,17 +391,11 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
     put('tests/studio/testlib.c', '/* library */\n');
     put('tests/studio/testlib.h', '/* header */\n');
     for (const name of ['video.c', 'main.c', 'dos.c']) put(`src/studio/${name}`, '/* module */\n');
-    put('src/studio/data/FACTORY/ORGAN.RBP', 'patch');
+    putFactory(root);
     put('src/studio/data/SPLASH.ANS', 'art');
     put(
       'src/targets.json',
-      JSON.stringify({
-        targets: [],
-        files: [
-          { source: 'studio/data/SPLASH.ANS', deploy: 'REBEEP' },
-          { source: 'studio/data/FACTORY/ORGAN.RBP', deploy: 'REBEEP/FACTORY' },
-        ],
-      }),
+      JSON.stringify({ targets: [], files: [{ source: 'studio/data/SPLASH.ANS', deploy: 'REBEEP' }, ...factoryFiles] }),
     );
   });
 
@@ -273,14 +405,13 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
   });
 
   /** Runs the suite; `results` is the RESULT.TXT the fake DOSBox-X writes, or null for none. */
-  const runStudio = (results, extraEnv = {}) => {
+  const runStudio = (results, extraEnv = {}, args = []) => {
     const n = ++logCount;
     const resultFile = path.join(fakes, `result-${n}.txt`);
     fs.writeFileSync(resultFile, results ?? '');
     const dosboxLog = path.join(fakes, `dosbox-${n}.log`);
     const wclLog = path.join(fakes, `wcl-${n}.log`);
-    const listing = path.join(fakes, `listing-${n}.txt`);
-    const result = runRebeep(['test', 'run', '--suite', 'studio'], {
+    const result = runRebeep(['test', 'run', '--suite', 'studio', ...args], {
       env: {
         REBEEP_REPO_ROOT: root,
         REBEEP_WATCOM: process.execPath,
@@ -289,53 +420,72 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
         REBEEP_DOSBOX_PREFIX_ARGS: JSON.stringify([path.join(fakes, 'fake-dosbox.mjs')]),
         FAKE_DOSBOX_RESULT_FILE: results === null ? '' : resultFile,
         FAKE_DOSBOX_LOG: dosboxLog,
-        FAKE_DOSBOX_LISTING: listing,
         FAKE_WCL_LOG: wclLog,
         ...extraEnv,
       },
     });
-    const lines = (file) =>
-      fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
-    return {
-      result,
-      dosbox: lines(dosboxLog),
-      wcl: lines(wclLog),
-      factory: fs.existsSync(listing) ? fs.readFileSync(listing, 'utf8') : null,
-    };
+    return { result, calls: logLines(dosboxLog), wcl: logLines(wclLog) };
   };
 
-  test('compiles each program with testlib and the modules but main.c, stages FACTORY, and passes', () => {
-    const { result, wcl, factory } = runStudio('PASS one\nDONE 1\n');
+  test('compiles each program with testlib and the modules but main.c into its own folder, and passes', () => {
+    const { result, wcl, calls } = runStudio('PASS one\nDONE 1\n');
     assert.equal(result.code, 0, result.stderr);
     assert.match(result.stdout + result.stderr, /studio tests passed/);
 
     assert.equal(wcl.length, 2);
-    const [alpha, beta] = wcl;
     for (const args of wcl) {
       for (const flag of ['-bt=dos', '-mm', '-0']) assert.ok(args.includes(flag), flag);
-      assert.ok(args.includes(`-i=${path.join('..', '..', 'tests', 'studio')}`), 'tests/studio is on the include path');
+      assert.ok(args.includes(`-i=${path.join('..', '..', '..', 'tests', 'studio')}`), 'tests/studio is on the include path');
       assert.ok(args.some((a) => a.endsWith('testlib.c')));
       assert.ok(args.some((a) => a.endsWith('video.c')) && args.some((a) => a.endsWith('dos.c')));
       assert.ok(!args.some((a) => a.endsWith('main.c')), 'main.c is not linked into a test');
       assert.ok(!args.some((a) => a.includes(root)), 'no absolute repo path reaches wcl');
     }
-    assert.ok(alpha.includes('-fe=T_ALPHA.EXE') && alpha.some((a) => a.endsWith('T_ALPHA.C')));
-    assert.ok(beta.includes('-fe=T_BETA.EXE'));
-    assert.equal(factory, 'ORGAN.RBP', 'only the REBEEP/FACTORY data files are staged');
+    for (const name of ['T_ALPHA', 'T_BETA']) {
+      const args = wcl.find((a) => a.includes(`-fe=${name}.EXE`));
+      assert.ok(args?.some((a) => a.endsWith(`${name}.C`)), name);
+      const folder = path.join(root, 'build', 'studio-tests', name);
+      for (const file of [`${name}.EXE`, path.join('gen', 'version.h')]) {
+        assert.ok(fs.existsSync(path.join(folder, file)), `${name}: ${file}`);
+      }
+    }
+    for (const call of calls) assert.equal(call.factory, FACTORY_STAGED, 'only the factory files are staged');
   });
 
   test('a SUITE: OPL2 program runs a second time as an OPL2 card with /OPL2; others run once', () => {
-    const { dosbox } = runStudio('PASS one\nDONE 1\n');
+    const events = path.join(fakes, 'events-in-turn.log');
+    const { calls } = runStudio(
+      'PASS one\nDONE 1\n',
+      { FAKE_DOSBOX_EVENTS: events, FAKE_DOSBOX_DELAY: '300' },
+      ['--jobs', '4'],
+    );
     const out = path.join(root, 'build', 'studio-tests');
-    assert.equal(dosbox.length, 3);
-    const [alphaDefault, alphaOpl2, beta] = dosbox;
-    assert.ok(alphaDefault.includes(`MOUNT C "${out}"`));
-    assert.ok(alphaDefault.includes('T_ALPHA.EXE > RESULT.TXT'));
-    assert.ok(!alphaDefault.includes('sblaster oplmode=opl2'));
-    assert.ok(alphaOpl2.includes('sblaster oplmode=opl2'), 'one argument: DOSBox-X ignores the comma form');
-    assert.ok(alphaOpl2.includes('T_ALPHA.EXE /OPL2 > RESULT.TXT'));
-    assert.ok(beta.includes('T_BETA.EXE > RESULT.TXT'));
-    assert.ok(beta.includes('mixer nosound=true') && beta.includes('-exit'));
+    assert.equal(calls.length, 3);
+    const alphaDefault = callOf(calls, 'T_ALPHA.EXE');
+    const alphaOpl2 = callOf(calls, 'T_ALPHA.EXE /OPL2');
+    const beta = callOf(calls, 'T_BETA.EXE');
+    const order = textLines(events);
+    assert.ok(order.indexOf('end T_ALPHA.EXE') < order.indexOf('start T_ALPHA.EXE /OPL2'), "one program's runs are in turn");
+    for (const call of [alphaDefault, alphaOpl2]) assert.ok(call.args.includes(`MOUNT C "${path.join(out, 'T_ALPHA')}"`));
+    assert.ok(beta.args.includes(`MOUNT C "${path.join(out, 'T_BETA')}"`));
+    assert.ok(!alphaDefault.args.includes('sblaster oplmode=opl2'));
+    assert.ok(alphaOpl2.args.includes('sblaster oplmode=opl2'), 'one argument: DOSBox-X ignores the comma form');
+    assert.ok(beta.args.includes('mixer nosound=true') && beta.args.includes('-exit'));
+    for (const call of calls) {
+      assert.ok(call.args.includes('-fastlaunch') && call.args.includes('cpu cycles=max'));
+      assert.deepEqual(call.drivers, ['dummy', 'dummy']);
+    }
+  });
+
+  test('--jobs 4 reports the programs in their order, whichever finishes first', () => {
+    const gate = path.join(fakes, 'studio-gate');
+    const { result } = runStudio(
+      'PASS one\nDONE 1\n',
+      { FAKE_DOSBOX_GATE: gate, FAKE_DOSBOX_HOLD: 'T_ALPHA.EXE' },
+      ['--jobs', '4', '--json'],
+    );
+    assert.equal(result.code, 0, result.stdout);
+    assert.deepEqual(programNames(result.stdout), ['T_ALPHA', 'T_ALPHA (OPL2)', 'T_BETA']);
   });
 
   test('a FAIL line fails the suite and names the program and case; the OPL2 run is judged on its own', () => {
@@ -352,11 +502,13 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
     assert.match(result.stderr, /T_BETA: no RESULT\.TXT written/);
   });
 
-  test('a compile error stops the suite with the compiler message', () => {
-    const { result, dosbox } = runStudio('PASS one\nDONE 1\n', { FAKE_WCL_FAIL: 'T_ALPHA.C(3): Error! E1009' });
+  test('a compile error stops the suite with the compiler message: nothing more is built or run', () => {
+    const failing = { FAKE_WCL_FAIL: 'T_ALPHA.C(3): Error! E1009' };
+    const { result, calls, wcl } = runStudio('PASS one\nDONE 1\n', failing, ['--jobs', '1']);
+    assert.equal(wcl.length, 1, 'T_BETA is not compiled once T_ALPHA failed');
     assert.equal(result.code, 1);
     assert.match(result.stderr, /wcl failed building T_ALPHA\.EXE/);
     assert.match(result.stderr, /E1009/);
-    assert.deepEqual(dosbox, []);
+    assert.deepEqual(calls, []);
   });
 });

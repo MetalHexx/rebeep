@@ -144,7 +144,7 @@ A **bank** is a folder of patches, and the studio finds banks in three places:
 
 | Bank | Holds | Who writes it |
 |---|---|---|
-| `FACTORY` | The patches that come with ReBeep: Organ, Flute, Brass and Bell. It sits beside `RBSTUDIO.EXE` | Nobody: `INSTALL` replaces it on every update |
+| `FACTORY` | The patches that come with ReBeep: Organ, Flute, Brass and Bell. They sit in `FACTORY\PATCHES`, beside `RBSTUDIO.EXE` | Nobody: `INSTALL` replaces them on every update |
 | `USER` | Your own patches, and the default place to save | The studio, and you |
 | Any other folder | Patches someone gave you, such as `HEXX\`, or a bank you made | You, and the studio when you save into it |
 
@@ -235,6 +235,7 @@ it.
 |---|---|
 | `PATCHES=D:\MYSOUNDS` | Where `USER` and the other banks are. Plain DOS names only. With no drive or leading `\`, the path starts at the program's folder. The default is `PATCHES` there |
 | `PATCH=FLUTE` | The patch ReBeep loads when you give it neither `/F` nor `/P:`. Same names as `/P:` |
+| `PROFILES=D:\MYGAMES` | Where your [game profiles](profiles.md) are, a folder each. The same kind of path as `PATCHES=`. The default is `PROFILES` beside the program |
 
 A line is `KEY=VALUE`, in any case. A line starting with `;` is a comment, and a line the studio does
 not know is ignored. The first line for a key counts. A `PATCHES=` that is not a plain DOS path is

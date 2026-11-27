@@ -82,8 +82,7 @@ ReBeep loads on every boot.
 
        MD C:\REBEEP
        COPY A:\*.* C:\REBEEP
-       MD C:\REBEEP\FACTORY
-       COPY A:\FACTORY\*.* C:\REBEEP\FACTORY
+       XCOPY A:\FACTORY C:\REBEEP\FACTORY\ /S
 
   3. Add the ReBeep entry. With no boot menu yet, make CONFIG.SYS look
      like this. Move your own HIMEM.SYS and EMM386.EXE lines into
@@ -158,11 +157,13 @@ JEMMEX.EXE in CONFIG.SYS. If Jemm is not in C:\JEMM, set RBJEMM first:
 
 4 Options and hotkeys
 ---------------------
-  REBEEP [/F | /P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
+  REBEEP [/F | /P:name | /G:name] [/V:n] [/L:n] [/R:n] [/K:xy]
+         [/ON | /OFF] [/S] [/U] [/?]
 
   /F      faithful square-wave voice (default)
   /P:name a patch: FOLDER\NAME, or NAME from USER then FACTORY (the four that
           come with ReBeep are ORGAN, FLUTE, BRASS and BELL)
+  /G:name a game profile, yours or one that comes with ReBeep
   /V:n    volume, 0 to 15 (default 12)
   /L:n    notes below 20 Hz: 0 silent (default), 1 played
   /R:n    sounds it can't translate: 1 speaker (default), 0 muted
@@ -176,7 +177,60 @@ JEMMEX.EXE in CONFIG.SYS. If Jemm is not in C:\JEMM, set RBJEMM first:
 /S, /U, /ON and /OFF act only on a loaded copy. On a loaded copy, any
 other option changes only what it names. With neither /F nor /P:, a PATCH=
 line in RBSTUDIO.CFG (section 5) picks the patch at load. A patch ReBeep
-can't use is a message, and the faithful voice plays.
+can't use is a message, and the faithful voice plays. Give one of /F, /P:
+and /G: at a time; on a loaded copy, /P: or /F ends a profile.
+
+A game profile gives each part of a game its own patch, told apart by what
+the game sends the speaker. ReBeep comes with one, for Grand Prix Circuit:
+
+  REBEEP /G:GPC
+
+/G:name loads PROFILES\name\name.RBG and the patches beside it. With no
+such file, it loads the one that comes with ReBeep, in FACTORY\PROFILES.
+INSTALL replaces those on an update, so to change one, copy its whole
+folder into PROFILES and change the copy, which then wins:
+
+  MD C:\REBEEP\PROFILES
+  MD C:\REBEEP\PROFILES\GPC
+  COPY C:\REBEEP\FACTORY\PROFILES\GPC\*.* C:\REBEEP\PROFILES\GPC
+
+A profile you write goes in its own folder in PROFILES, such as
+PROFILES\MYGAME. Its text file looks like this:
+
+  [PROFILE]
+  FORMAT=1
+  DEFAULT=MENU
+  [RULE]
+  ID=RACE
+  STEP=CTRL B6h
+  STEP=NOTE C22Eh 40
+  PATCH=ENGINE
+  [EFFECT]
+  WHILE=RACE
+  PITCH=0950h 50
+  PATCH=SQUEAL
+
+DEFAULT= names the patch that plays first, MENU.RBP in the profile's
+folder; it wins over RBSTUDIO.CFG's PATCH= line. Each [RULE], up to 16, is
+tried in order, and the first to match picks its PATCH=, which plays until
+another rule picks a different one. A rule has up to 4 STEP= lines, each
+matching the next event of its kind: NOTE n t, a note starts within t of
+the count n; CHANGE n t, a sounding note changes to that count; PITCH n t,
+either; OFF, a note stops; CTRL n, the game writes n to port 43h. Leave out
+n to take any.
+
+An [EFFECT], up to 8, gives a sound effect a patch of its own: while a note
+is within t of the count n in PITCH=n t (n - t at least 193), it plays in
+the effect's PATCH= on an FM channel of its own, then the rule's patch
+takes it back. Effects don't play in the faithful voice. ID= names a rule
+(1 to 8 letters, digits, _ or -, not only digits), and WHILE=ID makes a rule
+or an effect count only while that rule is the last to have matched. NAME=
+gives any section a name of 1 to 24 characters, for a menu later.
+
+A profile has up to 8 patches and 2048 bytes. Numbers are decimal, or hex
+with a trailing h, and lines starting with ; are comments. A rule's patch
+plays in its own voice, even after Ctrl+Alt+N. A profile ReBeep can't use
+is a message, and what was playing goes on.
 
 Some games use a pitch below 20 Hz as a rest, as Grand Prix Circuit's
 engine does. /L:0 keeps those silent, close to what the real speaker
@@ -185,7 +239,7 @@ does with them. /L:1 plays them as a low FM note.
 Clicks, noise and pitches above the FM chip's range can't become an FM
 note, so they play on the real speaker (/R:1). /R:0 mutes them, and only
 the FM chip sounds. The game then loses whatever it played that way, such
-as Grand Prix Circuit's percussion.
+as the click Grand Prix Circuit makes as each song starts and stops.
 
 Hotkeys, with the defaults:
 
@@ -221,7 +275,8 @@ Esc steps back.
 
 Patches are .RBP text files in banks, which are folders:
 
-  FACTORY   ORGAN, FLUTE, BRASS and BELL. INSTALL replaces it on an update.
+  FACTORY   ORGAN, FLUTE, BRASS and BELL, in FACTORY\PATCHES beside
+            RBSTUDIO.EXE. INSTALL replaces them on an update.
   USER      your patches, and where the Save dialog starts. A USER patch
             named like a factory one overrides it for /P:name.
   banks     any other folder in the patches folder, such as HEXX. Use them
@@ -238,6 +293,7 @@ overwrites it. SAMPLES\RBSTUDIO.CFG is a commented example to copy:
 
   PATCHES=D:\MYSOUNDS   where USER and the banks are (default: PATCHES)
   PATCH=FLUTE          the patch REBEEP loads with neither /F nor /P:
+  PROFILES=D:\MYGAMES  where your game profiles are (default: PROFILES)
 
 RBSTUDIO.LOG, beside the program, records each run and every patch file it
 left out, and why.
@@ -281,8 +337,8 @@ Messages, and what to do about each:
       Every AMIS slot is in use by other resident programs. Unload one
       of them and try again.
 
-  "Another program already traps the speaker ports (for example
-   SBEMU's PC-speaker feature)."
+  "Another program already traps the speaker ports
+   (for example SBEMU's PC-speaker feature)."
       Only one program can trap the speaker ports. For SBEMU, start it
       with /PCS0 to turn its PC-speaker emulation off.
 
@@ -301,12 +357,12 @@ Messages, and what to do about each:
   "DOS would not free ReBeep's memory."
       Reboot to clear the resident copy.
 
-  "Patch NAME not used: ... Playing the faithful voice."
-      ReBeep could not use the patch. The reason follows: "not found in USER
-      or FACTORY" means no NAME.RBP in either folder (a patch in another
-      bank needs its bank, /P:HEXX\ORGAN). "folder does not exist" means
-      the PATCHES= folder is missing. Anything about the file itself names
-      a line to fix in a text editor.
+  "Patch NAME not used. Playing the faithful voice."
+      ReBeep could not use the patch. The reason is on the lines below: "not
+      found in USER or FACTORY" means no NAME.RBP in either folder (a patch
+      in another bank needs its bank, /P:HEXX\ORGAN). "folder does not exist"
+      means the PATCHES= folder is missing. Anything about the file itself
+      names a line to fix in a text editor.
 
 Other problems:
 

@@ -170,7 +170,7 @@ describe('release create', () => {
     put('build/FDBOOT.BIN', FDBOOT);
     put('build/RBSTUDIO.EXE', RBSTUDIO);
     put('build/files/REBEEP/SPLASH.ANS', SPLASH);
-    put('build/files/REBEEP/FACTORY/ORGAN.RBP', ORGAN);
+    put('build/files/REBEEP/FACTORY/PATCHES/ORGAN.RBP', ORGAN);
     put('build/files/ENV/OTHER.DAT', 'not packaged');
     put('build/build.json', JSON.stringify({
       targets: [
@@ -181,7 +181,7 @@ describe('release create', () => {
       ],
       files: [
         { name: 'SPLASH.ANS', deploy: 'REBEEP', sha256: sha256(SPLASH) },
-        { name: 'ORGAN.RBP', deploy: 'REBEEP/FACTORY', sha256: sha256(ORGAN) },
+        { name: 'ORGAN.RBP', deploy: 'REBEEP/FACTORY/PATCHES', sha256: sha256(ORGAN) },
         { name: 'OTHER.DAT', deploy: 'ENV', sha256: sha256('not packaged') },
       ],
     }));
@@ -210,7 +210,7 @@ describe('release create', () => {
     );
     assert.deepEqual(
       data.files.map((f) => f.path),
-      ['CHANGES.TXT', 'FACTORY/ORGAN.RBP', 'INSTALL.BAT', 'RBPLAY.BAT', 'RBSTUDIO.EXE', 'RBTEST.COM',
+      ['CHANGES.TXT', 'FACTORY/PATCHES/ORGAN.RBP', 'INSTALL.BAT', 'RBPLAY.BAT', 'RBSTUDIO.EXE', 'RBTEST.COM',
         'README.TXT', 'REBEEP.COM', 'SAMPLES/FREEDOS/FDAUTO.BAT', 'SAMPLES/MSDOS/CONFIG.SYS',
         'SAMPLES/RBSTUDIO.CFG', 'SPLASH.ANS'],
     );
@@ -226,7 +226,7 @@ describe('release create', () => {
     assert.equal(disk.readFile('SAMPLES\\MSDOS\\CONFIG.SYS').toString(), 'DEVICE=C:\\DOS\\HIMEM.SYS\r\n');
     assert.deepEqual(disk.readFile('RBSTUDIO.EXE'), RBSTUDIO);
     assert.deepEqual(disk.readFile('SPLASH.ANS'), SPLASH);
-    assert.deepEqual(disk.readFile('FACTORY\\ORGAN.RBP'), ORGAN);
+    assert.deepEqual(disk.readFile('FACTORY\\PATCHES\\ORGAN.RBP'), ORGAN);
     assert.match(zip.entries.find((e) => e.name === 'README.TXT').read().toString(), /^ReBeep 1\.1\.0\r\n/);
     assert.match(zip.entries.find((e) => e.name === 'INSTALL.BAT').read().toString(), /echo ReBeep 1\.1\.0 setup\r\n/);
     assert.ok(!zip.entries.some((e) => e.name.includes('AGENTS')));
@@ -334,7 +334,7 @@ describe('release create', () => {
   });
 
   test('fails when a data file no longer matches build.json', () => {
-    put('build/files/REBEEP/FACTORY/ORGAN.RBP', 'changed');
+    put('build/files/REBEEP/FACTORY/PATCHES/ORGAN.RBP', 'changed');
     const result = create();
     assert.equal(result.code, 1);
     assert.match(result.stdout, /ORGAN\.RBP does not match build\/build\.json/);

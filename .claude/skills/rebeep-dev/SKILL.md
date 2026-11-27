@@ -1,6 +1,6 @@
 ---
 name: rebeep-dev
-description: Work in the ReBeep repo's dev environment through the rebeep CLI (tools/rebeep.mjs). Use to set up, check, reset or clean the 86Box environment; add MS-DOS or game media; create, install, run, snapshot or reset the VMs (mirror-msdos, mirror-freedos, slow-386sx, ega-msdos, hercules-msdos); build ReBeep and deploy it to the VMs' D: disk; see, fetch or add files on a VM's D: (logs, results); log what a game makes ReBeep do with the REBEEPD trace build; run the tests; or add a command to the CLI.
+description: "Work in the ReBeep repo's dev environment through the rebeep CLI (tools/rebeep.mjs). Use to set up, check, reset or clean the 86Box environment; add MS-DOS or game media; create, install, run, snapshot or reset the VMs (mirror-msdos, mirror-freedos, slow-386sx, ega-msdos, hercules-msdos); build ReBeep and deploy it to the VMs' D: disk; see, fetch or add files on a VM's D: (logs, results); log what a game makes ReBeep do with the REBEEPD trace build; keep the lab's game profiles (/G:) on every D: (making or changing one is the game-profile skill); run the tests; or add a command to the CLI."
 ---
 
 # rebeep-dev
@@ -14,8 +14,10 @@ commands and hard rules. Read it first, then the one reference that matches the 
 | Create a VM, install DOS, run it, snapshot it | [references/vms.md](references/vms.md) |
 | Build, deploy to D:, test | [references/build-and-test.md](references/build-and-test.md) |
 | See, fetch or add files on a VM's D: (logs, results, small files) | [references/d-files.md](references/d-files.md) |
+| Set up a hand test for the user, so they only press Enter to start it (a bench) | [references/bench.md](references/bench.md) |
 | Log what a game makes ReBeep do (REBEEPD, the trace build) and read the log | [references/trace.md](references/trace.md) |
 | Keep the lab's patch set: collect patches saved on a VM, put them on every D: | [references/patches.md](references/patches.md) |
+| Keep the lab's game profiles (`/G:`) on every D:. To make or change one with the user: the [game-profile skill](../game-profile/SKILL.md) | [references/profiles.md](references/profiles.md) |
 | Preview the product page (`rebeep site run`), build or check it | [site/AGENTS.md](../../../site/AGENTS.md) |
 | Cut a release, or build the release package: zip, floppy image, checksums, notes | The [release skill](../release/SKILL.md) |
 | Add or change a CLI noun, verb or option | [references/cli.md](references/cli.md) |
@@ -28,5 +30,7 @@ commands and hard rules. Read it first, then the one reference that matches the 
 - Use `--preview` before any `reset`, `clean` or `remove`, and confirm with the user before running
   it for real.
 - Never run game files on the host, and never commit anything from `~/.rebeep`.
+- A test the user runs by hand in a VM is set up as a bench first ([references/bench.md](references/bench.md)):
+  they press Enter to start it, never type the commands.
 
 **Adding an activity:** write one new file in `references/` and add one row to the table above.

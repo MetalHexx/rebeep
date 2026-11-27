@@ -70,6 +70,14 @@ speaker step and OPL note, and `REBEEPD /D` writes the log to `D:\REBEEP\RBTRACE
 development only and never ships. The steps and the log format are in the `rebeep-dev` skill's
 [trace reference](../../.claude/skills/rebeep-dev/references/trace.md).
 
+## Game profiles
+
+A profile in `src/factory/profiles/<NAME>/` comes with ReBeep: merged means shipped. To add one,
+list its files in `src/targets.json` and add its folder to `release/INSTALL.BAT`, as for `GPC`;
+`rebeep test run --suite tools` names anything left out, and `--suite interpreter` loads each profile
+as `/G:` does. The `game-profile` skill, below, makes one with you, and its
+[ship it](../../.claude/skills/game-profile/references/ship.md) page has every step.
+
 ## Commits
 
 [Conventional Commits](https://www.conventionalcommits.org): `feat`, `fix`, `docs`, `test`,
@@ -124,5 +132,6 @@ The repo ships skills for AI coding assistants, such as Claude Code, which picks
 | [`release`](../../.claude/skills/release/SKILL.md) | Cuts a release: the changelog from the branch's commits, your review of the notes, the checks, the merge and the publish |
 | [`drive-dos-app`](../../.claude/skills/drive-dos-app/SKILL.md) | Drives a DOS program in a real DOSBox-X window, or a lab VM in 86Box, with typed keys and screenshots, for flows the headless checks cannot reach |
 | [`update-site`](../../.claude/skills/update-site/SKILL.md) | Changes the product page with a live three-width preview, and retakes the ReBeep Studio screenshots |
+| [`game-profile`](../../.claude/skills/game-profile/SKILL.md) | Makes or changes a game profile with you: logs the game, finds the events that tell its parts apart, checks that each rule fires, shapes the patches by ear |
 
 Ask the agent to run `update-docs` before you commit; it applies the doc rules above to your change.

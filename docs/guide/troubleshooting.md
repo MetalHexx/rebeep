@@ -43,13 +43,17 @@ The exit codes behind these messages are in the [reference](reference.md#exit-co
 
 ## A patch was not used
 
-A patch ReBeep can't use is never an error. It prints one line, and the faithful voice plays:
+A patch ReBeep can't use is never an error. It says why, and the faithful voice plays:
 
 ```
-Patch MYLEAD not used: not found in USER or FACTORY. Playing the faithful voice.
+Patch MYLEAD not used. Playing the faithful voice.
+  not found in USER or FACTORY.
 ```
 
-| It says | What to do |
+The last line is the reason. A line above it, ending in `:`, names the file or folder it is about,
+when that isn't the name you gave.
+
+| The reason | What to do |
 |---|---|
 | `not found in USER or FACTORY` | No `MYLEAD.RBP` in either folder. Check the spelling, and that the file is in `USER` in the patches folder. A patch in another bank takes the bank too: `/P:HEXX\ORGAN` |
 | `not found` | There is no such file in the folder you named |
@@ -58,8 +62,30 @@ Patch MYLEAD not used: not found in USER or FACTORY. Playing the faithful voice.
 | `cannot be read` | DOS couldn't read the file. Check the disk |
 | Something about the file, such as `FORMAT is not 1` | The file has a mistake. Open it in a text editor and fix that line. The studio leaves such a file out of its list, and its log says which line |
 
-A `PATCHES=` line that isn't a plain DOS path gets its own message, `PATCHES=... ignored`, and the
-default folder is used. Both lines are explained in [the settings file](studio.md#the-settings-file).
+A `PATCHES=` line that isn't a plain DOS path gets its own message, and the default folder is used:
+
+```
+PATCHES=..\MINE
+ignored: not a plain DOS path. Using the default folder.
+```
+
+The line is explained in [the settings file](studio.md#the-settings-file).
+
+## A profile was not used
+
+A [game profile](profiles.md) ReBeep can't use is never an error either. It says why, and what
+was playing goes on:
+
+```
+Profile MYGAME not used: not found in PROFILES or FACTORY.
+```
+
+That means there is no `MYGAME.RBG` in your `PROFILES` folder, and ReBeep doesn't come with one:
+check the folder and the name. Otherwise a line names the file and the next gives the reason, such as
+`a rule has no PATCH` or `more than 16 rules`: fix that line. A patch the profile names that can't
+be used gets the patch message above, and the faithful voice plays for its rule. It is looked for
+only beside the `.RBG`, so a [changed copy](profiles.md#change-one-that-comes-with-rebeep) needs
+every patch. A bad `PROFILES=` line gets a message like the one for `PATCHES=`.
 
 ## The studio log
 

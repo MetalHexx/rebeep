@@ -1,6 +1,6 @@
 ; T_PATCH - the startup part's patch parser, name rules, settings reader and patch lookup
 ; (startup/patch.asm and startup/files.asm). The parser and the settings reader run on text
-; buffers; the lookup reads the factory files the suite stages as FACTORY\ beside the program.
+; buffers; the lookup reads the factory files the suite stages in FACTORY\PATCHES\ beside it.
 ; The parser's cases are the studio's (src/studio/patch.c): both must accept and reject the
 ; same files.
 ; SPDX-License-Identifier: MIT

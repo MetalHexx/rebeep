@@ -1,7 +1,9 @@
 ; The INT 2Dh (AMIS) handler: identifies ReBeep, publishes RB_STATE, switches the traps
 ; and uninstalls. Resident code (8086); the functions are in include/amis.inc.
-; Everything here runs with interrupts off (INT clears IF) and makes no DOS call: the
-; command-line copy that asks for an uninstall frees the memory afterwards.
+; Everything here runs with interrupts off and makes no DOS call: the command-line copy that
+; asks for an uninstall frees the memory afterwards. INT clears IF, but a caller may reach
+; us with PUSHF and a far call, so ReBeep's functions clear it themselves: a trapped write
+; landing mid-apply would find the OPL half programmed, and fx.asm's voices swapped.
 ; SPDX-License-Identifier: MIT
 
         cpu     8086
@@ -22,12 +24,15 @@ amis_isr:
         iret
 
 .ours:
+        cli                             ; IRET gives the caller its own IF back
         cmp     al, AMIS_FN_INSTALLED
         je      .installed
         cmp     al, AMIS_FN_HOOKS
         je      .hooks
         cmp     al, AMIS_FN_STATE
         je      .state
+        cmp     al, AMIS_FN_PROFILE
+        je      .profile
 %ifdef REBEEP_TRACE
         cmp     al, AMIS_FN_TRACE
         je      .trace
@@ -70,7 +75,7 @@ amis_isr:
         call    rb_opl_start
         call    capture_install
         jnc     .ok
-        call    opl_shutdown            ; the traps were refused: give the OPL back
+        call    fx_shutdown             ; the traps were refused: give the OPL back
         mov     bl, EXIT_TRAPPED
         jmp     .fail
 
@@ -78,7 +83,7 @@ amis_isr:
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
         jz      .ok
         call    capture_remove
-        call    opl_shutdown
+        call    fx_shutdown
 
 .ok:
         mov     al, 0FFh
@@ -112,6 +117,11 @@ amis_isr:
         mov     dx, cs
         mov     bx, RB_STATE
         iret
+.profile:
+        mov     al, 0FFh
+        mov     dx, cs
+        mov     bx, rules_tbl
+        iret
 %ifdef REBEEP_TRACE
 .trace:
         mov     al, 0FFh
@@ -123,13 +133,14 @@ amis_isr:
 ; rb_opl_start: take over the OPL with the configured voice and volume.
 ; In:  AL = 2 or 3, the chip type
 rb_opl_start:
-        call    opl_init
+        call    fx_init
         call    rb_set_voice
         mov     al, [RB_STATE + RBS_VOLUME]
         jmp     opl_set_volume
 
-; rb_set_voice: hand RB_STATE's voice to the OPL target. The patch voice needs a loaded patch;
-; without one the faithful voice plays. Clobbers AL and SI.
+; rb_set_voice: hand RB_STATE's voice to the OPL target (fx_set_voice: the effect voice too
+; takes a new profile's patch or a new volume at its next effect). The patch voice needs a
+; loaded patch; without one the faithful voice plays. Clobbers AL and SI.
 rb_set_voice:
         mov     al, [RB_STATE + RBS_VOICE]
         mov     si, RB_STATE + RBS_PATCH
@@ -137,7 +148,7 @@ rb_set_voice:
         jnz     .go
         xor     al, al
 .go:
-        jmp     opl_set_voice
+        jmp     fx_set_voice
 
 ; rb_apply_low: hand RB_STATE's /L flag to the interpreter. With the traps on,
 ; rb_apply_config then applies it to a held count at once. Clobbers AL.
@@ -199,7 +210,7 @@ rb_uninstall:
         pop     ax
         or      al, al
         jz      .done
-        call    opl_shutdown
+        call    fx_shutdown
 .done:
         clc
         ret

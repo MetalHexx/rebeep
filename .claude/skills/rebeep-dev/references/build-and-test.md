@@ -18,6 +18,10 @@ Re-run `P_BENCH` when the trap code changes and update the numbers in `docs/arch
 `build run` copies them to `build/files/<deploy>/` and the delivery puts them on D: at `<deploy>\`.
 A `/* SUITE: OPL2 */` first line makes a studio test run again as an OPL2 card.
 
+The interpreter and studio suites build every program into its own folder (`build/tests/<NAME>/`,
+`build/studio-tests/<NAME>/`), then run them in headless DOSBox-X at full speed, up to 4 at once.
+`--jobs 1` runs one at a time and streams DOSBox-X's output; above 1 only a failed run's is printed.
+
 A C target (`RBSTUDIO.EXE`) needs the compiler: `rebeep tool fetch open-watcom` once (about 150 MB), or `REBEEP_WATCOM`.
 `RBSTUDIO /BENCH` writes `BENCH.TXT`: the synth screen's redraw, key press, value change and help, the library load, and the patch list over 2,048 entries (draw, click, PgDn), in ms per call, run on `slow-386sx` for the number that matters.
 

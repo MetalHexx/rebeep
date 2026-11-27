@@ -158,8 +158,8 @@ describe('disk deploy', () => {
     const ctx = context();
     fs.mkdirSync(path.dirname(s.paths.vm('mirror-msdos').dImg), { recursive: true });
     writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'SPLASH.ANS'), 'art');
-    writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'FACTORY', 'ORGAN.RBP'), 'patch');
-    writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'FACTORY', 'STRAY.RBP'), 'not listed');
+    writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'FACTORY', 'PATCHES', 'ORGAN.RBP'), 'patch');
+    writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'FACTORY', 'PATCHES', 'STRAY.RBP'), 'not listed');
     writeFile(
       path.join(ctx.repo.build, 'build.json'),
       JSON.stringify({
@@ -168,8 +168,8 @@ describe('disk deploy', () => {
         targets: [],
         files: [
           { name: 'SPLASH.ANS', deploy: 'REBEEP', size: 3, sha256: 'x' },
-          { name: 'ORGAN.RBP', deploy: 'REBEEP/FACTORY', size: 5, sha256: 'x' },
-          { name: 'GONE.RBP', deploy: 'REBEEP/FACTORY', size: 1, sha256: 'x' },
+          { name: 'ORGAN.RBP', deploy: 'REBEEP/FACTORY/PATCHES', size: 5, sha256: 'x' },
+          { name: 'GONE.RBP', deploy: 'REBEEP/FACTORY/PATCHES', size: 1, sha256: 'x' },
           { name: 'long name.rbp', deploy: 'REBEEP', size: 1, sha256: 'x' },
           { name: 'ESC.RBP', deploy: '../ESCAPE', size: 1, sha256: 'x' },
         ],
@@ -183,10 +183,10 @@ describe('disk deploy', () => {
     deployDisk(ctx, 'mirror-msdos');
     const image = readD();
     assert.equal(image.readFile('REBEEP/SPLASH.ANS').toString(), 'art');
-    assert.equal(image.readFile('REBEEP/FACTORY/ORGAN.RBP').toString(), 'patch');
-    assert.ok(image.list().some((e) => e.path.toUpperCase() === 'REBEEP/FACTORY' && e.isDir));
-    assert.ok(!image.exists('REBEEP/FACTORY/STRAY.RBP'), 'only files listed in build.json are delivered');
-    assert.ok(!image.exists('REBEEP/FACTORY/GONE.RBP'));
+    assert.equal(image.readFile('REBEEP/FACTORY/PATCHES/ORGAN.RBP').toString(), 'patch');
+    assert.ok(image.list().some((e) => e.path.toUpperCase() === 'REBEEP/FACTORY/PATCHES' && e.isDir));
+    assert.ok(!image.exists('REBEEP/FACTORY/PATCHES/STRAY.RBP'), 'only files listed in build.json are delivered');
+    assert.ok(!image.exists('REBEEP/FACTORY/PATCHES/GONE.RBP'));
     assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
   });
 
@@ -222,6 +222,35 @@ describe('disk deploy', () => {
       listed(image).filter((n) => n.startsWith('REBEEP/PATCHES/') && !n.startsWith('REBEEP/PATCHES/LAB')),
       ['REBEEP/PATCHES/KQ4', 'REBEEP/PATCHES/KQ4/TKQ4-000.RBP'],
       'a folder is a bank of its own name, upper case, with only its .RBP files',
+    );
+    assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
+  });
+
+  test('puts the lab game profiles on D: as REBEEP/PROFILES/<NAME>, CRLF, only their .RBG and .RBP files', () => {
+    const labProfiles = path.join(s.tmp, 'lab-profiles');
+    const ctx = { ...context(), repo: { ...context().repo, labProfiles } };
+    fs.mkdirSync(path.dirname(s.paths.vm('mirror-msdos').dImg), { recursive: true });
+
+    assert.ok(!composeDelivery(ctx).files.some((f) => f.path.startsWith('REBEEP/PROFILES')), 'no folder, no profiles');
+
+    writeFile(path.join(labProfiles, 'gpc', 'gpc.rbg'), '[GAME]\nNAME=GPC\n');
+    writeFile(path.join(labProfiles, 'gpc', 'INTRO.RBP'), '[PATCH]\nFORMAT=1\n');
+    writeFile(path.join(labProfiles, 'gpc', 'README.md'), 'not a profile file');
+    writeFile(path.join(labProfiles, 'gpc', 'TOOLONGNAME.RBP'), 'x');
+    writeFile(path.join(labProfiles, 'X.RBG'), 'x');
+    writeFile(path.join(labProfiles, 'TOOLONGNAME', 'A.RBG'), 'x');
+    const delivery = composeDelivery(ctx);
+    assert.ok(delivery.warnings.some((w) => /TOOLONGNAME\.RBP/.test(w)), 'a file name that is not 8.3 is skipped with a warning');
+    assert.ok(delivery.warnings.some((w) => /PROFILES\/TOOLONGNAME/.test(w)), 'so is a profile folder whose name is not 8.3');
+
+    deployDisk(ctx, 'mirror-msdos');
+    const image = readD();
+    assert.equal(image.readFile('REBEEP/PROFILES/GPC/GPC.RBG').toString(), '[GAME]\r\nNAME=GPC\r\n');
+    assert.equal(image.readFile('REBEEP/PROFILES/GPC/INTRO.RBP').toString(), '[PATCH]\r\nFORMAT=1\r\n');
+    assert.deepEqual(
+      listed(image).filter((n) => n.startsWith('REBEEP/PROFILES')).sort(),
+      ['REBEEP/PROFILES', 'REBEEP/PROFILES/GPC', 'REBEEP/PROFILES/GPC/GPC.RBG', 'REBEEP/PROFILES/GPC/INTRO.RBP'],
+      'only the profile folder with its .RBG and .RBP files',
     );
     assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
   });

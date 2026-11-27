@@ -1,6 +1,6 @@
 {
   "name": "rebeep",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Hear PC-speaker-only DOS games through a Sound Blaster's OPL2/OPL3, plus a cross-platform 86Box dev environment to build and test it.",
   "private": true,
   "type": "module",

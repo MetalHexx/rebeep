@@ -1,0 +1,17 @@
+; ReBeep patch. Edit it in ReBeep Studio or by hand.
+; OPn= AR DR SL RR OL KSL MULT WAVE TREM VIB SUS KSR, decimal.
+; SL and OL: bigger is louder. OCTAVE 4 is the game's pitch.
+; The tire squeal and the gear chirp: a rough screech, not a bell. The
+; modulator at the pitch with full feedback, for grit; the carrier an
+; octave up, both with vibrato and no decay. A short release bridges
+; the engine's 40 ms between squeal slots without ringing on after.
+[PATCH]
+FORMAT=1
+OCTAVE=4
+
+[2OP]
+; CONNECTION: FM or AM. FEEDBACK 0..7.
+CONNECTION=FM
+FEEDBACK=7
+OP1=15 0 15 7 36 0 1 0 0 1 1 0
+OP2=15 0 15 7 56 0 2 0 0 1 1 0

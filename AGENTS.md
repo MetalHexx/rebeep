@@ -18,14 +18,14 @@ and resets everything to vanilla.
 
 | Folder | What it holds | Guide |
 |---|---|---|
-| `src/` | ReBeep's NASM source, the C studio and their build targets | [src/AGENTS.md](src/AGENTS.md) |
+| `src/` | ReBeep's NASM source, the C studio, the factory patches and profiles, and their build targets | [src/AGENTS.md](src/AGENTS.md) |
 | `tests/` | DOS test programs: interpreter tests and the speaker exerciser | [tests/AGENTS.md](tests/AGENTS.md) |
 | `env/` | The 86Box environment definition: tool manifest, VM profiles, DOS boot files | [env/AGENTS.md](env/AGENTS.md) |
 | `release/` | The package's hand-made files: the manual, `INSTALL.BAT`, `RBPLAY.BAT`, sample configs | [release/AGENTS.md](release/AGENTS.md) |
 | `tools/` | The `rebeep` CLI, its libraries and its unit tests | [tools/AGENTS.md](tools/AGENTS.md) |
 | `site/` | The product page for the GitHub Pages site: plain HTML, CSS and JS | [site/AGENTS.md](site/AGENTS.md) |
 | `docs/` | Human docs in three levels: `guide/` for players, `architecture/` for how it works, `lab/` for contributors | [docs/AGENTS.md](docs/AGENTS.md) |
-| `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI), `update-docs` (doc health), `release` (cutting a release, the changelog rules), `drive-dos-app` (a DOS program in DOSBox-X or a VM in 86Box, typed keys and screenshots) and `update-site` (the product page's edit-and-preview loop, the studio screenshots) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) · [release](.claude/skills/release/SKILL.md) · [drive-dos-app](.claude/skills/drive-dos-app/SKILL.md) · [update-site](.claude/skills/update-site/SKILL.md) |
+| `.claude/skills/` | Agent skills: `rebeep-dev` (environment, VMs, build, CLI), `update-docs` (doc health), `release` (cutting a release, the changelog rules), `drive-dos-app` (a DOS program in DOSBox-X or a VM in 86Box, typed keys and screenshots), `update-site` (the product page's edit-and-preview loop, the studio screenshots) and `game-profile` (making or changing a game profile with the user: logging the game, finding its events, checking each rule, shaping the patches) | [rebeep-dev](.claude/skills/rebeep-dev/SKILL.md) · [update-docs](.claude/skills/update-docs/SKILL.md) · [release](.claude/skills/release/SKILL.md) · [drive-dos-app](.claude/skills/drive-dos-app/SKILL.md) · [update-site](.claude/skills/update-site/SKILL.md) · [game-profile](.claude/skills/game-profile/SKILL.md) |
 | `.github/` | CI, release and Pages workflows, and the PR template | — |
 | `build/` | Build output (ignored) | — |
 

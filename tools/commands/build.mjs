@@ -81,7 +81,7 @@ function validateTargets(doc, file) {
 /**
  * Validates the optional top-level `files` list: plain data files under `src/` that ship with the
  * build. `source` is a path inside `src/` whose base name is an 8.3 upper-case DOS name; `deploy`
- * is one or two 8.3 upper-case folder names joined by `/`. Returns `{ source, deploy, name }`
+ * is one to four 8.3 upper-case folder names joined by `/`. Returns `{ source, deploy, name }`
  * entries, `source` with `/` separators.
  */
 function validateFiles(doc, file) {
@@ -108,8 +108,8 @@ function validateFiles(doc, file) {
       fail(`${where}.source '${f.source}' must end in an 8.3 upper-case DOS name such as ORGAN.RBP`);
     }
     const segments = typeof f.deploy === 'string' ? f.deploy.split('/') : [];
-    if (segments.length > 2 || !segments.every((s) => DIR_83.test(s)) || segments.length === 0) {
-      fail(`${where}.deploy must be one or two 8.3 upper-case DOS folder names joined by "/", such as REBEEP/FACTORY`);
+    if (segments.length > 4 || !segments.every((s) => DIR_83.test(s)) || segments.length === 0) {
+      fail(`${where}.deploy must be one to four 8.3 upper-case DOS folder names joined by "/", such as REBEEP/FACTORY/PATCHES`);
     }
     const key = `${f.deploy}/${name}`;
     if (seen.has(key)) fail(`duplicate file ${key}`);

@@ -22,7 +22,7 @@ It needs no new dependency: Node built-ins, PowerShell, and the DOSBox-X that `r
 
 1. Build: `rebeep build run`.
 2. Stage a scratch folder (outside the repo) that is the program's folder: `build/RBSTUDIO.EXE`, the files in
-   `build/files/REBEEP/` (the art, `FACTORY\`), and any data the flow needs, such as `PATCHES\USER\*.RBP` for the patch list.
+   `build/files/REBEEP/` (the art, `FACTORY\PATCHES\`), and any data the flow needs, such as `PATCHES\USER\*.RBP` for the patch list.
 3. Run:
 
    ```sh

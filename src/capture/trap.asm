@@ -13,6 +13,7 @@
         cpu     386
 %include "speaker.inc"
 %include "amis.inc"
+%include "profile.inc"
 %include "trace.inc"
 
 QPI_READ        equ 1A00h               ; DX = port -> BL
@@ -99,7 +100,7 @@ capture_remove:
         cli
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
         jz      .untrap
-        call    opl_note_off
+        call    fx_quiet
         mov     byte [masked], 0
         call    sync_real_61
 .untrap:
@@ -191,10 +192,11 @@ capture_translation_changed:
         cmp     byte [RB_STATE + RBS_MODE], M_TONE
         jne     .real
         mov     bx, [RB_STATE + RBS_DIVISOR]
-        call    opl_note_on
+        mov     al, EV_TONE_ON          ; on the main voice, or an effect's
+        call    fx_play
         jmp     .real
 .off:
-        call    opl_note_off
+        call    fx_quiet
 .real:
         call    sync_real_61
 .done:
@@ -203,8 +205,9 @@ capture_translation_changed:
         ret
 
 ; capture_voice_changed: the voice changed (or is being re-applied): a tone that is sounding
-; on the OPL, and stays there, restarts with the new voice. One that is moving between the
-; OPL and the speaker is left to capture_translation_changed, which runs next.
+; on the OPL, and stays there, restarts with the new voice, or an effect's, as fx_play picks
+; again. One that is moving between the OPL and the speaker is left to
+; capture_translation_changed, which runs next.
 ; Does nothing while the traps are off. Preserves every register.
 capture_voice_changed:
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRAPS
@@ -217,9 +220,10 @@ capture_voice_changed:
         jz      .done
         cmp     byte [RB_STATE + RBS_MODE], M_TONE
         jne     .done                   ; a rest: nothing is sounding
-        call    opl_note_off
+        call    fx_quiet
         mov     bx, [RB_STATE + RBS_DIVISOR]
-        call    opl_note_on
+        mov     al, EV_TONE_ON
+        call    fx_play
 .done:
         popa
 .ret:
@@ -366,18 +370,14 @@ qpi_out:
         pop     dx
         ret
 
-; play_event: drive the OPL from an interpreter event while translation is on.
+; play_event: drive the OPL from an interpreter event while translation is on: the main
+; voice, or a profile's effect (engine/fx.asm).
 ; In:  AL = event, BX = divisor
 play_event:
         test    byte [RB_STATE + RBS_FLAGS], RBS_F_TRANSLATE
         jz      .ret
         TRACE_EVENT
-        cmp     al, EV_TONE_ON
-        je      opl_note_on
-        cmp     al, EV_PITCH
-        je      opl_pitch
-        cmp     al, EV_TONE_OFF
-        je      opl_note_off
+        jmp     fx_play
 .ret:
         ret
 
@@ -517,6 +517,7 @@ handle_access:
         call    qpi_out
         pop     bx
         pop     ax
+        call    rules_hook
         call    play_event
         TRACE_SITE TK_GAMEPIT
         call    mask_update
@@ -536,7 +537,33 @@ handle_access:
         OUT_REAL_61
         pop     bx
         pop     ax
+        call    rules_hook
         jmp     play_event
+
+; rules_hook: while a profile is on, its rules see each of the game's events, whether translation
+; is on or off, and a rule that picks another patch switches the voice before play_event plays
+; the event: a note that starts here starts in the new voice, and one that sounds on (a pitch
+; change, a control word) restarts in it. The trace build logs each rule that completes.
+; In: AL = event, BX = divisor, DX = port, ES:DI -> the frame. Preserves every register.
+rules_hook:
+        cmp     byte [rules_tbl + PT_ACTIVE], 0
+        je      .ret
+        pusha
+        mov     bp, ax                  ; the event, for after the switch
+        mov     cl, [es:di + IMG_EAX]
+        call    rules_match             ; CF: AL = rule, AH = slot, CH = its flags
+        jnc     .done
+        TRACE_RULE
+        call    rules_switch
+        jnc     .done
+        mov     ax, bp
+        cmp     al, EV_TONE_ON
+        je      .done
+        call    capture_voice_changed
+.done:
+        popa
+.ret:
+        ret
 
 ; forward_access: pass the trapped access through QPI unchanged. An IN stores the value
 ; into the frame's EAX, in the accessed width, leaving the rest of EAX alone.

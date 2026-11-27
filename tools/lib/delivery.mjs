@@ -14,6 +14,8 @@ const AUTOLOAD_BYTES = Buffer.from('autoload\r\n');
 /** Where the lab's patch set lands: banks in the studio's default patches folder. */
 const PATCHES_DIR = 'REBEEP/PATCHES';
 const LAB_BANK = `${PATCHES_DIR}/LAB`;
+/** Where the lab's game profiles land: one folder per profile. */
+const PROFILES_DIR = 'REBEEP/PROFILES';
 
 const fileNames = (dir) =>
   fs
@@ -21,6 +23,23 @@ const fileNames = (dir) =>
     .filter((e) => e.isFile())
     .map((e) => e.name)
     .sort();
+
+const subfolderNames = (dir) =>
+  fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort();
+
+/** The files of `dir` whose names match `pattern`, as CRLF D: files under `dest`, names upper case. */
+function labFolderFiles(dir, dest, pattern) {
+  return fileNames(dir)
+    .filter((name) => pattern.test(name))
+    .map((name) => {
+      const bytes = toCrlf(fs.readFileSync(path.join(dir, name)));
+      return { path: `${dest}/${name.toUpperCase()}`, bytes, size: bytes.length };
+    });
+}
 
 /** The first segment that is not a valid 8.3 name, as a message; `null` when the path is fine. */
 function nameProblem(relPath) {
@@ -96,22 +115,28 @@ function envFiles(repo) {
  */
 function labPatchFiles(repo) {
   if (!repo.labPatches || !fs.existsSync(repo.labPatches)) return [];
-  const bank = (dir, dest) =>
-    fileNames(dir)
-      .filter((name) => /\.rbp$/i.test(name))
-      .map((name) => {
-        const bytes = toCrlf(fs.readFileSync(path.join(dir, name)));
-        return { path: `${dest}/${name.toUpperCase()}`, bytes, size: bytes.length };
-      });
-  const folders = fs
-    .readdirSync(repo.labPatches, { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .map((e) => e.name)
-    .sort();
   return [
-    ...bank(repo.labPatches, LAB_BANK),
-    ...folders.flatMap((name) => bank(path.join(repo.labPatches, name), `${PATCHES_DIR}/${name.toUpperCase()}`)),
+    ...labFolderFiles(repo.labPatches, LAB_BANK, /\.rbp$/i),
+    ...subfolderNames(repo.labPatches).flatMap((name) =>
+      labFolderFiles(path.join(repo.labPatches, name), `${PATCHES_DIR}/${name.toUpperCase()}`, /\.rbp$/i),
+    ),
   ];
+}
+
+/**
+ * The lab's game profiles (`repo.labProfiles`, the rebeep-dev skill's `profiles/`), CRLF: each folder in it
+ * whose name is a valid 8.3 base name is a profile, and its `.RBG` and `.RBP` files go to
+ * `REBEEP/PROFILES/<FOLDER>/`. Files at the top of `profiles/`, other files and badly named folders are
+ * skipped; names that are not 8.3 are skipped with a warning by `composeDelivery`. A dev aid only: `release
+ * create` never reads it. No folder, no files and no warning.
+ */
+function labProfileFiles(repo) {
+  if (!repo.labProfiles || !fs.existsSync(repo.labProfiles)) return [];
+  return subfolderNames(repo.labProfiles)
+    .filter((name) => !name.includes('.'))
+    .flatMap((name) =>
+      labFolderFiles(path.join(repo.labProfiles, name), `${PROFILES_DIR}/${name.toUpperCase()}`, /\.(rbg|rbp)$/i),
+    );
 }
 
 function jemmFiles(ctx, warnings) {
@@ -275,7 +300,7 @@ function buildFiles(ctx, warnings) {
 
 /**
  * Composes the D: delivery disk from the repo's DOS boot files, the fetched JEMM tool, the
- * imported games, the latest build and the lab's patch set. Returns `{ files, dirs, warnings, skipped }`; `files` and
+ * imported games, the latest build and the lab's patch set and game profiles. Returns `{ files, dirs, warnings, skipped }`; `files` and
  * `dirs` go straight to `buildImage`. Names that are not 8.3 are left out, listed in `skipped` and
  * reported in `warnings`. Pass the disk's profile section as `d` (`{ geometry, clusterSize }`) so
  * that games which would not fit are skipped, in name order, instead of failing the whole disk.
@@ -288,6 +313,7 @@ export function composeDelivery(ctx, { d } = {}) {
     ...jemmFiles(ctx, warnings),
     ...buildFiles(ctx, warnings),
     ...labPatchFiles(ctx.repo),
+    ...labProfileFiles(ctx.repo),
   ];
   const kept = [];
   for (const file of base) {

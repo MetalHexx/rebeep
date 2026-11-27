@@ -13,11 +13,11 @@ the [studio guide](../guide/studio.md); the hard rules for changing the code are
 | `dos.c` · `dos.h` | Program folder from `argv[0]`; Ctrl+Break, Ctrl+C and critical-error handlers; `dos_hook` and `dos_restore`; file helpers (`dos_read_file`, `dos_make_dir`, `dos_each`, the safe save `dos_save_file`) |
 | `patch.c` · `patch.h` | The patch model (`Patch`, `Voice`, `Op`: the editor's values, never registers) and the RBP text file: `patch_parse`, `patch_format`, `patch_read`, `patch_write`; `patch_carriers`, which operators a connection makes heard. The NASM parser in `startup/patch.asm` follows the same rules |
 | `dice.c` · `dice.h` | Random and Mutate: a seedable xorshift32 (`dice_seed`, from the BIOS tick count at start), `dice_roll` (a whole voice) and `dice_mutate` (a few small steps); all the tuning is one table at the top |
-| `library.c` · `library.h` | The patch library: `FACTORY\` beside the program, `USER\` and the other banks in the patches folder; `lib_open` and `lib_load` read it once, `lib_put` and `lib_drop` keep it right after a save; lookup, overrides, `name_valid`, `path_valid` for `PATCHES=` |
+| `library.c` · `library.h` | The patch library: the `FACTORY` bank in `FACTORY\PATCHES\` beside the program, `USER\` and the other banks in the patches folder; `lib_open` and `lib_load` read it once, `lib_put` and `lib_drop` keep it right after a save; lookup, overrides, `name_valid`, `path_valid` for `PATCHES=` |
 | `settings.c` · `settings.h` | `RBSTUDIO.CFG`, read only (`cfg_load`, `cfg_get`) |
 | `log.c` · `log.h` | `RBSTUDIO.LOG`, replaced each run, each line committed at once (DOS `68h`) |
 | `undo.c` · `undo.h` | Whole-`Patch` snapshots in far memory, 100 steps, redo, key-coalesced edits |
-| `data/FACTORY/*.RBP` | The four factory patches; `targets.json` `files` ships them to `REBEEP\FACTORY\` |
+| `../factory/patches/*.RBP` | The four factory patches; `targets.json` `files` ships them to `REBEEP\FACTORY\PATCHES\` |
 | `opl.c` · `opl.h` | The OPL driver: detection, `opl_regs2`/`opl_regs4` (the one parameter-to-register mapping), live notes on every channel, `opl_sink` for tests, `/TRACE` write logging |
 | `jingle.c` · `jingle.h` | The splash jingle on `FACTORY\BELL`, advanced by `jingle_poll` from the BIOS tick count |
 | `rebeep.c` · `rebeep.h` | The resident ReBeep through AMIS (INT 2Dh): traps off (13h) at start, on (12h) at exit |

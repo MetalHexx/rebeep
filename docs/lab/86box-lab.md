@@ -63,14 +63,16 @@ The D: layout:
 D:\README.TXT
 D:\ENV\BOOT.BAT              run by AUTOEXEC on every boot
 D:\ENV\QPICHK.COM            reports whether QPIEMU is up
+D:\ENV\BENCH.BAT             a hand test, only when one was added: run by BOOT.BAT
 D:\ENV\MSDOS622\INSTALL.BAT  one-time C: setup for MS-DOS 6.22
 D:\ENV\FREEDOS\INSTALL.BAT   one-time C: setup after a FreeDOS installer
 D:\JEMM\                     Jemm 5.87, JLOAD, QPIEMU
 D:\GAMES\<NAME>\             your games
 D:\REBEEP\                   REBEEP.COM, RBTEST.COM, RBSTUDIO.EXE, SPLASH.ANS, MENU.ANS,
-                             FACTORY\*.RBP and AUTOLOAD.FLG, the latest build, and
-                             REBEEPD.COM, the dev-only trace build
+                             FACTORY\ (patches, game profiles) and AUTOLOAD.FLG, the latest
+                             build, and REBEEPD.COM, the dev-only trace build
 D:\REBEEP\PATCHES\LAB\       the lab's patch set (and KQ4\, SQ1\, FROG\): banks, never shipped
+D:\REBEEP\PROFILES\<NAME>\   the lab's game profiles still being worked out: never shipped
 ```
 
 D: is written by the CLI's own FAT16 writer, straight from the repo, the tool archives and your
@@ -108,6 +110,10 @@ folders can't be fetched; your games stay in the media folder.
    - runs `JLOAD QPIEMU.DLL`, then `QPICHK`;
    - `LH D:\REBEEP\REBEEP` if `D:\REBEEP\AUTOLOAD.FLG` exists. `rebeep build run --deploy` writes
      that flag for every build target marked `"autoload": true` in `src/targets.json` (`REBEEP.COM` is).
+
+   Last, on either entry, it calls `D:\ENV\BENCH.BAT` when there is one: a hand test, set up so you
+   only press Enter to start the program. `rebeep disk add <vm> BENCH.BAT --to ENV` puts it there,
+   and the next deploy removes it.
 
 Because `BOOT.BAT` lives on D:, changing the boot steps needs only a deploy, never an edit on C:.
 
@@ -187,6 +193,7 @@ The repo ships skills for AI coding assistants, such as Claude Code, which picks
 | [`release`](../../.claude/skills/release/SKILL.md) | Cuts a release: the changelog from the branch's commits, your review of the notes, the checks, the merge and the publish |
 | [`drive-dos-app`](../../.claude/skills/drive-dos-app/SKILL.md) | Drives a DOS program in a real DOSBox-X window, or a lab VM in 86Box, with typed keys and screenshots, for flows the headless checks cannot reach |
 | [`update-site`](../../.claude/skills/update-site/SKILL.md) | Changes the product page with a live three-width preview, and retakes the ReBeep Studio screenshots |
+| [`game-profile`](../../.claude/skills/game-profile/SKILL.md) | Makes or changes a game profile with you: logs the game, finds the events that tell its parts apart, checks that each rule fires, shapes the patches by ear |
 
 For this page, its [VMs](../../.claude/skills/rebeep-dev/references/vms.md), [build and
 test](../../.claude/skills/rebeep-dev/references/build-and-test.md) and [D:

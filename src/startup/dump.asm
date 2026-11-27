@@ -170,7 +170,7 @@ tl_kind:
         push    cx
         push    si
         mov     si, s_tr_unknown
-        cmp     al, TK_NOTE_OFF
+        cmp     al, TK_LAST
         ja      .name
         or      al, al
         jz      .name
@@ -290,8 +290,15 @@ s_tr_head       db      "# ", REBEEP_NAME, ": ", 0
 s_tr_of         db      " records kept of ", 0
 s_tr_cap        db      " offered (capacity ", 0
 s_tr_kinds      db      "# kind: a speaker step forwarding the game's 61h write, one its 42h/43h "
-                db      "write caused, one by ReBeep itself, an OPL note on, an OPL note off", 0
+                db      "write caused, one by ReBeep itself, an OPL note on, an OPL note off, "
+                db      "a profile's rule (before>after = rule>slot), its catch-all, "
+                db      "a pitch jump of over an eighth on a sounding note, "
+                db      "an effect taking the tone (before>after = effect>slot)", 0
 s_tr_names      db      "step61 ", 0, "steppit", 0, "steprb ", 0, "noteon ", 0, "noteoff", 0
+                db      "rule   ", 0, "fallbk ", 0, "change ", 0, "effect ", 0
+%if ($ - s_tr_names) != TK_LAST * 8
+%error s_tr_names needs an 8-byte name for each kind
+%endif
 s_tr_unknown    db      "kind?  ", 0
 s_tr_cols       db      "# hex: seq tick pit0 kind real-before>after game61 mode masked "
                 db      "divisor flags, then the game's last 8 writes (port=value, oldest first)", 0

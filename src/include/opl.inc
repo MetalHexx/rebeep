@@ -1,5 +1,5 @@
-; OPL2/OPL3 ports, register bases and the two channels (or, in a four-operator
-; voice, the two channel pairs) ReBeep's one voice alternates between.
+; OPL2/OPL3 ports, register bases, the two channels (or, in a four-operator voice, the
+; two channel pairs) ReBeep's main voice alternates between, and the effect voice's one.
 ; SPDX-License-Identifier: MIT
 
 %ifndef OPL_INC
@@ -39,6 +39,12 @@ OPL4_OP2    equ 03h
 OPL4_OP3    equ 08h
 OPL4_OP4    equ 0Bh
 OPL4_CH2    equ 3               ; the pair's second channel, for C0h
+
+; The effect voice (engine/fx.asm): channel 6, or a four-operator patch on bank 1's pair 2+5.
+; Each register is the main voice's first channel's (or pair's) plus the difference.
+OPL_FX_CH   equ 6               ; channel 7's registers - 1, free on an OPL2 and an OPL3
+OPL4_FX_CH  equ 102h            ; pair A's registers + 2
+OPL4_FX_ENABLE equ 20h          ; REG_4OP bit 5: pair 2+5 of bank 1
 
 KEY_ON      equ 20h             ; REG_KEYBLK bit 5
 OPL3_OUT    equ 30h             ; REG_FBCNT left and right output enables

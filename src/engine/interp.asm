@@ -11,7 +11,9 @@
 %include "speaker.inc"
 
 ; interp_reset: all state off. Gate 0, speaker 0, channel 2 in mode 3 with
-; LSB-then-MSB access, divisor unknown.
+; LSB-then-MSB access, divisor unknown. Only the tests call it (ReBeep starts from
+; interp_sync), so it is assembled only when INTERP_RESET is defined.
+%ifdef INTERP_RESET
 interp_reset:
         mov     byte [st_gate], 0
         mov     byte [st_spk], 0
@@ -24,12 +26,13 @@ interp_reset:
         mov     word [st_div], 0
         mov     word [interp_div], 0
         ret
+%endif
 
 ; interp_sync: adopt the real port 61h value after a pass-through.
 ; In:  AL = port 61h value
 ; Out: AH = mode (M_SILENT or M_RAW; the divisor is unknown)
 ; No event is reported: if the previous mode was M_TONE, the caller must key the
-; OPL voice off (opl_note_off) itself.
+; OPL voice off (fx_quiet, which takes an effect's too) itself.
 interp_sync:
         push    ax
         push    bx

@@ -171,6 +171,7 @@ if (beta) {
   process.exit(0);
 }
 fs.appendFileSync(path.join(dir, 'MACHINES.LOG'), (machine ? machine.slice('dosbox machine='.length) : 'default') + String.fromCharCode(10));
+console.log('dosbox dumped under ' + (machine ? machine.slice('dosbox machine='.length) : 'default'));
 const behaviour = JSON.parse(process.env.FAKE_DUMPS);
 const batch = fs.readFileSync(path.join(dir, 'DUMPS.BAT'), 'utf8').split(String.fromCharCode(10)).map((l) => l.trim());
 for (const line of batch.filter((l) => l.startsWith('RBSTUDIO'))) {
@@ -189,7 +190,7 @@ for (const line of batch.filter((l) => l.startsWith('RBSTUDIO'))) {
 `;
 
 describe('test run --suite studio: the screen check, with fake Open Watcom and DOSBox-X', () => {
-  const run = (behaviour) => {
+  const run = (behaviour, args = ['--json']) => {
     const fakes = makeTempDir('rebeep-screens-fakes-');
     const root = makeTempDir('rebeep-screens-');
     try {
@@ -206,11 +207,18 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
       put('src/studio/main.c', '/* module */\n');
       put('src/studio/video.c', '/* module */\n');
       put('src/studio/data/SPLASH.ANS', 'art');
-      put('src/targets.json', JSON.stringify({ targets: [], files: [{ source: 'studio/data/SPLASH.ANS', deploy: 'REBEEP' }] }));
+      put('src/factory/patches/ORGAN.RBP', 'patch');
+      put('src/targets.json', JSON.stringify({
+        targets: [],
+        files: [
+          { source: 'studio/data/SPLASH.ANS', deploy: 'REBEEP' },
+          { source: 'factory/patches/ORGAN.RBP', deploy: 'REBEEP/FACTORY/PATCHES' },
+        ],
+      }));
       put('tests/screens/demo.vga.scr', scrText({ glyph: 'A', fg: 'F', bg: '1' }));
       put('tests/screens/demo.mono.scr', scrText({ glyph: 'A', fg: 'F', bg: '1' }));
       put('tests/screens/later.vga.scr', scrText({ glyph: 'A', fg: 'F', bg: '1' }));
-      const result = runRebeep(['test', 'run', '--suite', 'studio', '--json'], {
+      const result = runRebeep(['test', 'run', '--suite', 'studio', ...args], {
         env: {
           REBEEP_REPO_ROOT: root,
           REBEEP_WATCOM: process.execPath,
@@ -221,12 +229,21 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
         },
       });
       const out = path.join(root, 'build', 'studio-tests');
+      const lines = (...parts) => fs.readFileSync(path.join(out, ...parts), 'utf8').split('\n').filter(Boolean);
       return {
         result,
-        staged: fs.existsSync(path.join(out, 'SPLASH.ANS')),
-        batch: fs.readFileSync(path.join(out, 'DUMPS.BAT'), 'utf8'),
-        machines: fs.readFileSync(path.join(out, 'MACHINES.LOG'), 'utf8').split('\n').filter(Boolean),
-        beta: fs.readFileSync(path.join(out, 'BETA.LOG'), 'utf8').split('\n').filter(Boolean),
+        folders: ['default', 'cga', 'ega', 'vgaonly'].map((machine) => {
+          const folder = path.join(out, 'screens', machine);
+          return {
+            machine,
+            program: fs.existsSync(path.join(folder, 'RBSTUDIO.EXE')),
+            art: fs.existsSync(path.join(folder, 'SPLASH.ANS')),
+            factory: fs.existsSync(path.join(folder, 'FACTORY', 'PATCHES', 'ORGAN.RBP')),
+            batch: fs.readFileSync(path.join(folder, 'DUMPS.BAT'), 'utf8'),
+            ran: lines('screens', machine, 'MACHINES.LOG'),
+          };
+        }),
+        beta: lines('T_BETA', 'BETA.LOG'),
       };
     } finally {
       removeDir(fakes);
@@ -238,16 +255,18 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
     return (parsed.data ?? parsed.error?.data).suites[0].programs.filter((p) => p.program.startsWith('SCREENS'));
   };
 
-  test('matching dumps pass under the default machine and again under cga, ega and vgaonly, and the art is staged', () => {
-    const { result, staged, batch, machines } = run({ demo: 'match', later: 'match' });
+  test('matching dumps pass under the default machine and again under cga, ega and vgaonly, each in its own folder', () => {
+    const { result, folders } = run({ demo: 'match', later: 'match' });
     assert.equal(result.code, 0, result.stderr);
     const runs = screensOf(result);
     assert.deepEqual(runs.map((r) => r.program), ['SCREENS', 'SCREENS (cga)', 'SCREENS (ega)', 'SCREENS (vgaonly)']);
     for (const r of runs) assert.deepEqual(r.passed, ['demo.mono', 'demo.vga', 'later.vga'], r.program);
-    assert.deepEqual(machines, ['default', 'cga', 'ega', 'vgaonly']);
-    assert.ok(staged, 'SPLASH.ANS sits beside RBSTUDIO.EXE');
-    assert.match(batch, /RBSTUDIO \/DUMP:demo \/VIEW:MONO \/O:D00\.DMP/);
-    assert.match(batch, /RBSTUDIO \/DUMP:demo \/O:D01\.DMP/);
+    for (const { machine, program, art, factory, batch, ran } of folders) {
+      assert.deepEqual(ran, [machine], 'one run in the folder, under its machine');
+      assert.ok(program && art && factory, `${machine}: RBSTUDIO.EXE with SPLASH.ANS and the factory files beside it`);
+      assert.match(batch, /RBSTUDIO \/DUMP:demo \/VIEW:MONO \/O:D00\.DMP/);
+      assert.match(batch, /RBSTUDIO \/DUMP:demo \/O:D01\.DMP/);
+    }
   });
 
   test('a program marked SUITE: MACHINES runs once under each display machine with its name, and not under the default', () => {
@@ -257,6 +276,17 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
     const names = (parsed.data ?? parsed.error?.data).suites[0].programs.map((p) => p.program).filter((n) => n.startsWith('T_BETA'));
     assert.deepEqual(names, ['T_BETA (cga)', 'T_BETA (ega)', 'T_BETA (vgaonly)']);
     assert.deepEqual(beta, ['cga on cga', 'ega on ega', 'vgaonly on vgaonly']);
+  });
+
+  test("above one job, only a failed dump run's DOSBox-X output is printed", () => {
+    const passed = run({ demo: 'match', later: 'match' }, ['--jobs', '4']);
+    assert.equal(passed.result.code, 0, passed.result.stderr);
+    assert.doesNotMatch(passed.result.stdout, /dosbox dumped/);
+    const failed = run({ demo: 'differ', later: 'match' }, ['--jobs', '4']);
+    assert.equal(failed.result.code, 1);
+    for (const machine of ['default', 'cga', 'ega', 'vgaonly']) {
+      assert.match(failed.result.stdout, new RegExp(`dosbox dumped under ${machine}`));
+    }
   });
 
   test('a differing cell fails the run and names the cell', () => {

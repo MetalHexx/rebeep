@@ -105,6 +105,7 @@ test('repoLayout gives the documented repo paths', () => {
     dos: path.join(root, 'env', '86box', 'dos'),
     toolsTest: path.join(root, 'tools', 'test'),
     labPatches: path.join(root, '.claude', 'skills', 'rebeep-dev', 'patches'),
+    labProfiles: path.join(root, '.claude', 'skills', 'rebeep-dev', 'profiles'),
   });
   assert.equal(repoLayout().root, repoRoot());
 });
