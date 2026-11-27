@@ -12,17 +12,11 @@ never ship, and `release create` does not read this folder. The format is in
 |---|---|---|
 | `GPC/` | Grand Prix Circuit | The intro (a bass guitar), the menus (a distorted guitar) and the race (a rough engine), each recognized by `43h=B6` then its first note; the start lights, and the gear chirp and tire squeal, are effects in patches of their own (`LIGHTS`, `SQUEAL`), each in its window (`GRID`, `RACE`); anything else that starts that way falls back to the bell |
 
-**Working one out with the user:**
-
-1. Find what each part of the game sends: a REBEEPD session ([trace.md](trace.md)) and the game's
-   code, never a guess. A rule goes by the order of events, never by time.
-2. While testing, make the default and the catch-all a patch nobody would mistake, so a fallback is
-   heard.
-3. Deploy with every VM closed and set up a bench ([bench.md](bench.md)) that loads
-   `REBEEPD /G:NAME`, runs the game, then `REBEEPD /D`; the user plays the parts and closes the
-   VM. Each rule that completes is a `rule`
-   record, a catch-all `fallbk`, with `before>after` = the rule's number > its slot (slots in the
-   order the file first names each patch, `DEFAULT=` included).
+**Making or changing one with the user** is the [game-profile skill](../../game-profile/SKILL.md):
+planning the parts, logging the game, finding the events, checking each rule fires, shaping the
+patches. In a REBEEPD log, each rule that completes is a `rule` record and a catch-all a `fallbk`,
+with `before>after` = the rule's number > its slot (from 0, slots in the order the file first
+names each patch, `DEFAULT=` included). That skill's `trace.mjs hits` names them.
 
 **Rules:**
 
