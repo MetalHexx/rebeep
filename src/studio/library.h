@@ -1,6 +1,7 @@
-/* ReBeep Studio: the folder-based patch library. The program folder holds FACTORY\; the patches folder (PATCHES=
-   in RBSTUDIO.CFG, else <program folder>\PATCHES) holds USER\ and the banks, one level deep. The library is read once
-   per run (lib_open counts, lib_load reads) and kept up to date by lib_put and lib_drop after a save.
+/* ReBeep Studio: the folder-based patch library. The program folder holds the FACTORY bank (FACTORY_DIR); the patches
+   folder (PATCHES= in RBSTUDIO.CFG, else <program folder>\PATCHES) holds USER\ and the banks, one level deep. The
+   library is read once per run (lib_open counts, lib_load reads) and kept up to date by lib_put and lib_drop after a
+   save.
    SPDX-License-Identifier: MIT */
 #ifndef RBSTUDIO_LIBRARY_H
 #define RBSTUDIO_LIBRARY_H
@@ -10,6 +11,7 @@
 #define LIB_MAX 2048        /* patches listed at most; the rest are logged and left out */
 #define LIB_MAX_BANKS 64    /* bank folders read besides FACTORY and USER; the rest are logged and left out */
 #define LIB_DIR_LEN 160
+#define FACTORY_DIR "FACTORY\\PATCHES"   /* the FACTORY bank's folder, under the program folder */
 
 typedef struct {
     char folder[9];

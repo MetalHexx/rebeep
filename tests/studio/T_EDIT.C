@@ -749,8 +749,8 @@ int main(void)
     t_checkl(hit.kind, SH_HELP, "F1 Help");
 
     t_case("PgUp and PgDn walk the list order across banks and wrap");
-    put_patch("EDTREE\\PROG\\FACTORY\\AAA.RBP", 0);
-    put_patch("EDTREE\\PROG\\FACTORY\\BBB.RBP", 1);
+    put_patch("EDTREE\\PROG\\FACTORY\\PATCHES\\AAA.RBP", 0);
+    put_patch("EDTREE\\PROG\\FACTORY\\PATCHES\\BBB.RBP", 1);
     put_patch("EDTREE\\PROG\\PATCHES\\USER\\CCC.RBP", 0);
     put_patch("EDTREE\\PROG\\PATCHES\\BANK\\DDD.RBP", 1);
     put_patch("EDTREE\\PROG\\PATCHES\\BANK\\EEE.RBP", 0);

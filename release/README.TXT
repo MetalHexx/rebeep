@@ -83,7 +83,8 @@ ReBeep loads on every boot.
        MD C:\REBEEP
        COPY A:\*.* C:\REBEEP
        MD C:\REBEEP\FACTORY
-       COPY A:\FACTORY\*.* C:\REBEEP\FACTORY
+       MD C:\REBEEP\FACTORY\PATCHES
+       COPY A:\FACTORY\PATCHES\*.* C:\REBEEP\FACTORY\PATCHES
 
   3. Add the ReBeep entry. With no boot menu yet, make CONFIG.SYS look
      like this. Move your own HIMEM.SYS and EMM386.EXE lines into

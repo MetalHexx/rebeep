@@ -6,7 +6,7 @@
 
 | Path | Role |
 |---|---|
-| `targets.json` | What `rebeep build run` builds, plus an optional `files` list of data files under `src/` (`source` with an 8.3 upper-case base name, `deploy` one or two 8.3 folders such as `REBEEP/FACTORY`): copied to `build/files/` and put on D:. Each target: name, source, `format` (`bin` = one NASM file, `exe` = a folder of C files built with Open Watcom), optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it), `defines` (extra NASM `-D` names: `REBEEP_TRACE` builds `REBEEPD.COM`, dev-only, never packaged; `REBEEP.COM` is unchanged by it) |
+| `targets.json` | What `rebeep build run` builds, plus an optional `files` list of data files under `src/` (`source` with an 8.3 upper-case base name, `deploy` one to four 8.3 folders such as `REBEEP/FACTORY/PATCHES`): copied to `build/files/` and put on D:. Each target: name, source, `format` (`bin` = one NASM file, `exe` = a folder of C files built with Open Watcom), optional `root` (`src`, the default, or `tests`), `deploy` folder, `autoload` (the deploy then writes `AUTOLOAD.FLG` beside it), `defines` (extra NASM `-D` names: `REBEEP_TRACE` builds `REBEEPD.COM`, dev-only, never packaged; `REBEEP.COM` is unchanged by it) |
 | `rebeep.asm` | `REBEEP.COM`: the resident part, then `resident_end`, then the startup part |
 | `resident/` | `data.asm`: `RB_STATE` (the loaded patch's records too), saved vectors, the private stack. `amis.asm`: the `INT 2Dh` handler and uninstall |
 | `capture/` | `trap.asm`: QPI trap install and remove, the callback, the port semantics (masking, read view, OPL events). `trace.asm`: REBEEPD's log |
@@ -14,7 +14,7 @@
 | `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
 | `startup/` | `main.asm`: options, checks, load, change, unload, messages. `patch.asm`: the `.RBP` parser. `files.asm`: program folder, `RBSTUDIO.CFG`, name rules, patch lookup, an INT 24h fail handler (`crit_on`/`crit_off`) around the file reads. `profile.asm`: `/G:`, the `.RBG` parser and loader. `opldet.asm`: `opl_detect`. `dump.asm`: `REBEEPD /D`. All freed when going resident |
 | `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [profile.inc](include/profile.inc): the profile table and its limits. [exitcode.inc](include/exitcode.inc): the exit codes. `trace.inc`: REBEEPD's record. None is restated elsewhere |
-| `studio/` | `RBSTUDIO.EXE`, ReBeep Studio (the configuration program), in C. Its rules: [studio/AGENTS.md](studio/AGENTS.md) |
+| `studio/` · `factory/` | `RBSTUDIO.EXE`, ReBeep Studio (the configuration program), in C: rules in [studio/AGENTS.md](studio/AGENTS.md) · the defaults ReBeep ships: `patches/`, the factory patches |
 | `diag/` | `qpichk.asm` → `QPICHK.COM`, reports whether QPIEMU is up (run by `BOOT.BAT`). `fdboot.asm` → `FDBOOT.BIN`, the release floppy's boot sector: hands the boot to C:, asks for a key only when C: has none |
 
 ## Rules

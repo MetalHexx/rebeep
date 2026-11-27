@@ -39,7 +39,7 @@ Set expectations in a line or two:
 
 Make `.claude/skills/rebeep-dev/profiles/<SHORT>/` with `<SHORT>.RBG` and one patch per part:
 
-- **Placeholders that differ,** copied from `src/studio/data/FACTORY/` (`ORGAN`, `FLUTE`, `BRASS`)
+- **Placeholders that differ,** copied from `src/factory/patches/` (`ORGAN`, `FLUTE`, `BRASS`)
   under the profile's names (`TITLE.RBP`, `PLAY.RBP`), so the user hears each switch.
 - **A fallback nobody would mistake,** such as `BELL` as `FALLBK.RBP`, for `DEFAULT=` and the
   catch-all rule. When the user hears it, a rule missed.

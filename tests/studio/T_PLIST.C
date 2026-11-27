@@ -76,8 +76,8 @@ static void put_text(const char *file, const char *body)
 
 static void build_tree(void)
 {
-    put_patch("PLTREE\\PROG\\FACTORY\\ORGAN.RBP", 1, 0, 4);
-    put_patch("PLTREE\\PROG\\FACTORY\\BELL.RBP", 0, 0, 4);
+    put_patch("PLTREE\\PROG\\FACTORY\\PATCHES\\ORGAN.RBP", 1, 0, 4);
+    put_patch("PLTREE\\PROG\\FACTORY\\PATCHES\\BELL.RBP", 0, 0, 4);
     put_patch("PLTREE\\PROG\\PATCHES\\USER\\BELL.RBP", 1, 0, 5);
     put_patch("PLTREE\\PROG\\PATCHES\\USER\\MYFOUR.RBP", 0, 1, 3);
     put_text("PLTREE\\PROG\\PATCHES\\USER\\BAD.RBP", "[PATCH]\r\nFORMAT=1\r\n[2OP]\r\nCONNECTION=FM\r\n");
@@ -194,7 +194,7 @@ int main(void)
 
     t_case("paths");
     t_checkl(lib_path(&lib, 0, path, sizeof path), 0, "factory path");
-    t_check(strcmp(path, "\\PLTREE\\PROG\\FACTORY\\BELL.RBP") == 0, path);
+    t_check(strcmp(path, "\\PLTREE\\PROG\\FACTORY\\PATCHES\\BELL.RBP") == 0, path);
     t_checkl(lib_path(&lib, 2, path, sizeof path), 0, "user path");
     t_check(strcmp(path, "\\PLTREE\\PROG\\PATCHES\\USER\\BELL.RBP") == 0, path);
     t_checkl(lib_path(&lib, 6, path, sizeof path), 0, "bank path");

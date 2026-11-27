@@ -5,7 +5,7 @@
 ## What's here
 
 One `.c` and `.h` per module: DOS handlers, the patch model and library, the OPL driver, the video and screen layer, one
-`scr_*.c` per screen, the editor (logic, no drawing), `sample.c` (the sample data `/DUMP:` draws) and `data/` (factory patches, art).
+`scr_*.c` per screen, the editor (logic, no drawing), `sample.c` (the sample data `/DUMP:` draws) and `data/` (art).
 Every module and its functions: [docs/architecture/studio.md](../../docs/architecture/studio.md).
 
 ## Rules

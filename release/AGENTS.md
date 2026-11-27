@@ -9,7 +9,7 @@
 | Path | Role |
 |---|---|
 | `README.TXT` | The manual. Its title carries `@VERSION@`, filled in at build |
-| `INSTALL.BAT` | Installs or updates ReBeep in a folder, from a menu or with `/I` and `/U`. Copies `RBSTUDIO.EXE`, the `.ANS` art and `FACTORY\` (replaced on update). Prints the config lines, edits none |
+| `INSTALL.BAT` | Installs or updates ReBeep in a folder, from a menu or with `/I` and `/U`. Copies `RBSTUDIO.EXE`, the `.ANS` art and `FACTORY\PATCHES\` (replaced on update). Prints the config lines, edits none |
 | `RBPLAY.BAT` | Runs one game with ReBeep loaded, then unloads ReBeep if it loaded it. QPIEMU stays loaded |
 | `SAMPLES/MSDOS/` | Full `CONFIG.SYS` and `AUTOEXEC.BAT`, ReBeep menu entry |
 | `SAMPLES/FREEDOS/` | Complete `FDCONFIG.SYS` and `FDAUTO.BAT`, same entry |

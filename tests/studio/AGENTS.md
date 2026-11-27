@@ -30,7 +30,7 @@
   record the first failure of the case (`FAIL <case>: <what>: got N, want M`); `t_done()` prints `DONE <n>`.
 - A first line of `/* SUITE: OPL2 */` runs the program a second time as an OPL2 card with the argument `/OPL2` (the first run
   is DOSBox-X's default OPL3); `T_OPLKND.C` fails if the suite's `-set "sblaster oplmode=opl2"` stops taking effect.
-- The shipped `REBEEP/FACTORY` data files are staged as `FACTORY\` beside the program, so a test reads the real patches.
+- The shipped factory patches are staged as `FACTORY\PATCHES\` beside the program, so a test reads the real ones.
 - **Reference screens** are `tests/screens/<screen>.<view>.scr`, view `vga` or `mono`: one per screen, state and view, among
   them `splash-load`, `patchlist-bank` and `savedlg-4op`. The format (UTF-8, LF): line 1 `# ReBeep reference screen: <screen>, <view>`,
   line 2 `# <sample state>`, `glyphs` and 25 rows of 80 characters (a CP437 byte as the character the VGA font draws, byte 0 a

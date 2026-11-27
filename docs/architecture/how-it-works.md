@@ -105,8 +105,8 @@ reads, and both refuse a file that breaks its rules, with the reason.
 **The startup loader.** ReBeep reads a patch once, at load, so nothing resident touches a file.
 The name comes from `/P:`, or from `PATCH=` in `RBSTUDIO.CFG` when there is neither `/F` nor `/P:`.
 A bare `NAME` is looked up as `USER\NAME`, then `FACTORY\NAME`, and the first file that exists
-decides. `BANK\NAME` is that file alone: a bank is a folder of patches. `FACTORY` sits beside the program; `USER` and the
-other banks sit in the patches folder, `PATCHES=` in the settings file or else `PATCHES` beside the program.
+decides. `BANK\NAME` is that file alone: a bank is a folder of patches. `FACTORY`'s are in `FACTORY\PATCHES` beside the
+program; `USER` and the other banks sit in the patches folder, `PATCHES=` in the settings file or else `PATCHES` there.
 The loader parses the file into a record, then the startup part is freed. A patch it can't use is
 a message and the faithful voice, never an exit code.
 

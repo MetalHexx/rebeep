@@ -27,7 +27,7 @@ fs.appendFileSync(process.env.FAKE_DOSBOX_LOG, JSON.stringify(args) + '\\n');
 const mount = args.find((a) => a.startsWith('MOUNT C '));
 const dir = mount.slice('MOUNT C '.length).replace(/^"|"$/g, '');
 if (process.env.FAKE_DOSBOX_LISTING) {
-  const factory = path.join(dir, 'FACTORY');
+  const factory = path.join(dir, 'FACTORY', 'PATCHES');
   fs.writeFileSync(process.env.FAKE_DOSBOX_LISTING, fs.existsSync(factory) ? fs.readdirSync(factory).join(',') : 'none');
 }
 if (process.env.FAKE_DOSBOX_RESULT_FILE) fs.copyFileSync(process.env.FAKE_DOSBOX_RESULT_FILE, path.join(dir, 'RESULT.TXT'));
@@ -171,11 +171,11 @@ describe('test run --suite interpreter, with fake NASM and DOSBox-X', () => {
     fs.mkdirSync(path.join(root, 'src', 'include'), { recursive: true });
     fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'x', version: '0.1.0' }));
     fs.writeFileSync(path.join(root, 'tests', 'interpreter', 't_add.asm'), 'org 100h\n');
-    fs.mkdirSync(path.join(root, 'src', 'studio', 'data', 'FACTORY'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'src', 'studio', 'data', 'FACTORY', 'ORGAN.RBP'), 'patch');
+    fs.mkdirSync(path.join(root, 'src', 'factory', 'patches'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'factory', 'patches', 'ORGAN.RBP'), 'patch');
     fs.writeFileSync(
       path.join(root, 'src', 'targets.json'),
-      JSON.stringify({ targets: [], files: [{ source: 'studio/data/FACTORY/ORGAN.RBP', deploy: 'REBEEP/FACTORY' }] }),
+      JSON.stringify({ targets: [], files: [{ source: 'factory/patches/ORGAN.RBP', deploy: 'REBEEP/FACTORY/PATCHES' }] }),
     );
   });
 
@@ -212,10 +212,10 @@ describe('test run --suite interpreter, with fake NASM and DOSBox-X', () => {
     assert.ok(calls[0].includes('T_ADD.COM > RESULT.TXT'));
   });
 
-  test('stages the factory patches as FACTORY beside the programs', () => {
+  test('stages the factory patches as FACTORY/PATCHES beside the programs', () => {
     const { result } = runInterp('PASS add\nDONE 1\n');
     assert.equal(result.code, 0, result.stderr);
-    assert.equal(fs.readFileSync(path.join(root, 'build', 'tests', 'FACTORY', 'ORGAN.RBP'), 'utf8'), 'patch');
+    assert.equal(fs.readFileSync(path.join(root, 'build', 'tests', 'FACTORY', 'PATCHES', 'ORGAN.RBP'), 'utf8'), 'patch');
   });
 
   test('a FAIL line fails the run and names an unnamed case', () => {
@@ -253,7 +253,7 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
     put('tests/studio/testlib.c', '/* library */\n');
     put('tests/studio/testlib.h', '/* header */\n');
     for (const name of ['video.c', 'main.c', 'dos.c']) put(`src/studio/${name}`, '/* module */\n');
-    put('src/studio/data/FACTORY/ORGAN.RBP', 'patch');
+    put('src/factory/patches/ORGAN.RBP', 'patch');
     put('src/studio/data/SPLASH.ANS', 'art');
     put(
       'src/targets.json',
@@ -261,7 +261,7 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
         targets: [],
         files: [
           { source: 'studio/data/SPLASH.ANS', deploy: 'REBEEP' },
-          { source: 'studio/data/FACTORY/ORGAN.RBP', deploy: 'REBEEP/FACTORY' },
+          { source: 'factory/patches/ORGAN.RBP', deploy: 'REBEEP/FACTORY/PATCHES' },
         ],
       }),
     );
@@ -321,7 +321,7 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
     }
     assert.ok(alpha.includes('-fe=T_ALPHA.EXE') && alpha.some((a) => a.endsWith('T_ALPHA.C')));
     assert.ok(beta.includes('-fe=T_BETA.EXE'));
-    assert.equal(factory, 'ORGAN.RBP', 'only the REBEEP/FACTORY data files are staged');
+    assert.equal(factory, 'ORGAN.RBP', 'only the factory patches are staged');
   });
 
   test('a SUITE: OPL2 program runs a second time as an OPL2 card with /OPL2; others run once', () => {

@@ -158,8 +158,8 @@ describe('disk deploy', () => {
     const ctx = context();
     fs.mkdirSync(path.dirname(s.paths.vm('mirror-msdos').dImg), { recursive: true });
     writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'SPLASH.ANS'), 'art');
-    writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'FACTORY', 'ORGAN.RBP'), 'patch');
-    writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'FACTORY', 'STRAY.RBP'), 'not listed');
+    writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'FACTORY', 'PATCHES', 'ORGAN.RBP'), 'patch');
+    writeFile(path.join(ctx.repo.build, 'files', 'REBEEP', 'FACTORY', 'PATCHES', 'STRAY.RBP'), 'not listed');
     writeFile(
       path.join(ctx.repo.build, 'build.json'),
       JSON.stringify({
@@ -168,8 +168,8 @@ describe('disk deploy', () => {
         targets: [],
         files: [
           { name: 'SPLASH.ANS', deploy: 'REBEEP', size: 3, sha256: 'x' },
-          { name: 'ORGAN.RBP', deploy: 'REBEEP/FACTORY', size: 5, sha256: 'x' },
-          { name: 'GONE.RBP', deploy: 'REBEEP/FACTORY', size: 1, sha256: 'x' },
+          { name: 'ORGAN.RBP', deploy: 'REBEEP/FACTORY/PATCHES', size: 5, sha256: 'x' },
+          { name: 'GONE.RBP', deploy: 'REBEEP/FACTORY/PATCHES', size: 1, sha256: 'x' },
           { name: 'long name.rbp', deploy: 'REBEEP', size: 1, sha256: 'x' },
           { name: 'ESC.RBP', deploy: '../ESCAPE', size: 1, sha256: 'x' },
         ],
@@ -183,10 +183,10 @@ describe('disk deploy', () => {
     deployDisk(ctx, 'mirror-msdos');
     const image = readD();
     assert.equal(image.readFile('REBEEP/SPLASH.ANS').toString(), 'art');
-    assert.equal(image.readFile('REBEEP/FACTORY/ORGAN.RBP').toString(), 'patch');
-    assert.ok(image.list().some((e) => e.path.toUpperCase() === 'REBEEP/FACTORY' && e.isDir));
-    assert.ok(!image.exists('REBEEP/FACTORY/STRAY.RBP'), 'only files listed in build.json are delivered');
-    assert.ok(!image.exists('REBEEP/FACTORY/GONE.RBP'));
+    assert.equal(image.readFile('REBEEP/FACTORY/PATCHES/ORGAN.RBP').toString(), 'patch');
+    assert.ok(image.list().some((e) => e.path.toUpperCase() === 'REBEEP/FACTORY/PATCHES' && e.isDir));
+    assert.ok(!image.exists('REBEEP/FACTORY/PATCHES/STRAY.RBP'), 'only files listed in build.json are delivered');
+    assert.ok(!image.exists('REBEEP/FACTORY/PATCHES/GONE.RBP'));
     assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
   });
 

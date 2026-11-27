@@ -208,7 +208,7 @@ export function readBuiltTarget(repo, name, buildJson = readBuildJson(repo)) {
 
 /**
  * The package path of a build.json `files` entry deployed to `REBEEP` or a folder below it
- * (`REBEEP/FACTORY` gives `FACTORY/<name>`), or null for one deployed elsewhere.
+ * (`REBEEP/FACTORY/PATCHES` gives `FACTORY/PATCHES/<name>`), or null for one deployed elsewhere.
  */
 function packagedDataPath(entry) {
   const [root, ...below] = String(entry.deploy).split('/');

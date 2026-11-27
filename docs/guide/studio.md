@@ -144,7 +144,7 @@ A **bank** is a folder of patches, and the studio finds banks in three places:
 
 | Bank | Holds | Who writes it |
 |---|---|---|
-| `FACTORY` | The patches that come with ReBeep: Organ, Flute, Brass and Bell. It sits beside `RBSTUDIO.EXE` | Nobody: `INSTALL` replaces it on every update |
+| `FACTORY` | The patches that come with ReBeep: Organ, Flute, Brass and Bell. They sit in `FACTORY\PATCHES`, beside `RBSTUDIO.EXE` | Nobody: `INSTALL` replaces them on every update |
 | `USER` | Your own patches, and the default place to save | The studio, and you |
 | Any other folder | Patches someone gave you, such as `HEXX\`, or a bank you made | You, and the studio when you save into it |
 

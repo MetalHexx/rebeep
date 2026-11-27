@@ -51,20 +51,20 @@
       "deploy": "REBEEP"
     },
     {
-      "source": "studio/data/FACTORY/ORGAN.RBP",
-      "deploy": "REBEEP/FACTORY"
+      "source": "factory/patches/ORGAN.RBP",
+      "deploy": "REBEEP/FACTORY/PATCHES"
     },
     {
-      "source": "studio/data/FACTORY/FLUTE.RBP",
-      "deploy": "REBEEP/FACTORY"
+      "source": "factory/patches/FLUTE.RBP",
+      "deploy": "REBEEP/FACTORY/PATCHES"
     },
     {
-      "source": "studio/data/FACTORY/BRASS.RBP",
-      "deploy": "REBEEP/FACTORY"
+      "source": "factory/patches/BRASS.RBP",
+      "deploy": "REBEEP/FACTORY/PATCHES"
     },
     {
-      "source": "studio/data/FACTORY/BELL.RBP",
-      "deploy": "REBEEP/FACTORY"
+      "source": "factory/patches/BELL.RBP",
+      "deploy": "REBEEP/FACTORY/PATCHES"
     }
   ]
 }

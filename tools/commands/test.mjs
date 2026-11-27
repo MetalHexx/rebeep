@@ -16,8 +16,8 @@ const ANSI = /\x1b\[[0-9;]*[A-Za-z]/g;
 const OPL2_MARKER = /^\s*\/\*\s*SUITE:\s*OPL2\s*\*\//;
 /** A first line of `SUITE: MACHINES` runs the program once under each of `DISPLAY_MACHINES` (its argument is the machine's name), and not under the default machine. */
 const MACHINES_MARKER = /^\s*\/\*\s*SUITE:\s*MACHINES\s*\*\//;
-/** The data-file folder that studio tests can read as FACTORY\, staged beside the programs. */
-const FACTORY_DEPLOY = 'REBEEP/FACTORY';
+/** The factory patches' data-file folder, staged at the same place beside the test programs. */
+const FACTORY_DEPLOY = 'REBEEP/FACTORY/PATCHES';
 /** The data-file folder whose files sit beside RBSTUDIO.EXE, as they do beside the installed program. */
 const PROGRAM_DEPLOY = 'REBEEP';
 const SCREEN_FILE = /^([a-z0-9-]+)\.(vga|mono)\.scr$/;
@@ -151,9 +151,9 @@ async function runInterpreter(ctx, repo) {
   return { suite: 'interpreter', ok: results.every((r) => r.ok), programs: results };
 }
 
-/** Stages the shipped factory patches as `FACTORY\` in `out`, so a test program reads what players get. */
+/** Stages the shipped factory patches as `FACTORY\PATCHES\` in `out`, so a test program reads what players get. */
 function stageFactory(repo, out) {
-  const folder = path.join(out, 'FACTORY');
+  const folder = path.join(out, 'FACTORY', 'PATCHES');
   fs.mkdirSync(folder, { recursive: true });
   for (const file of loadDataFiles(repo)) {
     if (file.deploy === FACTORY_DEPLOY) fs.copyFileSync(file.from, path.join(folder, file.name));

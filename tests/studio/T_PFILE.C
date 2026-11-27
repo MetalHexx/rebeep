@@ -49,7 +49,7 @@ static void check_factory(const char *file, const char *name, int conn, int fb, 
 {
     char path[40];
 
-    sprintf(path, "FACTORY\\%s", file);
+    sprintf(path, "FACTORY\\PATCHES\\%s", file);
     t_case(file);
     t_checkl(patch_read(path, &patch, err, sizeof err), 0, "the shipped file parses");
     t_check(strcmp(patch.name, name) == 0, "named after the file");
@@ -159,7 +159,7 @@ int main(void)
     t_checkl(patch_read("NOFILE.RBP", &patch, err, sizeof err), -1, "a missing file is refused");
 
     t_case("patch_write: safe save, folder creation, overwrite");
-    patch_read("FACTORY\\BELL.RBP", &patch, err, sizeof err);
+    patch_read("FACTORY\\PATCHES\\BELL.RBP", &patch, err, sizeof err);
     t_checkl(patch_write("PFTMP\\USER\\X.RBP", &patch), 0, "creates the folders and saves");
     t_checkl(patch_read("PFTMP\\USER\\X.RBP", &again, err, sizeof err), 0, "reads back");
     t_check(patch_equal(&patch, &again) && strcmp(again.name, "X") == 0, "equal, named X");
@@ -170,7 +170,7 @@ int main(void)
     t_check(!dos_is_file("PFTMP\\USER\\X.BAK") && !dos_is_file("PFTMP\\USER\\X.$$$"), "no .BAK or .$$$ left");
 
     t_case("patch_equal ignores the name");
-    patch_read("FACTORY\\BELL.RBP", &patch, err, sizeof err);
+    patch_read("FACTORY\\PATCHES\\BELL.RBP", &patch, err, sizeof err);
     again = patch;
     strcpy(again.name, "OTHER");
     t_check(patch_equal(&patch, &again), "same values, other name");

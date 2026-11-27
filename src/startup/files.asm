@@ -12,6 +12,7 @@ PATH_MAX        equ     64              ; a PATCHES= value
 CFG_MAX         equ     2048            ; the settings file is read this far
 CFG_PATCHES_LEN equ     PATH_MAX + 1    ; one more than valid, so a longer value stays invalid
 CFG_PATCH_LEN   equ     40
+FACTORY_LEN     equ     8               ; "FACTORY\"
 
 FP_LOADED       equ     0               ; try_cand's answers
 FP_MISSING      equ     1
@@ -594,10 +595,10 @@ print_text:
         pop     ax
         ret
 
-; find_patch: loads the patch spec_buf names. FOLDER\NAME is that file alone (FACTORY is
-; beside the program, any other folder is under the patches folder); a bare NAME is USER\NAME,
-; then FACTORY\NAME, and the first file that exists decides. Needs the settings read first
-; for a folder other than FACTORY (settings_ensure).
+; find_patch: loads the patch spec_buf names. FOLDER\NAME is that file alone (FACTORY's are
+; in FACTORY\PATCHES beside the program, any other folder's under the patches folder); a bare
+; NAME is USER\NAME, then FACTORY\NAME, and the first file that exists decides. Needs the
+; settings read first for a folder other than FACTORY (settings_ensure).
 ; Out: CF clear: pbuf = the name field and the patch block. CF set: fail_who (0, or an ASCIZ
 ; to print before the reason) and fail_reason (a '$' string) say why. Clobbers ES.
 find_patch:
@@ -669,14 +670,17 @@ try_cand:
         jne     .patches
         mov     si, prog_dir
         call    copy_upper
+        mov     si, s_factorypats
+        call    copy_upper
+        mov     si, cand_name + FACTORY_LEN
         jmp     .name
 .patches:
         mov     si, patches_dir
         call    copy_upper
         mov     byte [di], '\'
         inc     di
-.name:
         mov     si, cand_name
+.name:
         call    copy_upper
         mov     si, s_ext
         call    copy_upper
@@ -717,6 +721,7 @@ try_cand:
 
 s_user          db      "USER\", 0
 s_factory       db      "FACTORY\", 0
+s_factorypats   db      "FACTORY\PATCHES\", 0   ; the FACTORY bank, beside the program
 s_patches       db      "PATCHES", 0
 s_cfg           db      "RBSTUDIO.CFG", 0
 s_ext           db      ".RBP", 0

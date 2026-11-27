@@ -79,10 +79,11 @@ and changes nothing else. If ReBeep is already loaded, reboot to load the new co
 MD C:\REBEEP
 COPY A:\*.* C:\REBEEP
 MD C:\REBEEP\FACTORY
-COPY A:\FACTORY\*.* C:\REBEEP\FACTORY
+MD C:\REBEEP\FACTORY\PATCHES
+COPY A:\FACTORY\PATCHES\*.* C:\REBEEP\FACTORY\PATCHES
 ```
 
-The last two lines are for [ReBeep Studio](studio.md), which keeps its factory patches there.
+The last three lines copy the patches that come with ReBeep, for `/P:` and [ReBeep Studio](studio.md).
 
 ## 4. Add a ReBeep boot menu entry
 

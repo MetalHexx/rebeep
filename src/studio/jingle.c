@@ -5,6 +5,7 @@
 
 #include "dos.h"
 #include "jingle.h"
+#include "library.h"
 #include "log.h"
 #include "opl.h"
 #include "patch.h"
@@ -52,14 +53,14 @@ static void builtin_bell(Patch *p)
 void jingle_start(void)
 {
     static Patch p;
-    static char path[96];
+    static char path[128];
     static char err[80];
     int i;
 
     jingle_stop();
     if (opl_chip() == 0) return;
     strcpy(path, dos_program_dir());
-    strcat(path, "FACTORY\\BELL.RBP");
+    strcat(path, FACTORY_DIR "\\BELL.RBP");
     if (patch_read(path, &p, err, sizeof err) != 0) {
         log_line("jingle: %s, using the built-in bell", err);
         builtin_bell(&p);

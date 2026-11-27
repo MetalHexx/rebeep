@@ -13,6 +13,11 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
   start lights or a tire squeal, their own patch, taking turns with the engine or the music as in the game
   ([game profiles](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/profiles.md)).
 
+### Changed
+
+- **The factory patches moved** to `FACTORY\PATCHES` in ReBeep's folder. `INSTALL` moves them on an
+  update, and `/P:` names stay the same ([banks](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#banks)).
+
 ## [0.2.0] - 2026-11-26
 
 ### Added
