@@ -76,7 +76,7 @@ PATCH=ENGINE
 [EFFECT]
 NAME=Tire squeal
 WHILE=RACE
-TONE=0950h 50
+PITCH=0950h 50
 PATCH=SQUEAL
 ```
 
@@ -88,9 +88,9 @@ PATCH=SQUEAL
 | `[RULE]` | One rule, up to 16. They are tried in order, and the first to match picks its patch. That patch plays until another rule picks a different one |
 | `ID=RACE` | A rule's name, for `WHILE=`: 1 to 8 letters, digits, `_` or `-`, not only digits. Optional |
 | `WHILE=RACE` | The rule or effect counts only while `RACE` is the last rule to have matched. Optional |
-| `STEP=` | Up to 4 a rule, in order. Each matches the next sound event of its kind. `NOTE n t`: a note starts within `t` of the timer count `n`. `PITCH n t`: a sounding note changes to that count. `TONE n t`: either. `OFF`: a note stops. `CTRL n`: the game writes `n` to the timer's control port, `43h`. Leave out the number to take any |
+| `STEP=` | Up to 4 a rule, in order. Each matches the next sound event of its kind. `NOTE n t`: a note starts within `t` of the timer count `n`. `CHANGE n t`: a sounding note changes to that count. `PITCH n t`: either. `OFF`: a note stops. `CTRL n`: the game writes `n` to the timer's control port, `43h`. Leave out the number to take any |
 | `PATCH=ENGINE` | The rule's or effect's patch, `ENGINE.RBP` in the profile's folder. Up to 8 patches a profile |
-| `[EFFECT]` | A sound effect with a patch of its own, up to 8. While a note is within `t` of the count `n` in `TONE=n t` (`n - t` at least 193), it plays in the effect's patch on an FM channel of its own; then the rule's patch takes the note back. Not in the faithful voice |
+| `[EFFECT]` | A sound effect with a patch of its own, up to 8. While a note is within `t` of the count `n` in `PITCH=n t` (`n - t` at least 193), it plays in the effect's patch on an FM channel of its own; then the rule's patch takes the note back. Not in the faithful voice |
 
 Numbers are decimal, or hex with a trailing `h`. Lines starting with `;` are comments. A profile
 file is at most 2,048 bytes. A `PROFILES=` line in [the settings file](studio.md#the-settings-file) moves the profiles folder.

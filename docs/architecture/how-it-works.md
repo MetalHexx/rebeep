@@ -144,7 +144,7 @@ its file and every patch it names at load, into a table in the resident part.
 
 **Rules go by events, never time.** Each game byte gives at most one event: a note start, a pitch
 change or a note stop, with the divisor, or a byte written to `43h`, the timer's control word. A
-step matches the next event of its kind, a tone step a note start or a pitch change. A value that
+step matches the next event of its kind, a `PITCH` step a note start or a pitch change. A value that
 doesn't fit sends the rule back to its first step, which the same event may start again; other
 kinds pass by. The first rule to complete wins, and all start over. Games reprogram the timer.
 

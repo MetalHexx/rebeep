@@ -21,10 +21,10 @@ ST_LO           equ 1           ; dw the lowest value that matches
 ST_HI           equ 3           ; dw the highest
 STEP_LEN        equ 5
 
-; Kinds are bits: an event has one, a step one or (TONE) two, and they match when they share one.
+; Kinds are bits: an event has one, a step one or (PITCH) two, and they match when they share one.
 SK_NOTE         equ 1           ; a note starts; value: its divisor (EV_TONE_ON)
-SK_PITCH        equ 2           ; a sounding note changes pitch; value: the new divisor (EV_PITCH)
-SK_TONE         equ 3           ; either: a note starts, or a sounding note changes pitch
+SK_CHANGE       equ 2           ; a sounding note changes pitch; value: the new divisor (EV_PITCH)
+SK_PITCH        equ 3           ; either: a note starts, or a sounding note changes pitch
 SK_OFF          equ 4           ; a note stops; no value (EV_TONE_OFF)
 SK_CTRL         equ 8           ; a byte written to 43h, the timer's control word; value: the byte
 SK_ANY          equ 80h

@@ -28,7 +28,7 @@ trace_note:
         pop     bx
         ret
 
-; trace_event: record an OPL note on or off, or a pitch jump (TK_PITCH in trace.inc).
+; trace_event: record an OPL note on or off, or a pitch jump (TK_CHANGE in trace.inc).
 ; In: AL = interpreter event, BX = divisor. Preserves all.
 trace_event:
         push    ax
@@ -37,7 +37,7 @@ trace_event:
         cmp     al, EV_TONE_ON
         je      .start
         cmp     al, EV_PITCH
-        je      .pitch
+        je      .change
         mov     cl, TK_NOTE_OFF
         cmp     al, EV_TONE_OFF
         jne     .done
@@ -51,7 +51,7 @@ trace_event:
 .start:
         mov     [trace_div], bx
         jmp     .rec
-.pitch:
+.change:
         mov     ax, [trace_div]         ; AX = the last count recorded
         mov     cx, bx
         sub     cx, ax                  ; CX = new - last
@@ -65,7 +65,7 @@ trace_event:
         cmp     cx, ax
         jbe     .done                   ; an eighth or less: vibrato, a glide
         mov     [trace_div], bx
-        mov     cl, TK_PITCH
+        mov     cl, TK_CHANGE
         jmp     .rec
 
 ; trace_rule: record a profile's rule completing. In: AL = rule, AH = slot, CH = its RL_FLAGS.
@@ -182,7 +182,7 @@ trace_record:
         ret
 
 trace_site      db      TK_REBEEP
-trace_div       dw      0               ; the count of the last note on or pitch record
+trace_div       dw      0               ; the count of the last note on or change record
 trace_pos       db      0               ; the next slot in trace_ctx, and so the oldest
 trace_ctx       times 16 db 0
 trace_hdr:

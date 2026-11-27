@@ -98,7 +98,7 @@ TABLE   t_kinds, 3
         STEP    SK_NOTE, 200, 200
         ENDRULE
         RULE    2, 0, 1
-        STEP    SK_PITCH, 290, 310
+        STEP    SK_CHANGE, 290, 310
         ENDRULE
         RULE    3, RL_F_ANY, 1
         STEP    SK_OFF | SK_ANY, 0, 0FFFFh
@@ -106,8 +106,8 @@ TABLE   t_kinds, 3
         BLOCKS
 ENDTABLE
 
-; A race: GRID at its start, then RACE only while GRID is the last to have fired, at a tone
-; (a note start or a pitch) and its stop; both play slot 0. WHILE = (the rule's number + 1) * 2:
+; A race: GRID at its start, then RACE only while GRID is the last to have fired, at a pitch
+; (a note start or a change) and its stop; both play slot 0. WHILE = (the rule's number + 1) * 2:
 ; GRID is rule 0.
 W_GRID          equ     (0 + 1) * 2
 W_RACE          equ     (1 + 1) * 2
@@ -117,7 +117,7 @@ TABLE   t_while, 2
         STEP    SK_NOTE, 0C22Eh - 40, 0C22Eh + 40
         ENDRULE
         RULE    0, W_GRID, 2
-        STEP    SK_TONE, 0471h - 30, 0471h + 30
+        STEP    SK_PITCH, 0471h - 30, 0471h + 30
         STEP    SK_OFF | SK_ANY, 0, 0FFFFh
         ENDRULE
         BLOCKS
@@ -167,7 +167,7 @@ sink_clear:
 %macro NOTE 1
         EVT     EV_TONE_ON, %1, SYS_CTRL, 03h
 %endmacro
-%macro PITCH 1
+%macro CHANGE 1
         EVT     EV_PITCH, %1, PIT_CH2, 12h
 %endmacro
 %macro OFF 0
@@ -377,7 +377,7 @@ start:
         mov     si, t_gpc
         call    load_tbl
         CTRLW   0B6h
-        PITCH   1000h
+        CHANGE  1000h
         NOFIRE
         OFF
         NOFIRE
@@ -419,16 +419,16 @@ start:
         FIRES   0, 1, 0
         ENDCASE
 
-        CASE    "pitch_and_off_rules"
+        CASE    "change_and_off_rules"
         mov     si, t_kinds
         call    load_tbl
-        PITCH   289
+        CHANGE  289
         NOFIRE
-        PITCH   311
+        CHANGE  311
         NOFIRE
-        PITCH   290
+        CHANGE  290
         FIRES   1, 2, 0
-        PITCH   310
+        CHANGE  310
         FIRES   1, 2, 0
         OFF
         FIRES   2, 3, RL_F_ANY
@@ -462,17 +462,17 @@ start:
         NOFIRE
         ENDCASE
 
-        CASE    "a_tone_step_takes_a_pitch_too_but_no_stop"
+        CASE    "a_pitch_step_takes_a_change_too_but_no_stop"
         mov     si, t_while
         call    load_tbl
         CTRLW   0B6h
         NOTE    0C22Eh
         FIRES   0, 0, 0
-        OFF                             ; another kind than TONE: RACE stays at its first step
+        OFF                             ; another kind than PITCH: RACE stays at its first step
         NOFIRE
-        PITCH   0471h                   ; the green light, as the engine's note changes to it
+        CHANGE  0471h                   ; the green light, as the engine's note changes to it
         NOFIRE
-        PITCH   2828h                   ; another kind than OFF: kept
+        CHANGE  2828h                   ; another kind than OFF: kept
         NOFIRE
         OFF
         FIRES   1, 0, W_GRID

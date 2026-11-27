@@ -196,7 +196,7 @@ it. A profile is a text file such as this one:
   PATCH=ENGINE
   [EFFECT]
   WHILE=RACE
-  TONE=0950h 50
+  PITCH=0950h 50
   PATCH=SQUEAL
 
 DEFAULT= names the patch that plays first, MENU.RBP in the profile's
@@ -204,12 +204,12 @@ folder; it wins over RBSTUDIO.CFG's PATCH= line. Each [RULE], up to 16, is
 tried in order, and the first to match picks its PATCH=, which plays until
 another rule picks a different one. A rule has up to 4 STEP= lines, each
 matching the next event of its kind: NOTE n t, a note starts within t of
-the count n; PITCH n t, a sounding note changes to that count; TONE n t,
+the count n; CHANGE n t, a sounding note changes to that count; PITCH n t,
 either; OFF, a note stops; CTRL n, the game writes n to port 43h. Leave out
 n to take any.
 
 An [EFFECT], up to 8, gives a sound effect a patch of its own: while a note
-is within t of the count n in TONE=n t (n - t at least 193), it plays in
+is within t of the count n in PITCH=n t (n - t at least 193), it plays in
 the effect's PATCH= on an FM channel of its own, then the rule's patch
 takes it back. Effects don't play in the faithful voice. ID= names a rule
 (1 to 8 letters, digits, _ or -, not only digits), and WHILE=ID makes a rule

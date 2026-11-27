@@ -13,7 +13,7 @@
 %include "amis.inc"
 %include "profile.inc"
 
-%if SK_NOTE != EV_TONE_ON || SK_PITCH != EV_PITCH || EV_TONE_OFF != 3 || SK_TONE != (SK_NOTE | SK_PITCH)
+%if SK_NOTE != EV_TONE_ON || SK_CHANGE != EV_PITCH || EV_TONE_OFF != 3 || SK_PITCH != (SK_NOTE | SK_CHANGE)
 %error an event's kind is the interpreter's event for a note start or a pitch, SK_OFF for an off
 %endif
 %if STEP_LEN != 5

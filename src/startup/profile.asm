@@ -5,15 +5,15 @@
 ;              NAME=text (optional)
 ;   [RULE]     STEP=KIND [VALUE [TOLERANCE]], one to four in order, then PATCH=NAME;
 ;              ID=NAME and WHILE=ID (optional), NAME=text (optional)
-;   [EFFECT]   TONE=DIVISOR [TOLERANCE] and PATCH=NAME (both required); WHILE=ID, NAME=text
+;   [EFFECT]   PITCH=DIVISOR [TOLERANCE] and PATCH=NAME (both required); WHILE=ID, NAME=text
 ;              (optional): up to 8, sharing the 8 patches
-; Kinds: NOTE and PITCH (a divisor, with a tolerance), CTRL (a byte), OFF (no value). A step
-; without a value takes any, except OFF, which never has one. A WHILE names the ID of a rule
-; before or after it, itself included; it is resolved when the whole file is read. A NAME is 1
-; to 24 characters without a control character: checked, never kept. Numbers are decimal, or
-; hex with a trailing H. Keys, kinds and section names in any case; ';' comment lines, blank
-; lines, unknown keys and unknown sections are ignored; a duplicate key or [PROFILE] is
-; invalid; at most 2048 bytes.
+; Kinds: NOTE (a note start), CHANGE (a sounding note's new pitch) and PITCH (either) take a
+; divisor and a tolerance, CTRL a byte, OFF nothing. A step without a value takes any, except
+; OFF, which never has one. A WHILE names the ID of a rule before or after it, itself included;
+; it is resolved when the whole file is read. A NAME is 1 to 24 characters without a control
+; character: checked, never kept. Numbers are decimal, or hex with a trailing H. Keys, kinds
+; and section names in any case; ';' comment lines, blank lines, unknown keys and unknown
+; sections are ignored; a duplicate key or [PROFILE] is invalid; at most 2048 bytes.
 ; 8086. Included after resident_end, so it is freed when going resident. Uses patch.asm's line
 ; helpers and parser, and files.asm's names, paths and reads.
 ; SPDX-License-Identifier: MIT
@@ -34,7 +34,7 @@ PH_PATCH        equ     01h             ; pg_has: the keys the section being rea
 PH_NAME         equ     02h
 PH_ID           equ     04h
 PH_WHILE        equ     08h
-PH_TONE         equ     10h
+PH_PITCH        equ     10h
 NAME_MAX        equ     24              ; the longest NAME
 WHILE_LEN       equ     6               ; a pending WHILE: dw the byte it sets, dw its name's span
 
@@ -422,7 +422,7 @@ pg_section:
         PFAIL   r_secdup
 
 ; pg_item_end: the rule or effect being read, if any, must be complete: a rule has a step and a
-; patch, an effect a TONE and a patch. Any section's end clears the keys it had.
+; patch, an effect a PITCH and a patch. Any section's end clears the keys it had.
 pg_item_end:
         mov     bx, [pg_rule]
         or      bx, bx
@@ -439,10 +439,10 @@ pg_item_end:
         cmp     word [pg_effect], 0
         je      .done
         mov     word [pg_effect], 0
-        test    byte [pg_has], PH_TONE
-        jnz     .tone
-        PFAIL   g_notone
-.tone:
+        test    byte [pg_has], PH_PITCH
+        jnz     .pitch
+        PFAIL   g_nopitch
+.pitch:
         test    byte [pg_has], PH_PATCH
         jnz     .done
         PFAIL   g_nofxpatch
@@ -532,12 +532,12 @@ pg_rulekey:
 
 ; pg_effectkey: a KEY=VALUE of [EFFECT].
 pg_effectkey:
-        mov     bx, w_tone
+        mov     bx, w_pitch
         call    key_is
         jc      .patch
-        mov     ah, PH_TONE
+        mov     ah, PH_PITCH
         call    pg_once
-        jmp     pg_tone
+        jmp     pg_pitch
 .patch:
         mov     bx, w_patchkey
         call    key_is
@@ -665,9 +665,9 @@ pg_resolve:
 .ret:
         ret
 
-; pg_tone: the value of a TONE= into the effect being read: a divisor and a tolerance, as a
+; pg_pitch: the value of a PITCH= into the effect being read: a divisor and a tolerance, as a
 ; NOTE step takes them. Its lowest divisor must be one the OPL can play.
-pg_tone:
+pg_pitch:
         mov     ax, [pf_vs]
         mov     [pg_ts], ax
         mov     ax, [pf_ve]
@@ -685,7 +685,7 @@ pg_tone:
         cmp     word [di], DIV_MIN
         jae     .ret
 .bad:
-        PFAIL   g_tone
+        PFAIL   g_pitch
 .ret:
         ret
 
@@ -903,10 +903,10 @@ w_default       db      "DEFAULT", 0
 w_name          db      "NAME", 0
 w_id            db      "ID", 0
 w_while         db      "WHILE", 0
-w_tone          db      "TONE", 0
+w_pitch         db      "PITCH", 0
 w_step          db      "STEP", 0
-w_kinds         db      "NOTE", 0, "PITCH", 0, "TONE", 0, "OFF", 0, "CTRL", 0, 0
-%if SK_NOTE != 1 || SK_PITCH != 2 || SK_TONE != 3 || SK_OFF != 4 || SK_CTRL != 8
+w_kinds         db      "NOTE", 0, "CHANGE", 0, "PITCH", 0, "OFF", 0, "CTRL", 0, 0
+%if SK_NOTE != 1 || SK_CHANGE != 2 || SK_PITCH != 3 || SK_OFF != 4 || SK_CTRL != 8
 %error pg_step takes a kind from its place in w_kinds
 %endif
 s_rbg           db      ".RBG", 0
@@ -924,11 +924,11 @@ g_patches       db      "more than 8 patches$"
 g_nostep        db      "a rule has no STEP$"
 g_nopatch       db      "a rule has no PATCH$"
 g_name          db      "a patch is not 1 to 8 letters, digits, _ or -, and not only digits$"
-g_step          db      "a STEP is not NOTE [n [t]], PITCH [n [t]], CTRL [n] or OFF$"
+g_step          db      "a STEP is not NOTE, CHANGE or PITCH [n [t]], CTRL [n] or OFF$"
 g_effects       db      "more than 8 effects$"
-g_notone        db      "an effect has no TONE$"
+g_nopitch       db      "an effect has no PITCH$"
 g_nofxpatch     db      "an effect has no PATCH$"
-g_tone          db      "a TONE is not n [t] with n - t at least 193$"
+g_pitch         db      "a PITCH is not n [t] with n - t at least 193$"
 g_id            db      "an ID is not 1 to 8 letters, digits, _ or -, or only digits$"
 g_iddup         db      "two rules have the same ID$"
 g_while         db      "a WHILE names no rule's ID$"
@@ -951,7 +951,7 @@ profiles_dir    times 192 db 0
 pg_sp           dw      0
 pg_rule         dw      0               ; the rule being read in prof_new, or 0
 pg_effect       dw      0               ; the effect being read in prof_new, or 0
-pg_ts           dw      0               ; what is left of a STEP or TONE value
+pg_ts           dw      0               ; what is left of a STEP or PITCH value
 pg_te           dw      0
 pg_sec          db      0
 pg_seen         db      0

@@ -295,7 +295,7 @@ s_tr_kinds      db      "# kind: a speaker step forwarding the game's 61h write,
                 db      "a pitch jump of over an eighth on a sounding note, "
                 db      "an effect taking the tone (before>after = effect>slot)", 0
 s_tr_names      db      "step61 ", 0, "steppit", 0, "steprb ", 0, "noteon ", 0, "noteoff", 0
-                db      "rule   ", 0, "fallbk ", 0, "pitch  ", 0, "effect ", 0
+                db      "rule   ", 0, "fallbk ", 0, "change ", 0, "effect ", 0
 %if ($ - s_tr_names) != TK_LAST * 8
 %error s_tr_names needs an 8-byte name for each kind
 %endif

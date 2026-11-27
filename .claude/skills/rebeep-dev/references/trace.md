@@ -39,7 +39,7 @@ ran. Each record is one line; every number is hex:
 | seq | The game's byte OUTs to 42h/43h/61h so far (`RBS_TRAPPED`) |
 | tick | BIOS tick count, low word. A game that reprograms the timer may stop it |
 | pit0 | PIT channel 0's count, latched: it counts down within each tick |
-| kind | `step61` forwarding the game's 61h write, `steppit` a 42h/43h write moved the mask, `steprb` ReBeep itself (an apply, the hotkey, `/OFF`), `noteon`, `noteoff`, `pitch` a pitch jump, `rule` a profile's rule completed, `fallbk` its catch-all did, `effect` one of its effects took the tone |
+| kind | `step61` forwarding the game's 61h write, `steppit` a 42h/43h write moved the mask, `steprb` ReBeep itself (an apply, the hotkey, `/OFF`), `noteon`, `noteoff`, `change` a pitch jump, `rule` a profile's rule completed, `fallbk` its catch-all did, `effect` one of its effects took the tone |
 | before>after | The real `61h` around a step (`00>00` for a note); for `rule` and `fallbk`, the rule's number > its patch slot; for `effect`, the effect's number > its slot |
 | game61, mode, masked | The game's own `61h`, the interpreter mode (0 silent, 1 tone, 2 raw, 3 rest), the bit held clear |
 | divisor, flags | `RBS_DIVISOR` (valid in tone mode), `RBS_FLAGS` |

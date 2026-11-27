@@ -37,12 +37,12 @@ PATCH=ENGINE
 
 [RULE]
 ; The rest after the green light: racing. The light starts as a note or
-; as a change of the engine's, so TONE. Off the road, 119 Hz, stays in
+; as a change of the engine's, so PITCH. Off the road, 119 Hz, stays in
 ; the engine's patch.
 ID=RACE
 NAME=Racing
 WHILE=GRID
-STEP=TONE 0471h 8
+STEP=PITCH 0471h 8
 STEP=OFF
 PATCH=ENGINE
 
@@ -59,25 +59,25 @@ PATCH=FALLBK
 [EFFECT]
 NAME=Red and yellow lights
 WHILE=GRID
-TONE=11D6h 8
+PITCH=11D6h 8
 PATCH=LIGHTS
 
 [EFFECT]
 NAME=Green light
 WHILE=GRID
-TONE=0471h 8
+PITCH=0471h 8
 PATCH=LIGHTS
 
 [EFFECT]
 ; 1018 to 1115 Hz in the log, gliding.
 NAME=Gear chirp
 WHILE=RACE
-TONE=0461h 64
+PITCH=0461h 64
 PATCH=SQUEAL
 
 [EFFECT]
 ; 501 Hz.
 NAME=Tire squeal
 WHILE=RACE
-TONE=094Ch 40
+PITCH=094Ch 40
 PATCH=SQUEAL

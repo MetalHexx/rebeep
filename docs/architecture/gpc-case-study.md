@@ -29,7 +29,7 @@ note every 60 ms. An effect fills the rest instead, so ReBeep hears a pitch chan
 note, not a new note. The lab profile plays the effects in patches of their own, on the effect
 voice. The lights count from the race's start until the green light ends, because red and yellow
 share a pitch with the engine's revs: the rule that ends that window takes the green light as a
-note or a pitch (`STEP=TONE`). Then the chirp and the squeal count. Driving off the road stays in
+new note or a change (`STEP=PITCH`). Then the chirp and the squeal count. Driving off the road stays in
 the engine's patch.
 
 **The difference.** On a real PC a new count takes over only at the end of the current half-cycle.

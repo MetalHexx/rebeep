@@ -33,7 +33,7 @@ TR_SPARE        equ 31          ; db 0
 ; gate while bit 1 is on. 4-5 are the OPL notes the game's writes start and stop. 6-7 are a
 ; profile's rules completing, with TR_BEFORE = the rule's number and TR_AFTER = its slot.
 ; 8 is a pitch change on a sounding note that moves the count by more than an eighth of the
-; larger count, against the last note on or pitch record: an effect cutting into a tone, not
+; larger count, against the last note on or change record: an effect cutting into a tone, not
 ; a song's vibrato, which rewrites the count every tick and would fill the buffer. 9 is a tone
 ; moving onto the effect voice (engine/fx.asm), TR_BEFORE = the effect's number and TR_AFTER
 ; = its slot; its glides are not recorded.
@@ -44,7 +44,7 @@ TK_NOTE_ON      equ 4
 TK_NOTE_OFF     equ 5
 TK_RULE         equ 6           ; a rule whose last step has a value
 TK_FALLBK       equ 7           ; a catch-all: its last step takes any value
-TK_PITCH        equ 8           ; a pitch jump on a sounding note
+TK_CHANGE       equ 8           ; a pitch jump on a sounding note
 TK_EFFECT       equ 9           ; a profile's effect takes the tone
 TK_LAST         equ TK_EFFECT
 
