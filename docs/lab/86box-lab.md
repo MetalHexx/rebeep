@@ -63,6 +63,7 @@ The D: layout:
 D:\README.TXT
 D:\ENV\BOOT.BAT              run by AUTOEXEC on every boot
 D:\ENV\QPICHK.COM            reports whether QPIEMU is up
+D:\ENV\BENCH.BAT             a hand test, only when one was added: run by BOOT.BAT
 D:\ENV\MSDOS622\INSTALL.BAT  one-time C: setup for MS-DOS 6.22
 D:\ENV\FREEDOS\INSTALL.BAT   one-time C: setup after a FreeDOS installer
 D:\JEMM\                     Jemm 5.87, JLOAD, QPIEMU
@@ -109,6 +110,10 @@ folders can't be fetched; your games stay in the media folder.
    - runs `JLOAD QPIEMU.DLL`, then `QPICHK`;
    - `LH D:\REBEEP\REBEEP` if `D:\REBEEP\AUTOLOAD.FLG` exists. `rebeep build run --deploy` writes
      that flag for every build target marked `"autoload": true` in `src/targets.json` (`REBEEP.COM` is).
+
+   Last, on either entry, it calls `D:\ENV\BENCH.BAT` when there is one: a hand test, set up so you
+   only press Enter to start the program. `rebeep disk add <vm> BENCH.BAT --to ENV` puts it there,
+   and the next deploy removes it.
 
 Because `BOOT.BAT` lives on D:, changing the boot steps needs only a deploy, never an edit on C:.
 

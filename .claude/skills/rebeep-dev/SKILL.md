@@ -14,6 +14,7 @@ commands and hard rules. Read it first, then the one reference that matches the 
 | Create a VM, install DOS, run it, snapshot it | [references/vms.md](references/vms.md) |
 | Build, deploy to D:, test | [references/build-and-test.md](references/build-and-test.md) |
 | See, fetch or add files on a VM's D: (logs, results, small files) | [references/d-files.md](references/d-files.md) |
+| Set up a hand test for the user, so they only press Enter to start it (a bench) | [references/bench.md](references/bench.md) |
 | Log what a game makes ReBeep do (REBEEPD, the trace build) and read the log | [references/trace.md](references/trace.md) |
 | Keep the lab's patch set: collect patches saved on a VM, put them on every D: | [references/patches.md](references/patches.md) |
 | Work out a game profile (`/G:`) with the user, keep the lab's profiles on every D: | [references/profiles.md](references/profiles.md) |
@@ -29,5 +30,7 @@ commands and hard rules. Read it first, then the one reference that matches the 
 - Use `--preview` before any `reset`, `clean` or `remove`, and confirm with the user before running
   it for real.
 - Never run game files on the host, and never commit anything from `~/.rebeep`.
+- A test the user runs by hand in a VM is set up as a bench first ([references/bench.md](references/bench.md)):
+  they press Enter to start it, never type the commands.
 
 **Adding an activity:** write one new file in `references/` and add one row to the table above.
