@@ -61,6 +61,20 @@ Patch MYLEAD not used: not found in USER or FACTORY. Playing the faithful voice.
 A `PATCHES=` line that isn't a plain DOS path gets its own message, `PATCHES=... ignored`, and the
 default folder is used. Both lines are explained in [the settings file](studio.md#the-settings-file).
 
+## A profile was not used
+
+A [game profile](playing.md#game-profiles) ReBeep can't use is never an error either. It names the
+file and the reason, and what was playing goes on:
+
+```
+Profile MYGAME not used: C:\REBEEP\PROFILES\MYGAME\MYGAME.RBG: not found.
+```
+
+`not found` means there is no such file: check the folder and the name. Anything else is a mistake
+in the file, such as `a rule has no PATCH` or `more than 16 rules`: fix that line. A patch the
+profile names that can't be used gets the patch message above, and the faithful voice plays for its
+rule. `PROFILES=... ignored` works like the `PATCHES=` message.
+
 ## The studio log
 
 [ReBeep Studio](studio.md) writes `RBSTUDIO.LOG` into the folder that holds `RBSTUDIO.EXE`, usually

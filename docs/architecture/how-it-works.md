@@ -137,6 +137,28 @@ speaker never moves, while the gate and the timer still run as the game set them
 note holds the gate moves the hold to bit 1, which is one step on the speaker. Ctrl+Alt+B still
 gives the game the real speaker, unmuted.
 
+## Game profiles
+
+A [profile](../guide/playing.md#game-profiles) picks a patch from what the game plays. `/G:` reads
+its file and every patch it names at load, into a table in the resident part.
+
+**Rules go by events, never time.** Each game byte gives at most one event: a note start, a pitch
+change or a note stop, with the divisor, or a byte written to `43h`, the timer's control word. A
+step matches the next event of its kind; a value that doesn't fit sends the rule back to its first
+step, which the same event may start again, and other kinds pass by. The first rule in the file to
+complete wins, and every rule starts over. Games reprogram the timer, so no rule waits on a clock.
+
+**The switch.** The winning patch is copied into `RB_STATE`, so `/S`, Ctrl+Alt+N and a change all
+see it, and the voice changes before the event plays: a note that starts on it starts in the new
+voice, and one that sounds on restarts in it. It plays the patch voice, as `/P:` does, so it ends a
+faithful voice picked with Ctrl+Alt+N. The same patch twice writes nothing. The rules run with
+translation on or off.
+
+**Fixed size.** The table holds 16 rules of 4 steps and 8 patches, 821 bytes, from the first load,
+so a later `/G:` always fits. With the code it adds 1,168 bytes: ReBeep is 4,896 bytes resident,
+profile or not. With no profile on, a trapped write costs a call, a compare and a return more, too
+little to show in `P_BENCH`.
+
 ## Residency, AMIS and the hotkey
 
 `REBEEP.COM` is a resident part followed by a startup part. When the program goes resident, the

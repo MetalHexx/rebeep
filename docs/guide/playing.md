@@ -44,6 +44,45 @@ plays that on an OPL3 and its two-operator voice on an OPL2.
 
 On a loaded copy, an option changes only what it names, so the other settings stay as they are.
 
+## Game profiles
+
+A game profile gives each part of a game its own patch, such as one for the title music and
+another for the menus. ReBeep tells the parts apart by what the game sends the speaker.
+
+```
+REBEEP /G:MYGAME
+```
+
+`/G:MYGAME` loads `PROFILES\MYGAME\MYGAME.RBG` from ReBeep's folder, and the patches beside it. No
+profile comes with ReBeep yet: you write your own, as below. The profile's default patch plays
+until a rule picks another, and a rule's patch plays in its own voice, even after Ctrl+Alt+N.
+`REBEEP /S` names the profile, and `/P:` or `/F` ends it. It lasts until you unload ReBeep or restart the PC. If ReBeep can't use a profile
+it says why, and what was playing goes on ([why](troubleshooting.md#a-profile-was-not-used)).
+
+A profile is a text file, in the same style as a patch:
+
+```
+[PROFILE]
+FORMAT=1
+DEFAULT=MENU
+
+[RULE]
+STEP=CTRL B6h
+STEP=NOTE 1922h 40
+PATCH=INTRO
+```
+
+| Line | Means |
+|---|---|
+| `FORMAT=1` | Required |
+| `DEFAULT=MENU` | The patch that plays first, `MENU.RBP` in the profile's folder. Without it, the patch you had plays on |
+| `[RULE]` | One rule, up to 16. They are tried in order, and the first to match picks its patch. That patch plays until another rule picks a different one |
+| `STEP=` | Up to 4 a rule, in order. Each matches the next sound event of its kind. `NOTE n t`: a note starts within `t` of the timer count `n`. `PITCH n t`: a sounding note changes to that count. `OFF`: a note stops. `CTRL n`: the game writes `n` to the timer's control port, `43h`. Leave out the number to take any |
+| `PATCH=INTRO` | The rule's patch, `INTRO.RBP` in the profile's folder. Up to 8 patches a profile |
+
+Numbers are decimal, or hex with a trailing `h`. Lines starting with `;` are comments. A profile
+file is at most 2,048 bytes. A `PROFILES=` line in [the settings file](studio.md#the-settings-file) moves the profiles folder.
+
 ## Set the volume
 
 ```

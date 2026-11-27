@@ -158,11 +158,13 @@ JEMMEX.EXE in CONFIG.SYS. If Jemm is not in C:\JEMM, set RBJEMM first:
 
 4 Options and hotkeys
 ---------------------
-  REBEEP [/F | /P:name] [/V:n] [/L:n] [/R:n] [/K:xy] [/ON | /OFF] [/S] [/U] [/?]
+  REBEEP [/F | /P:name | /G:name] [/V:n] [/L:n] [/R:n] [/K:xy]
+         [/ON | /OFF] [/S] [/U] [/?]
 
   /F      faithful square-wave voice (default)
   /P:name a patch: FOLDER\NAME, or NAME from USER then FACTORY (the four that
           come with ReBeep are ORGAN, FLUTE, BRASS and BELL)
+  /G:name a game profile, PROFILES\name: its rules pick the patch
   /V:n    volume, 0 to 15 (default 12)
   /L:n    notes below 20 Hz: 0 silent (default), 1 played
   /R:n    sounds it can't translate: 1 speaker (default), 0 muted
@@ -176,7 +178,34 @@ JEMMEX.EXE in CONFIG.SYS. If Jemm is not in C:\JEMM, set RBJEMM first:
 /S, /U, /ON and /OFF act only on a loaded copy. On a loaded copy, any
 other option changes only what it names. With neither /F nor /P:, a PATCH=
 line in RBSTUDIO.CFG (section 5) picks the patch at load. A patch ReBeep
-can't use is a message, and the faithful voice plays.
+can't use is a message, and the faithful voice plays. Give one of /F, /P:
+and /G: at a time; on a loaded copy, /P: or /F ends a profile.
+
+A game profile gives each part of a game its own patch, told apart by what
+the game sends the speaker. None comes with ReBeep yet: you write your own.
+REBEEP /G:MYGAME loads PROFILES\MYGAME\MYGAME.RBG and the patches beside
+it. A profile is a text file such as this one:
+
+  [PROFILE]
+  FORMAT=1
+  DEFAULT=MENU
+  [RULE]
+  STEP=CTRL B6h
+  STEP=NOTE 1922h 40
+  PATCH=INTRO
+
+DEFAULT= names the patch that plays first, MENU.RBP in the profile's
+folder; it wins over RBSTUDIO.CFG's PATCH= line. Each [RULE], up to 16, is
+tried in order, and the first to match picks its PATCH=, which plays until
+another rule picks a different one. A rule has up to 4 STEP= lines, each
+matching the next event of its kind: NOTE n t, a note starts within t of
+the count n; PITCH n t, a sounding note changes to that count; OFF, a note
+stops; CTRL n, the game writes n to port 43h. Leave out n to take any.
+
+A profile has up to 8 patches and 2048 bytes. Numbers are decimal, or hex
+with a trailing h, and lines starting with ; are comments. A rule's patch
+plays in its own voice, even after Ctrl+Alt+N. A profile ReBeep can't use
+is a message, and what was playing goes on.
 
 Some games use a pitch below 20 Hz as a rest, as Grand Prix Circuit's
 engine does. /L:0 keeps those silent, close to what the real speaker
@@ -185,7 +214,7 @@ does with them. /L:1 plays them as a low FM note.
 Clicks, noise and pitches above the FM chip's range can't become an FM
 note, so they play on the real speaker (/R:1). /R:0 mutes them, and only
 the FM chip sounds. The game then loses whatever it played that way, such
-as Grand Prix Circuit's percussion.
+as the click Grand Prix Circuit makes as each song starts and stops.
 
 Hotkeys, with the defaults:
 
@@ -238,6 +267,7 @@ overwrites it. SAMPLES\RBSTUDIO.CFG is a commented example to copy:
 
   PATCHES=D:\MYSOUNDS   where USER and the banks are (default: PATCHES)
   PATCH=FLUTE          the patch REBEEP loads with neither /F nor /P:
+  PROFILES=D:\MYGAMES  where the game profiles are (default: PROFILES)
 
 RBSTUDIO.LOG, beside the program, records each run and every patch file it
 left out, and why.

@@ -13,6 +13,10 @@ four-operator voices ([studio](guide/studio.md)).
 a Sound Blaster's OPL2 or OPL3 FM chip. It is proven on Grand Prix Circuit, on a real PC and in
 86Box.
 
+**Game profiles.** `/G:` gives each part of a game its own patch, told apart by what the game
+sends the speaker. Being worked out on Grand Prix Circuit, where the intro and the menus each get
+their own ([playing](guide/playing.md#game-profiles)).
+
 **A project website**, on GitHub Pages at <https://metalhexx.github.io/rebeep/>: what ReBeep is,
 what it runs on, and how to get it. It shows the latest release on its own.
 
@@ -26,7 +30,7 @@ what it runs on, and how to get it. It shows the latest release on its own.
 | Jemm in the package | One download instead of two, if Jemm's license allows it |
 | Hotkeys in every game | Catching the keys at the keyboard's port, so games that own the keyboard can't block them |
 | More voices | A larger set of factory patches, beyond the four that ship now |
-| Per-game profiles | Settings picked per game, such as the voice, the volume and how low notes play. Also on the studio's menu, marked coming soon |
+| More from game profiles | Profiles that come with ReBeep, the game recognized on its own, sound effects as well as screens, settings such as the volume and how low notes play, and the studio's profile screen, marked coming soon on its menu |
 | Digital sound for the rest | Clicks and noise played through the Sound Blaster's digital audio instead of the speaker |
 | XT and 286 machines | A simpler way to catch the beeps on the machines most speaker games were written for |
 | MIDI and other sound chips | Speaker music on a MIDI synth, or on a Tandy-style tone chip |

@@ -4,6 +4,12 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+### Added
+
+- **Game profiles:** `REBEEP /G:name` gives each part of a game its own patch, such as one for the
+  title music and another for the menus, told apart by what the game sends the speaker
+  ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#game-profiles)).
+
 ## [0.2.0] - 2026-11-26
 
 ### Added
