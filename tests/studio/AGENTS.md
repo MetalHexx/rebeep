@@ -30,7 +30,7 @@
   record the first failure of the case (`FAIL <case>: <what>: got N, want M`); `t_done()` prints `DONE <n>`.
 - A first line of `/* SUITE: OPL2 */` runs the program a second time as an OPL2 card with the argument `/OPL2` (the first run
   is DOSBox-X's default OPL3); `T_OPLKND.C` fails if the suite's `-set "sblaster oplmode=opl2"` stops taking effect.
-- The shipped factory patches are staged as `FACTORY\PATCHES\` beside the program, so a test reads the real ones.
+- The factory files, patches and profiles, are staged under `FACTORY\` beside the program, so a test reads the real ones.
 - **Reference screens** are `tests/screens/<screen>.<view>.scr`, view `vga` or `mono`: one per screen, state and view, among
   them `splash-load`, `patchlist-bank` and `savedlg-4op`. The format (UTF-8, LF): line 1 `# ReBeep reference screen: <screen>, <view>`,
   line 2 `# <sample state>`, `glyphs` and 25 rows of 80 characters (a CP437 byte as the character the VGA font draws, byte 0 a
@@ -40,7 +40,7 @@
   [src/studio/AGENTS.md](../../src/studio/AGENTS.md)). **The one version exception:** the reference screens and `SAMPLE_VERSION`
   in `sample.c` hold a fixed sample version, so a bump never changes them (`version check` skips only those).
 - **The screen check**, reported last, compiles `RBSTUDIO.EXE` once, into `build/studio-tests/screens/`. A folder there per
-  machine, `<machine>/`, gets a copy, the data files deployed under `REBEEP` and one `DUMPS.BAT` (`RBSTUDIO /DUMP:<screen> [/VIEW:MONO] /O:Dnn.DMP` per
+  machine, `<machine>/`, gets a copy, the factory files, the data files deployed under `REBEEP` and one `DUMPS.BAT` (`RBSTUDIO /DUMP:<screen> [/VIEW:MONO] /O:Dnn.DMP` per
   reference), run in one DOSBox-X start; each 4000-byte dump is compared (`tools/lib/screens.mjs`) with its `.scr`, failing with
   the first differing cells. A screen RBSTUDIO cannot draw exits 4 and fails the run. The set runs under the default machine and again under DOSBox-X's `machine=cga`, `ega` and `vgaonly` (reported as `SCREENS (cga)` and so on): the blink-off path differs on a CGA, so the attributes must still match. A dump cannot show whether blink is really off, so also look at a bright-background screen (the synth focus bar, the save prompt's buttons) in DOSBox-X under `machine=cga` and `ega`.
 

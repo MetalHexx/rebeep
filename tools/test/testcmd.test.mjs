@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { after, before, describe, test } from 'node:test';
 import { interpreterPrograms, parseResults, studioPrograms, toolTestFiles } from '../lib/suites.mjs';
@@ -20,7 +21,8 @@ fs.copyFileSync(args[args.length - 1], args[args.indexOf('-o') + 1]);
  * A fake DOSBox-X: prints a line naming its command, appends one line to FAKE_DOSBOX_LOG (its arguments, the SDL drivers
  * it got and the files under FACTORY in the folder mounted as C:), then copies FAKE_DOSBOX_RESULT_FILE into that folder as
  * RESULT.TXT, which is what a DOS program would have written. With FAKE_DOSBOX_GATE, a run of the program FAKE_DOSBOX_HOLD
- * names finishes only after a run of another program has; if none does in 15 s, it writes no result.
+ * names finishes only after a run of another program has; if none does in 15 s, it writes no result. With
+ * FAKE_DOSBOX_EVENTS it appends "start <command>" and "end <command>" there, FAKE_DOSBOX_DELAY ms or more apart.
  */
 const FAKE_DOSBOX = `import fs from 'node:fs';
 import path from 'node:path';
@@ -30,6 +32,10 @@ const mount = args.find((a) => a.startsWith('MOUNT C '));
 const dir = mount.slice('MOUNT C '.length).replace(/^"|"$/g, '');
 const { FAKE_DOSBOX_GATE: gate, FAKE_DOSBOX_HOLD: hold } = process.env;
 const held = Boolean(gate) && command.startsWith(hold + ' ');
+const { FAKE_DOSBOX_EVENTS: events, FAKE_DOSBOX_DELAY: delay } = process.env;
+const event = (what) => events && fs.appendFileSync(events, what + ' ' + command.split(' > ')[0] + '\\n');
+event('start');
+if (delay) await new Promise((r) => setTimeout(r, Number(delay)));
 let result = process.env.FAKE_DOSBOX_RESULT_FILE;
 if (held) {
   const until = Date.now() + 15000;
@@ -48,6 +54,7 @@ fs.appendFileSync(process.env.FAKE_DOSBOX_LOG, JSON.stringify({
 }) + '\\n');
 if (result) fs.copyFileSync(result, path.join(dir, 'RESULT.TXT'));
 if (gate && !held) fs.writeFileSync(gate, '');
+event('end');
 `;
 
 /** A repo's factory defaults for the fake suites, one patch and one profile, and what a test program finds of them. */
@@ -74,6 +81,14 @@ const callOf = (calls, command) => {
   const found = calls.find((c) => c.args.includes(`${command} > RESULT.TXT`));
   assert.ok(found, `no DOSBox-X run of ${command}`);
   return found;
+};
+
+const textLines = (file) => fs.readFileSync(file, 'utf8').split('\n').filter(Boolean);
+
+/** The most DOSBox-X runs going at once, from the fake's start and end lines. */
+const mostAtOnce = (events) => {
+  let running = 0;
+  return Math.max(...events.map((line) => (running += line.startsWith('start ') ? 1 : -1)));
 };
 
 const programNames = (stdout) => {
@@ -308,6 +323,24 @@ describe('test run --suite interpreter, with fake NASM and DOSBox-X', () => {
     assert.deepEqual(programNames(result.stdout), ['T_ADD', 'T_SUB']);
   });
 
+  test('no more programs run at once than --jobs says, and no more than 4 without it', () => {
+    const extra = [1, 2, 3, 4].map((n) => path.join(root, 'tests', 'interpreter', `t_more${n}.asm`));
+    for (const file of extra) fs.writeFileSync(file, 'org 100h\n');
+    try {
+      const cases = [[['--jobs', '1'], 1], [[], Math.min(4, os.availableParallelism())]];
+      for (const [i, [args, most]] of cases.entries()) {
+        const events = path.join(fakes, `events-jobs-${i}.log`);
+        const { result } = runInterp('PASS add\nDONE 1\n', args, { FAKE_DOSBOX_EVENTS: events, FAKE_DOSBOX_DELAY: '300' });
+        assert.equal(result.code, 0, result.stderr);
+        assert.equal(textLines(events).length, 12, 'six programs ran');
+        const peak = mostAtOnce(textLines(events));
+        assert.ok(peak <= most, `${args.join(' ') || 'by default'}: ${peak} at once, over ${most}`);
+      }
+    } finally {
+      for (const file of extra) fs.rmSync(file);
+    }
+  });
+
   test("--jobs 1 streams DOSBox-X's output; above 1 only a failed run's is printed", () => {
     const streamed = runInterp('PASS add\nDONE 1\n', ['--jobs', '1']);
     assert.equal(streamed.result.code, 0, streamed.result.stderr);
@@ -420,13 +453,19 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
   });
 
   test('a SUITE: OPL2 program runs a second time as an OPL2 card with /OPL2; others run once', () => {
-    const { calls } = runStudio('PASS one\nDONE 1\n');
+    const events = path.join(fakes, 'events-in-turn.log');
+    const { calls } = runStudio(
+      'PASS one\nDONE 1\n',
+      { FAKE_DOSBOX_EVENTS: events, FAKE_DOSBOX_DELAY: '300' },
+      ['--jobs', '4'],
+    );
     const out = path.join(root, 'build', 'studio-tests');
     assert.equal(calls.length, 3);
     const alphaDefault = callOf(calls, 'T_ALPHA.EXE');
     const alphaOpl2 = callOf(calls, 'T_ALPHA.EXE /OPL2');
     const beta = callOf(calls, 'T_BETA.EXE');
-    assert.ok(calls.indexOf(alphaDefault) < calls.indexOf(alphaOpl2), "one program's runs are in sequence");
+    const order = textLines(events);
+    assert.ok(order.indexOf('end T_ALPHA.EXE') < order.indexOf('start T_ALPHA.EXE /OPL2'), "one program's runs are in turn");
     for (const call of [alphaDefault, alphaOpl2]) assert.ok(call.args.includes(`MOUNT C "${path.join(out, 'T_ALPHA')}"`));
     assert.ok(beta.args.includes(`MOUNT C "${path.join(out, 'T_BETA')}"`));
     assert.ok(!alphaDefault.args.includes('sblaster oplmode=opl2'));
@@ -463,8 +502,10 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
     assert.match(result.stderr, /T_BETA: no RESULT\.TXT written/);
   });
 
-  test('a compile error stops the suite with the compiler message, before DOSBox-X starts', () => {
-    const { result, calls } = runStudio('PASS one\nDONE 1\n', { FAKE_WCL_FAIL: 'T_ALPHA.C(3): Error! E1009' });
+  test('a compile error stops the suite with the compiler message: nothing more is built or run', () => {
+    const failing = { FAKE_WCL_FAIL: 'T_ALPHA.C(3): Error! E1009' };
+    const { result, calls, wcl } = runStudio('PASS one\nDONE 1\n', failing, ['--jobs', '1']);
+    assert.equal(wcl.length, 1, 'T_BETA is not compiled once T_ALPHA failed');
     assert.equal(result.code, 1);
     assert.match(result.stderr, /wcl failed building T_ALPHA\.EXE/);
     assert.match(result.stderr, /E1009/);

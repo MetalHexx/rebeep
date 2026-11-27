@@ -45,6 +45,19 @@ static void write_text(const char *path, const char *text)
     }
 }
 
+/* The longest line of a CRLF text, in characters. */
+static int widest_line(const char *text)
+{
+    int widest = 0;
+    int n = 0;
+
+    for (; *text != '\0'; text++) {
+        if (*text == '\n') n = 0;
+        else if (*text != '\r' && ++n > widest) widest = n;
+    }
+    return widest;
+}
+
 static void check_factory(const char *file, const char *name, int conn, int fb, int sl1, int ar1, int ol2)
 {
     char path[40];
@@ -88,6 +101,7 @@ int main(void)
     }
     t_checkl(i, n, "every line end is CRLF");
     t_check(buf[0] == ';', "starts with a comment");
+    t_check(widest_line(buf) <= 78, "every line fits a DOS screen");
     t_checkl(patch_parse(buf, (unsigned)n, &again, err, sizeof err), 0, "reparses");
     t_check(patch_equal(&patch, &again), "equal after the round trip");
     t_checkl(patch_format(&patch, buf, 100), -1, "a short buffer is refused");

@@ -15,13 +15,16 @@
 %include "startup/profile.asm"
 %include "testlib.inc"
 
-; What profile.asm and rules.asm use of the rest of ReBeep, as stand-ins. print drops ReBeep's
-; messages: this program writes its own result lines.
+; What profile.asm and rules.asm use of the rest of ReBeep, as stand-ins. print is ReBeep's own,
+; so what it says of a refused profile goes into RESULT.TXT in whole lines. Those start with
+; "Profile" or a drive, never with a folder's name, so none of them is a result.
 OPT_P           equ     0002h
-opl_set_voice:
 print:
+        mov     ah, 09h
+        int     21h
+opl_set_voice:
         ret
-msg_pn_3        db      '$'
+msg_pn_3        db      ': $'
 fail_spec       dw      0
 patch_ok        db      0
 opt_set         dw      0
@@ -46,8 +49,8 @@ fail_line:
         mov     dx, s_crlf
         jmp     t_print
 
-; result_start: DX = s_pass or s_fail. Starts a counted result line, on a line of its own: what
-; print_text puts out for ReBeep's messages is no part of it. Keeps SI and CX.
+; result_start: DX = s_pass or s_fail. Starts a counted result line, on a line of its own,
+; whatever ReBeep printed before it. Keeps SI and CX.
 result_start:
         push    dx
         mov     dx, s_crlf

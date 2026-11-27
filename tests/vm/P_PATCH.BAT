@@ -83,7 +83,7 @@ ECHO FAIL fourop-patch: a patch with a 4-OP variant did not load, or an OPL3 did
 :BADFILE
 D:\REBEEP\REBEEP.COM /P:USER\BAD > D:\OUT.TXT
 IF ERRORLEVEL 1 GOTO BADFILEBAD
-C:\FREEDOS\BIN\FIND.COM "Patch USER\BAD not used" D:\OUT.TXT > NUL
+C:\FREEDOS\BIN\FIND.COM "Patch USER\BAD not used. Playing the faithful voice." D:\OUT.TXT > NUL
 IF ERRORLEVEL 1 GOTO BADFILEBAD
 D:\REBEEP\REBEEP.COM /S > D:\OUT.TXT
 C:\FREEDOS\BIN\FIND.COM "faithful voice" D:\OUT.TXT > NUL
