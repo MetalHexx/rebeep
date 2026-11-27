@@ -1,4 +1,4 @@
-; OPL render target: detects an OPL2/OPL3 at 388h and plays one voice, either a
+; OPL render target: plays one voice on the OPL2/OPL3 at 388h, either a
 ; faithful square wave or a patch (the two-operator record and octave of a patch
 ; block, amis.inc; on an OPL3 its four-operator record too, when it has one). Each
 ; new note takes the other of channels 7 and 8 (or, four-operator, of the pairs A and
@@ -7,8 +7,8 @@
 ; Near calls; DS = this module's segment. Every routine preserves all
 ; registers except its outputs, and flags.
 ; Only channels 7 and 8's registers (or pairs A and B's), the global 01h, (OPL3)
-; 104h and 105h and, while detecting, the timer registers 02h and 04h are ever
-; written. Volume 0 keys no note: TL 63 is only -47 dB, not silence.
+; 104h and 105h and, while detecting (startup/opldet.asm), the timer registers 02h and
+; 04h are ever written. Volume 0 keys no note: TL 63 is only -47 dB, not silence.
 ; The voice's mode (opl_four), record and carriers are latched when opl_set_voice
 ; runs: no other routine reads RB_STATE, and a record is read where it is only for
 ; its levels. The pair is keyed off, by the mode it was set in, before 104h changes.
@@ -35,62 +35,6 @@ OPL2_IDX_READS  equ     6
 OPL2_DATA_READS equ     35
 OPL3_IDX_READS  equ     2
 OPL3_DATA_READS equ     2
-
-; opl_detect: the standard AdLib timer test.
-; Out: AL = 0 none, 2 = OPL2, 3 = OPL3. Also picks the write delays by chip.
-opl_detect:
-        push    bx
-        push    cx
-        push    dx
-        call    opl_reset_timers
-        mov     dx, OPL_ADDR1
-        in      al, dx
-        and     al, 0E0h
-        jnz     .none
-        mov     bx, REG_TIMER1
-        mov     al, 0FFh
-        call    opl_hw_write
-        mov     bx, REG_TIMCTL
-        mov     al, 21h
-        call    opl_hw_write
-        mov     cx, 200                 ; at least 80 us of status reads
-.wait:
-        in      al, dx
-        loop    .wait
-        in      al, dx
-        and     al, 0E0h
-        mov     ch, al
-        call    opl_reset_timers
-        mov     al, ch
-        cmp     al, 0C0h
-        jne     .none
-        in      al, dx
-        and     al, 06h
-        jnz     .opl2
-        mov     byte [opl_idx_reads], OPL3_IDX_READS
-        mov     byte [opl_data_reads], OPL3_DATA_READS
-        mov     al, 3
-        jmp     .out
-.opl2:
-        mov     byte [opl_idx_reads], OPL2_IDX_READS
-        mov     byte [opl_data_reads], OPL2_DATA_READS
-        mov     al, 2
-        jmp     .out
-.none:
-        xor     al, al
-.out:
-        pop     dx
-        pop     cx
-        pop     bx
-        ret
-
-; Clobbers AL and BX; the callers have saved or do not need them.
-opl_reset_timers:
-        mov     bx, REG_TIMCTL
-        mov     al, 60h
-        call    opl_hw_write
-        mov     al, 80h
-        jmp     opl_hw_write
 
 ; opl_init: take over channels 7 and 8, key off, current voice and volume. The mode
 ; starts two-operator: opl_shutdown left 104h at 0, and opl_set_voice enables the pairs.

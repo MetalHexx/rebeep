@@ -20,6 +20,7 @@ ORGAN_CAR_TL    equ 08h
         jmp     start
 
 %include "engine/opl.asm"
+%include "startup/opldet.asm"
 %include "testlib.inc"
 
 ; A patch block as RB_STATE holds one from RBS_PATCH on: the name (18 bytes), the octave, the
