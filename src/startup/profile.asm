@@ -1,6 +1,7 @@
-; The startup part's game profiles: /G:NAME reads PROFILES\NAME\NAME.RBG, a text file in the
-; .RBP style, into a table of rules (include/profile.inc), and each patch it names from the same
-; folder into a slot of that table. apply_fields then copies the table into the resident one.
+; The startup part's game profiles: /G:NAME reads NAME\NAME.RBG, a text file in the .RBP
+; style, from PROFILES or the factory's, into a table of rules (include/profile.inc), and each
+; patch it names from the same folder into a slot of that table. apply_fields then copies the
+; table into the resident one.
 ;   [PROFILE]  FORMAT=1 (required), DEFAULT=NAME (optional: the patch that plays first),
 ;              NAME=text (optional)
 ;   [RULE]     STEP=KIND [VALUE [TOLERANCE]], one to four in order, then PATCH=NAME;
@@ -44,31 +45,36 @@ WHILE_LEN       equ     6               ; a pending WHILE: dw the byte it sets, 
 %endmacro
 
 ; profile_select: loads the profile prof_spec names into prof_new, and each of its patches into
-; a slot. A profile that can't be used is reported and nothing changes (prof_ok = 0). A patch
-; that can't be is reported, and its slot plays the faithful voice; an effect that names one is
-; dropped. When the profile has a DEFAULT=, its block goes into pbuf and OPT_P is set, as
-; load_patch does for PATCH=, so apply_fields plays it. Run inside crit_on. Out: prof_ok.
-; Clobbers ES.
+; a slot. NAME.RBG is read from the profiles folder; when it isn't there, from the profile
+; ReBeep came with, <program folder>\FACTORY\PROFILES. The patches come from the folder the
+; .RBG came from, never the other. A profile that can't be used is reported and nothing changes
+; (prof_ok = 0). A patch that can't be is reported, and its slot plays the faithful voice; an
+; effect that names one is dropped. When the profile has a DEFAULT=, its block goes into pbuf
+; and OPT_P is set, as load_patch does for PATCH=, so apply_fields plays it. Run inside
+; crit_on. Out: prof_ok. Clobbers ES.
 profile_select:
         mov     byte [prof_ok], 0
         call    settings_ensure
         call    profiles_resolve
-        push    ds
-        pop     es
-        cld
-        mov     di, path_buf
-        call    prof_folder
-        mov     si, prof_spec
-        call    copy_upper
-        mov     si, s_rbg
-        call    copy_upper
-        mov     dx, path_buf
-        mov     cx, PATCH_FILE_MAX + 1
-        call    read_file
+        call    prof_read
         jnc     .parse
-        mov     si, r_notfound
         or      al, al
-        jz      .failed
+        jnz     .unread                 ; there, so the factory's is not read
+        mov     ax, 4300h               ; DX = path_buf still: its attributes
+        int     21h
+        jnc     .unread                 ; there too, though it would not open
+        mov     si, s_unset
+        mov     di, profiles_dir
+        mov     bx, s_factoryprofs
+        call    dir_resolve
+        call    prof_read
+        jnc     .parse
+        or      al, al
+        jnz     .unread
+        call    prof_not_used
+        mov     dx, msg_gn_nowhere
+        jmp     print
+.unread:
         mov     si, r_unread
         jmp     .failed
 .parse:
@@ -78,13 +84,7 @@ profile_select:
         jnc     .parsed
 .failed:
         mov     [fail_reason], si
-        mov     dx, msg_gn_1
-        call    print
-        mov     si, prof_spec
-        mov     cx, 8
-        call    print_text
-        mov     dx, msg_gn_2
-        call    print
+        call    prof_not_used
         mov     si, path_buf
         mov     cx, 80
         call    print_text
@@ -122,6 +122,32 @@ profile_select:
         or      word [opt_set], OPT_P
 .ret:
         ret
+
+; prof_read: reads NAME.RBG in the NAME folder under profiles_dir. Out: as read_file, with
+; path_buf naming the file. Clobbers CX, DX, SI, DI and ES.
+prof_read:
+        push    ds
+        pop     es
+        cld
+        mov     di, path_buf
+        call    prof_folder
+        mov     si, prof_spec
+        call    copy_upper
+        mov     si, s_rbg
+        call    copy_upper
+        mov     dx, path_buf
+        mov     cx, PATCH_FILE_MAX + 1
+        jmp     read_file
+
+; prof_not_used: prints "Profile NAME not used: ".
+prof_not_used:
+        mov     dx, msg_gn_1
+        call    print
+        mov     si, prof_spec
+        mov     cx, 8
+        call    print_text
+        mov     dx, msg_gn_2
+        jmp     print
 
 ; prof_folder: DI = where to write "<profiles folder>\<NAME>\". Out: DI at its NUL.
 prof_folder:
@@ -911,10 +937,13 @@ w_kinds         db      "NOTE", 0, "CHANGE", 0, "PITCH", 0, "OFF", 0, "CTRL", 0,
 %endif
 s_rbg           db      ".RBG", 0
 s_badprofiles   db      "PROFILES=$"
+s_factoryprofs  db      "FACTORY\PROFILES", 0     ; beside the program
+s_unset         db      0                       ; dir_resolve's "no setting"
 
 msg_gn_1        db      "Profile $"
 msg_gn_2        db      " not used: $"
 msg_gn_3        db      ".", 13, 10, '$'
+msg_gn_nowhere  db      "not found in PROFILES or FACTORY.", 13, 10, '$'
 
 g_noprofile     db      "there is no [PROFILE] section$"
 g_noformat      db      "[PROFILE] has no FORMAT$"

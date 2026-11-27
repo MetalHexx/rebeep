@@ -17,7 +17,7 @@ Everything lands in `build/release/` (replaced on each run):
 
 **The package** is `REBEEP.COM`, `RBTEST.COM` and `RBSTUDIO.EXE` from `build/`; every `build.json` `files`
 entry deployed to `REBEEP` or below it, at its path below `REBEEP` (`SPLASH.ANS`, `MENU.ANS`,
-`FACTORY/PATCHES/*.RBP`); everything under `release/` except its `AGENTS.md` (`@VERSION@` in `README.TXT` and
+`FACTORY/PATCHES/*.RBP`, `FACTORY/PROFILES/<NAME>/*`); everything under `release/` except its `AGENTS.md` (`@VERSION@` in `README.TXT` and
 `INSTALL.BAT` is filled in); and a generated `CHANGES.TXT` (dated versions up to the package version).
 
 **Checks.** Every text must be ASCII, CRLF, at most 80 columns and have 8.3 names; `.COM`, `.EXE` and `.ANS`

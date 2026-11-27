@@ -1,6 +1,7 @@
 ; ReBeep game profile: Grand Prix Circuit, the intro, the menus and the
 ; race, with the race's effects in patches of their own.
-; A lab profile, for testing.
+; It comes with ReBeep. To change it, copy the whole folder to
+; PROFILES\GPC and edit the copy: yours then plays instead.
 ; Each song, and the race, starts with the timer control word 43h=B6,
 ; then its first note. That note plays about 20 counts high, so each
 ; opening gets a tolerance of 40.

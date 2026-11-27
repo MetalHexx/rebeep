@@ -53,6 +53,7 @@ The user may never have made a patch or read a log. Keep the conversation at the
 | 5. Check | A listening session: each rule and effect fires where it should, and nowhere else | [check.md](references/check.md) |
 | 6. Shape the sounds | The user likes each patch | [sounds.md](references/sounds.md) |
 | 7. Keep it | It's in the lab's folder ([profiles.md](../rebeep-dev/references/profiles.md)), and what the game taught is written down | [below](#grow-this-skill) |
+| 8. Ship it | The user wants it to come with ReBeep, and it does | [ship.md](references/ship.md) |
 
 Loop through 3 to 5 until every part switches right. Only then spend the user's time on sounds.
 

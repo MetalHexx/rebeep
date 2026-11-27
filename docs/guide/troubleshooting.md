@@ -63,17 +63,19 @@ default folder is used. Both lines are explained in [the settings file](studio.m
 
 ## A profile was not used
 
-A [game profile](profiles.md) ReBeep can't use is never an error either. It names the
-file and the reason, and what was playing goes on:
+A [game profile](profiles.md) ReBeep can't use is never an error either. It says why, and what
+was playing goes on:
 
 ```
-Profile MYGAME not used: C:\REBEEP\PROFILES\MYGAME\MYGAME.RBG: not found.
+Profile MYGAME not used: not found in PROFILES or FACTORY.
 ```
 
-`not found` means there is no such file: check the folder and the name. Anything else is a mistake
-in the file, such as `a rule has no PATCH` or `more than 16 rules`: fix that line. A patch the
-profile names that can't be used gets the patch message above, and the faithful voice plays for its
-rule. `PROFILES=... ignored` works like the `PATCHES=` message.
+That means there is no `MYGAME.RBG` in your `PROFILES` folder, and ReBeep doesn't come with one:
+check the folder and the name. Otherwise the message names the file, then the reason, such as
+`a rule has no PATCH` or `more than 16 rules`: fix that line. A patch the profile names that can't
+be used gets the patch message above, and the faithful voice plays for its rule. It is looked for
+only beside the `.RBG`, so a [changed copy](profiles.md#change-one-that-comes-with-rebeep) needs
+every patch. `PROFILES=... ignored` works like the `PATCHES=` message.
 
 ## The studio log
 

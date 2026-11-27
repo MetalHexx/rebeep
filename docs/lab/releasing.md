@@ -48,6 +48,8 @@ the `slow-386sx` numbers in [how-it-works.md](../architecture/how-it-works.md)) 
   and the site on this build ([update-site](../../.claude/skills/update-site/references/studio-shots.md)).
 - [ ] A four-operator patch: `REBEEP /P:<that USER patch>`, `REBEEP /S` says `(4-OP)`, and RBTEST case 1
   plays the fuller voice.
+- [ ] `REBEEP /G:GPC /R:0`, then the game: the intro, the menus, the engine, the start lights and the tire
+  sounds each have their own voice.
 - [ ] Last, attach `build/release/rebeep-<v>-floppy.img` as A: from 86Box's Media menu, run
   `INSTALL` from A: and press `I`: the installed folder holds `RBSTUDIO.EXE`, `FACTORY\` and the art, and
   `RBSTUDIO` starts from it. Run `INSTALL` again and press `U`: it updates the copy. Copy the

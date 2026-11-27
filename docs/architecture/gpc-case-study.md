@@ -26,11 +26,11 @@ start does, as each song's does ([below](#telling-the-screens-apart)).
 **What ReBeep does.** The engine pitch and the effects are tones, so they play on the OPL. The
 `FFFFh` slot is a rest: the OPL keys off and the speaker stays still, so the engine starts a new
 note every 60 ms. An effect fills the rest instead, so ReBeep hears a pitch change on the engine's
-note, not a new note. The lab profile plays the effects in patches of their own, on the effect
-voice. The lights count from the race's start until the green light ends, because red and yellow
-share a pitch with the engine's revs: the rule that ends that window takes the green light as a
-new note or a change (`STEP=PITCH`). Then the chirp and the squeal count. Driving off the road stays in
-the engine's patch.
+note, not a new note. [ReBeep's profile](../guide/playing.md#game-profiles) plays the effects in
+patches of their own, on the effect voice. The lights count from the race's start until the green
+light ends, because red and yellow share a pitch with the engine's revs: the rule that ends that
+window takes the green light as a new note or a change (`STEP=PITCH`). Then the chirp and the
+squeal count. Driving off the road stays in the engine's patch.
 
 **The difference.** On a real PC a new count takes over only at the end of the current half-cycle.
 At 18.2 Hz that is about 27 ms, so the real rest runs a little longer than ReBeep's 20 ms, and the
@@ -79,7 +79,7 @@ and nowhere else, and neither song plays the other's first note, so the pair nam
 The first note arrives about 20 counts above its count: the game opens the gate before it sets
 the speaker bit, and a vibrato tick lands between. The race starts on the engine's idle, about
 24 Hz. The engine comes within 24 counts of each song's first note, so the control word must come
-first. ReBeep's lab profile for the game matches that pair
+first. The profile ReBeep comes with, `GPC`, matches that pair
 ([game profiles](how-it-works.md#game-profiles)).
 
 ## Port reads and the keyboard

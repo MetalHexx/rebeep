@@ -9,7 +9,7 @@
 | Path | Role |
 |---|---|
 | `README.TXT` | The manual. Its title carries `@VERSION@`, filled in at build |
-| `INSTALL.BAT` | Installs or updates ReBeep in a folder, from a menu or with `/I` and `/U`. Copies `RBSTUDIO.EXE`, the `.ANS` art and `FACTORY\PATCHES\` (replaced on update). Prints the config lines, edits none |
+| `INSTALL.BAT` | Installs or updates ReBeep in a folder, from a menu or with `/I` and `/U`. Copies `RBSTUDIO.EXE`, the `.ANS` art and `FACTORY\` (the factory patches and game profiles, replaced on update). Prints the config lines, edits none |
 | `RBPLAY.BAT` | Runs one game with ReBeep loaded, then unloads ReBeep if it loaded it. QPIEMU stays loaded |
 | `SAMPLES/MSDOS/` | Full `CONFIG.SYS` and `AUTOEXEC.BAT`, ReBeep menu entry |
 | `SAMPLES/FREEDOS/` | Complete `FDCONFIG.SYS` and `FDAUTO.BAT`, same entry |
@@ -19,8 +19,11 @@
 
 - Text files only: 7-bit ASCII, CRLF, lines of 80 columns or fewer, 8.3 names. `release create`
   adds the `.EXE` and `.ANS` files (binary) and the `.RBP` patches (text), which come from `build/`.
-- `INSTALL` never touches `PATCHES\` or an `RBSTUDIO.CFG` that is already there, and never
-  creates one: the studio works without it.
+- `INSTALL` never touches `PATCHES\`, `PROFILES\` or an `RBSTUDIO.CFG` that is already there, and
+  never creates one: the studio works without it. It writes what ReBeep ships under `FACTORY\` only;
+  a new profile folder is added to its make, clear and copy lines (`factory.test.mjs` checks).
+- A command in `INSTALL` names the install folder once where it can: DOS cuts a line at 127
+  characters, so a folder is made with `IF EXIST ...\NUL GOTO`, then `MD`.
 - Samples never sit at the top level. They are copied over a user's config on
   purpose, so nothing here overwrites one.
 - `@VERSION@` is the only placeholder. It appears only in `README.TXT`'s title

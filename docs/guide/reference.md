@@ -15,7 +15,7 @@ REBEEP [/F | /P:name | /G:name] [/V:n] [/L:n] [/R:n] [/K:xy]
 |---|---|
 | `/F` | Faithful square-wave voice (default) |
 | `/P:name` | A patch: `BANK\NAME`, or `NAME` from `USER` then `FACTORY` |
-| `/G:name` | A [game profile](playing.md#game-profiles), `PROFILES\name`: its rules pick the patch |
+| `/G:name` | A [game profile](playing.md#game-profiles), yours or one that comes with ReBeep: its rules pick the patch |
 | `/V:n` | Volume, 0 to 15 (default 12) |
 | `/L:n` | Notes below 20 Hz: 0 silent (default), 1 played as a low FM note |
 | `/R:n` | Sounds ReBeep can't translate: 1 on the real speaker (default), 0 muted |

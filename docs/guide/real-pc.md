@@ -78,12 +78,11 @@ and changes nothing else. If ReBeep is already loaded, reboot to load the new co
 ```
 MD C:\REBEEP
 COPY A:\*.* C:\REBEEP
-MD C:\REBEEP\FACTORY
-MD C:\REBEEP\FACTORY\PATCHES
-COPY A:\FACTORY\PATCHES\*.* C:\REBEEP\FACTORY\PATCHES
+XCOPY A:\FACTORY C:\REBEEP\FACTORY\ /S
 ```
 
-The last three lines copy the patches that come with ReBeep, for `/P:` and [ReBeep Studio](studio.md).
+The last line copies the patches and [game profiles](playing.md#game-profiles) that come with
+ReBeep.
 
 ## 4. Add a ReBeep boot menu entry
 

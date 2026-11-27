@@ -70,6 +70,13 @@ speaker step and OPL note, and `REBEEPD /D` writes the log to `D:\REBEEP\RBTRACE
 development only and never ships. The steps and the log format are in the `rebeep-dev` skill's
 [trace reference](../../.claude/skills/rebeep-dev/references/trace.md).
 
+## Game profiles
+
+A profile in `src/factory/profiles/<NAME>/` comes with ReBeep: merged means shipped. To add one,
+list its files in `src/targets.json` and add its folder to `release/INSTALL.BAT`, as for `GPC`;
+`rebeep test run --suite tools` names anything left out. The `game-profile` skill, below, makes one
+with you, and its [ship it](../../.claude/skills/game-profile/references/ship.md) page has every step.
+
 ## Commits
 
 [Conventional Commits](https://www.conventionalcommits.org): `feat`, `fix`, `docs`, `test`,

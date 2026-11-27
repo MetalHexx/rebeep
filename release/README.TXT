@@ -82,9 +82,7 @@ ReBeep loads on every boot.
 
        MD C:\REBEEP
        COPY A:\*.* C:\REBEEP
-       MD C:\REBEEP\FACTORY
-       MD C:\REBEEP\FACTORY\PATCHES
-       COPY A:\FACTORY\PATCHES\*.* C:\REBEEP\FACTORY\PATCHES
+       XCOPY A:\FACTORY C:\REBEEP\FACTORY\ /S
 
   3. Add the ReBeep entry. With no boot menu yet, make CONFIG.SYS look
      like this. Move your own HIMEM.SYS and EMM386.EXE lines into
@@ -165,7 +163,7 @@ JEMMEX.EXE in CONFIG.SYS. If Jemm is not in C:\JEMM, set RBJEMM first:
   /F      faithful square-wave voice (default)
   /P:name a patch: FOLDER\NAME, or NAME from USER then FACTORY (the four that
           come with ReBeep are ORGAN, FLUTE, BRASS and BELL)
-  /G:name a game profile, PROFILES\name: its rules pick the patch
+  /G:name a game profile, yours or one that comes with ReBeep
   /V:n    volume, 0 to 15 (default 12)
   /L:n    notes below 20 Hz: 0 silent (default), 1 played
   /R:n    sounds it can't translate: 1 speaker (default), 0 muted
@@ -183,9 +181,21 @@ can't use is a message, and the faithful voice plays. Give one of /F, /P:
 and /G: at a time; on a loaded copy, /P: or /F ends a profile.
 
 A game profile gives each part of a game its own patch, told apart by what
-the game sends the speaker. None comes with ReBeep yet: you write your own.
-REBEEP /G:MYGAME loads PROFILES\MYGAME\MYGAME.RBG and the patches beside
-it. A profile is a text file such as this one:
+the game sends the speaker. ReBeep comes with one, for Grand Prix Circuit:
+
+  REBEEP /G:GPC
+
+/G:name loads PROFILES\name\name.RBG and the patches beside it. With no
+such file, it loads the one that comes with ReBeep, in FACTORY\PROFILES.
+INSTALL replaces those on an update, so to change one, copy its whole
+folder into PROFILES and change the copy, which then wins:
+
+  MD C:\REBEEP\PROFILES
+  MD C:\REBEEP\PROFILES\GPC
+  COPY C:\REBEEP\FACTORY\PROFILES\GPC\*.* C:\REBEEP\PROFILES\GPC
+
+A profile you write goes in its own folder in PROFILES, such as
+PROFILES\MYGAME. Its text file looks like this:
 
   [PROFILE]
   FORMAT=1
@@ -265,7 +275,8 @@ Esc steps back.
 
 Patches are .RBP text files in banks, which are folders:
 
-  FACTORY   ORGAN, FLUTE, BRASS and BELL. INSTALL replaces it on an update.
+  FACTORY   ORGAN, FLUTE, BRASS and BELL, in FACTORY\PATCHES beside
+            RBSTUDIO.EXE. INSTALL replaces them on an update.
   USER      your patches, and where the Save dialog starts. A USER patch
             named like a factory one overrides it for /P:name.
   banks     any other folder in the patches folder, such as HEXX. Use them
@@ -282,7 +293,7 @@ overwrites it. SAMPLES\RBSTUDIO.CFG is a commented example to copy:
 
   PATCHES=D:\MYSOUNDS   where USER and the banks are (default: PATCHES)
   PATCH=FLUTE          the patch REBEEP loads with neither /F nor /P:
-  PROFILES=D:\MYGAMES  where the game profiles are (default: PROFILES)
+  PROFILES=D:\MYGAMES  where your game profiles are (default: PROFILES)
 
 RBSTUDIO.LOG, beside the program, records each run and every patch file it
 left out, and why.

@@ -37,7 +37,7 @@ the gap to the nearest count of another part. `near` looks a 32nd either side un
 ## Write the profile
 
 - The format is [the file](../../../../docs/guide/profiles.md#the-file). For a worked example,
-  open a lab profile from the [case studies](case-studies.md).
+  open a profile from the [case studies](case-studies.md).
 - The most specific rule first, the catch-all last: of two rules that finish on one event, the one
   higher in the file wins.
 - A `NAME=` on each rule and effect, in the user's words, and an `ID=` on each rule a `WHILE=`

@@ -18,7 +18,7 @@ under the name the profile gives it, not into the lab's patch set.
 
 - The format: [patches](../../../../docs/architecture/how-it-works.md#patches), and the comment at
   the top of every `.RBP`, which names its twelve numbers. Start from the factory patch closest to
-  the sound, or a lab profile's patch, and change a few numbers.
+  the sound, or a profile's patch, and change a few numbers.
 - In FM, `OP1` is the modulator: it shapes the tone. `OP2` is the carrier: it is what you hear.
 - **`SL` and `OL` are turned round from the chip's:** in an `.RBP`, bigger is louder. Every other
   number is the chip's own: a bigger `AR`, `DR` or `RR` is faster.

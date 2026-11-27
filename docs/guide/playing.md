@@ -48,23 +48,23 @@ On a loaded copy, an option changes only what it names, so the other settings st
 
 A game profile gives each part of a game its own patch, such as one for the title music, another
 for the menus and others for sound effects. ReBeep tells the parts apart by what the game sends
-the speaker, and changes the patch as you play. A profile is a folder in `PROFILES`, in ReBeep's
-folder, holding a text file and its patches. No profile comes with ReBeep yet: to make one, see
-[writing a game profile](profiles.md).
+the speaker, and changes the patch as you play. A profile is a folder holding a text file and its
+patches. ReBeep comes with one, `GPC`, for [Grand Prix Circuit](compatibility.md#grand-prix-circuit);
+to change it or make your own, see [writing a game profile](profiles.md).
 
-Load a profile by its folder's name, before you start the game:
+Load a profile by its name, before you start the game:
 
 ```
-REBEEP /G:MYGAME
+REBEEP /G:GPC
 ```
 
-You should see `Profile MYGAME picks the patch from what the game plays. /P: or /F ends it.`
+You should see `Profile GPC picks the patch from what the game plays. /P: or /F ends it.`
 
 | To | Do this |
 |---|---|
-| Load it for one game only | `RBPLAY GAME.EXE /G:MYGAME` |
+| Load it for one game only | `RBPLAY GAME.EXE /G:GPC` |
 | See which profile is on | `REBEEP /S` |
-| Change to another | `REBEEP /G:OTHER` |
+| Change to another | `REBEEP /G:MYGAME` |
 | End it | `REBEEP /P:ORGAN`, or `REBEEP /F` |
 
 A profile lasts until you end it, unload ReBeep or restart the PC. Give `/G:` without `/P:` or

@@ -686,7 +686,7 @@ parse_options:
         mov     bx, OPT_P
         jmp     .flag
 
-.profile:                               ; /G:NAME, the profile in PROFILES\NAME
+.profile:                               ; /G:NAME, a game profile (profile_select)
         call    getc
         cmp     al, ':'
         jne     .bad
@@ -1169,7 +1169,7 @@ msg_help        db      REBEEP_NAME, " - plays PC-speaker beeps on a Sound Blast
 %endif
                 db      "  /F       faithful square-wave voice (default)", 13, 10
                 db      "  /P:name  a patch: FOLDER\NAME, or NAME from USER then FACTORY", 13, 10
-                db      "  /G:name  a game profile, PROFILES\name: its rules pick the patch", 13, 10
+                db      "  /G:name  a game profile, yours or one that comes with ReBeep", 13, 10
                 db      "  /V:n     volume 0-15 (default 12)", 13, 10
                 db      "  /L:n     notes below 20 Hz: 0 silent (default), 1 played", 13, 10
                 db      "  /R:n     sounds it can't translate: 1 speaker (default), 0 muted", 13, 10

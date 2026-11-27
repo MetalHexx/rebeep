@@ -14,7 +14,7 @@
 | `hotkey/kbd.asm` | The `INT 09h` hook for the Ctrl+Alt keys |
 | `startup/` | `main.asm`: options, checks, load, change, unload, messages. `patch.asm`: the `.RBP` parser. `files.asm`: program folder, `RBSTUDIO.CFG`, name rules, patch lookup, an INT 24h fail handler (`crit_on`/`crit_off`) around the file reads. `profile.asm`: `/G:`, the `.RBG` parser and loader. `opldet.asm`: `opl_detect`. `dump.asm`: `REBEEPD /D`. All freed when going resident |
 | `include/` | `speaker.inc`, `opl.inc`: ports and registers. [amis.inc](include/amis.inc): the AMIS functions and `RB_STATE` layout. [profile.inc](include/profile.inc): the profile table and its limits. [exitcode.inc](include/exitcode.inc): the exit codes. `trace.inc`: REBEEPD's record. None is restated elsewhere |
-| `studio/` · `factory/` | `RBSTUDIO.EXE`, ReBeep Studio (the configuration program), in C: rules in [studio/AGENTS.md](studio/AGENTS.md) · the defaults ReBeep ships: `patches/`, the factory patches |
+| `studio/` · `factory/` | `RBSTUDIO.EXE`, ReBeep Studio (the configuration program), in C: rules in [studio/AGENTS.md](studio/AGENTS.md) · the defaults ReBeep ships: `patches/`, the factory patches, and `profiles/<NAME>/`, the game profiles (each wired into `targets.json` and `INSTALL.BAT`) |
 | `diag/` | `qpichk.asm` → `QPICHK.COM`, reports whether QPIEMU is up (run by `BOOT.BAT`). `fdboot.asm` → `FDBOOT.BIN`, the release floppy's boot sector: hands the boot to C:, asks for a key only when C: has none |
 
 ## Rules

@@ -18,9 +18,12 @@ pull request adding a row.
 ### Grand Prix Circuit
 
 ```
-REBEEP /P:ORGAN /R:0
+REBEEP /G:GPC /R:0
 ```
 
+- **`/G:GPC`** is ReBeep's [game profile](playing.md#game-profiles) for it: the intro, the menus,
+  the engine, the start lights and the tire sounds each get their own voice. For one voice
+  throughout, use a patch instead, such as `/P:ORGAN`.
 - **Set everything before you start it.** The game takes over the keyboard, so the hotkeys do
   nothing inside it.
 - **`/R:0`** removes the clicks at the intro and at each screen change. The music loses its drum

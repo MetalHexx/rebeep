@@ -1,8 +1,7 @@
 # Writing a game profile
 
 A game profile gives each part of a game its own patch: an FM voice kept in a small file, `.RBP`.
-This page is for writing one. To load one, see [playing](playing.md#game-profiles). No profile
-comes with ReBeep yet.
+This page is for writing and changing one. To load one, see [playing](playing.md#game-profiles).
 
 ## The folder
 
@@ -19,6 +18,26 @@ C:\REBEEP\PROFILES\MYGAME\
 
 Names of profiles and patches are up to 8 letters, digits, `-` and `_`, and not only digits. To
 keep profiles elsewhere, set `PROFILES=` in [the settings file](studio.md#the-settings-file).
+
+## Change one that comes with ReBeep
+
+ReBeep's own profiles are in `FACTORY\PROFILES`, in ReBeep's folder: so far `GPC`, for Grand Prix
+Circuit. `INSTALL` replaces them on every update, so change a copy of the whole folder, in your
+`PROFILES`. Skip an `MD` for a folder you have:
+
+```
+MD C:\REBEEP\PROFILES
+MD C:\REBEEP\PROFILES\GPC
+COPY C:\REBEEP\FACTORY\PROFILES\GPC\*.* C:\REBEEP\PROFILES\GPC
+```
+
+From then on `REBEEP /G:GPC` loads your copy. Edit its `GPC.RBG` in a text editor, or copy a voice
+of your own over one of its patches.
+
+- ReBeep uses your folder when it holds `GPC.RBG`, and then takes every patch from it. A file your
+  copy lacks isn't taken from `FACTORY`.
+- To go back, delete your copy: `DEL C:\REBEEP\PROFILES\GPC\*.*`, answer `Y`, then
+  `RD C:\REBEEP\PROFILES\GPC`.
 
 ## How a profile follows a game
 
@@ -187,8 +206,8 @@ Want to know how it works inside? See [how it works](../architecture/how-it-work
 
 ## Help make profiles
 
-We're looking for contributors to help create profiles for other games. If you've made one, or want
-to, share it in either way:
+We're looking for contributors to help create profiles for other games. A profile that's merged
+comes with ReBeep, as `GPC` does. If you've made one, or want to, share it in either way:
 
 - Open a pull request, as [contributing](../lab/contributing.md) describes.
 - Tell us on [Discord](https://discord.gg/4wkPZnCfz), or open a

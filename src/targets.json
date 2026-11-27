@@ -65,6 +65,34 @@
     {
       "source": "factory/patches/BELL.RBP",
       "deploy": "REBEEP/FACTORY/PATCHES"
+    },
+    {
+      "source": "factory/profiles/GPC/GPC.RBG",
+      "deploy": "REBEEP/FACTORY/PROFILES/GPC"
+    },
+    {
+      "source": "factory/profiles/GPC/ENGINE.RBP",
+      "deploy": "REBEEP/FACTORY/PROFILES/GPC"
+    },
+    {
+      "source": "factory/profiles/GPC/FALLBK.RBP",
+      "deploy": "REBEEP/FACTORY/PROFILES/GPC"
+    },
+    {
+      "source": "factory/profiles/GPC/INTRO.RBP",
+      "deploy": "REBEEP/FACTORY/PROFILES/GPC"
+    },
+    {
+      "source": "factory/profiles/GPC/LIGHTS.RBP",
+      "deploy": "REBEEP/FACTORY/PROFILES/GPC"
+    },
+    {
+      "source": "factory/profiles/GPC/MENU.RBP",
+      "deploy": "REBEEP/FACTORY/PROFILES/GPC"
+    },
+    {
+      "source": "factory/profiles/GPC/SQUEAL.RBP",
+      "deploy": "REBEEP/FACTORY/PROFILES/GPC"
     }
   ]
 }

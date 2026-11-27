@@ -46,6 +46,8 @@ Make `.claude/skills/rebeep-dev/profiles/<SHORT>/` with `<SHORT>.RBG` and one pa
 - **The file starts small:** `[PROFILE]`, `FORMAT=1`, a `NAME=` and `DEFAULT=FALLBK`. The rules
   come in stage 3.
 - The lab's naming and line rules: rebeep-dev's [profiles.md](../../rebeep-dev/references/profiles.md).
+- To change a profile ReBeep comes with, start from its folder
+  ([ship.md](ship.md#changing-a-shipped-profile)).
 
 ## Pitfalls
 

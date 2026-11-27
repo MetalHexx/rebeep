@@ -12,6 +12,9 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 - **Sound effects in patches of their own:** a profile can give a game's effects, such as a race's
   start lights or a tire squeal, their own patch, taking turns with the engine or the music as in the game
   ([game profiles](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/profiles.md)).
+- **A profile for Grand Prix Circuit** comes with ReBeep: `REBEEP /G:GPC` gives the intro, the menus,
+  the engine, the start lights and the tire sounds their own voices
+  ([Grand Prix Circuit](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/compatibility.md#grand-prix-circuit)).
 
 ### Changed
 
