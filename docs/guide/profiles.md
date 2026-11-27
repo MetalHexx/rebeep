@@ -184,3 +184,20 @@ patch can't be used, its rules play the faithful voice, and its effects are left
 never matches gives no message: check its numbers and the order of its steps.
 
 Want to know how it works inside? See [how it works](../architecture/how-it-works.md#game-profiles).
+
+## Help make profiles
+
+We're looking for contributors to help create profiles for other games. If you've made one, or want
+to, share it in either way:
+
+- Open a pull request, as [contributing](../lab/contributing.md) describes.
+- Tell us on [Discord](https://discord.gg/4wkPZnCfz), or open a
+  [game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.yml) and attach
+  your profile's folder as a `.zip`.
+
+Send only the profile and its patches, never the game's files.
+
+**If your profile needs a change to ReBeep itself,** please talk it over with the maintainer first,
+in a [feature idea](https://github.com/MetalHexx/rebeep/issues/new?template=feature-idea.yml) or on
+Discord, or justify the change in your pull request's description. A change must work for any game:
+ReBeep has no code for one game in particular.
