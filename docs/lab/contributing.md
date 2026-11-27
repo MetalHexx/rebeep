@@ -74,8 +74,9 @@ development only and never ships. The steps and the log format are in the `rebee
 
 A profile in `src/factory/profiles/<NAME>/` comes with ReBeep: merged means shipped. To add one,
 list its files in `src/targets.json` and add its folder to `release/INSTALL.BAT`, as for `GPC`;
-`rebeep test run --suite tools` names anything left out. The `game-profile` skill, below, makes one
-with you, and its [ship it](../../.claude/skills/game-profile/references/ship.md) page has every step.
+`rebeep test run --suite tools` names anything left out, and `--suite interpreter` loads each profile
+as `/G:` does. The `game-profile` skill, below, makes one with you, and its
+[ship it](../../.claude/skills/game-profile/references/ship.md) page has every step.
 
 ## Commits
 

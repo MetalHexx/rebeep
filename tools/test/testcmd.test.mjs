@@ -18,7 +18,7 @@ fs.copyFileSync(args[args.length - 1], args[args.indexOf('-o') + 1]);
 
 /**
  * A fake DOSBox-X: prints a line naming its command, appends one line to FAKE_DOSBOX_LOG (its arguments, the SDL drivers
- * it got and the factory patches in the folder mounted as C:), then copies FAKE_DOSBOX_RESULT_FILE into that folder as
+ * it got and the files under FACTORY in the folder mounted as C:), then copies FAKE_DOSBOX_RESULT_FILE into that folder as
  * RESULT.TXT, which is what a DOS program would have written. With FAKE_DOSBOX_GATE, a run of the program FAKE_DOSBOX_HOLD
  * names finishes only after a run of another program has; if none does in 15 s, it writes no result.
  */
@@ -37,15 +37,33 @@ if (held) {
   if (!fs.existsSync(gate)) result = '';
 }
 console.log('dosbox ran ' + command);
-const factory = path.join(dir, 'FACTORY', 'PATCHES');
+const root = path.join(dir, 'FACTORY');
+const factory = fs.existsSync(root)
+  ? fs.readdirSync(root, { recursive: true }).filter((n) => fs.statSync(path.join(root, n)).isFile())
+  : [];
 fs.appendFileSync(process.env.FAKE_DOSBOX_LOG, JSON.stringify({
   args,
   drivers: [process.env.SDL_VIDEODRIVER, process.env.SDL_AUDIODRIVER],
-  factory: fs.existsSync(factory) ? fs.readdirSync(factory).join(',') : 'none',
+  factory: factory.map((n) => n.split(path.sep).join('/')).sort().join(','),
 }) + '\\n');
 if (result) fs.copyFileSync(result, path.join(dir, 'RESULT.TXT'));
 if (gate && !held) fs.writeFileSync(gate, '');
 `;
+
+/** A repo's factory defaults for the fake suites, one patch and one profile, and what a test program finds of them. */
+const FACTORY_SOURCES = {
+  'factory/patches/ORGAN.RBP': 'REBEEP/FACTORY/PATCHES',
+  'factory/profiles/DEMO/DEMO.RBG': 'REBEEP/FACTORY/PROFILES/DEMO',
+};
+const FACTORY_STAGED = 'PATCHES/ORGAN.RBP,PROFILES/DEMO/DEMO.RBG';
+const factoryFiles = Object.entries(FACTORY_SOURCES).map(([source, deploy]) => ({ source, deploy }));
+const putFactory = (root) => {
+  for (const source of Object.keys(FACTORY_SOURCES)) {
+    const file = path.join(root, 'src', source);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `contents of ${path.basename(file)}`);
+  }
+};
 
 /** The JSON lines a fake tool appended to `file`; none when it never ran. */
 const logLines = (file) =>
@@ -218,12 +236,8 @@ describe('test run --suite interpreter, with fake NASM and DOSBox-X', () => {
     fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'x', version: '0.1.0' }));
     fs.writeFileSync(path.join(root, 'tests', 'interpreter', 't_add.asm'), 'org 100h\n');
     fs.writeFileSync(path.join(root, 'tests', 'interpreter', 't_sub.asm'), 'org 100h\n');
-    fs.mkdirSync(path.join(root, 'src', 'factory', 'patches'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'src', 'factory', 'patches', 'ORGAN.RBP'), 'patch');
-    fs.writeFileSync(
-      path.join(root, 'src', 'targets.json'),
-      JSON.stringify({ targets: [], files: [{ source: 'factory/patches/ORGAN.RBP', deploy: 'REBEEP/FACTORY/PATCHES' }] }),
-    );
+    putFactory(root);
+    fs.writeFileSync(path.join(root, 'src', 'targets.json'), JSON.stringify({ targets: [], files: factoryFiles }));
   });
 
   after(() => {
@@ -263,13 +277,13 @@ describe('test run --suite interpreter, with fake NASM and DOSBox-X', () => {
     }
   });
 
-  test('stages the factory patches as FACTORY/PATCHES beside each program', () => {
+  test('stages the factory patches and profiles under FACTORY beside each program', () => {
     const { result, calls } = runInterp('PASS add\nDONE 1\n');
     assert.equal(result.code, 0, result.stderr);
-    for (const call of calls) assert.equal(call.factory, 'ORGAN.RBP');
+    for (const call of calls) assert.equal(call.factory, FACTORY_STAGED);
     for (const name of ['T_ADD', 'T_SUB']) {
-      const file = path.join(root, 'build', 'tests', name, 'FACTORY', 'PATCHES', 'ORGAN.RBP');
-      assert.equal(fs.readFileSync(file, 'utf8'), 'patch');
+      const file = path.join(root, 'build', 'tests', name, 'FACTORY', 'PROFILES', 'DEMO', 'DEMO.RBG');
+      assert.equal(fs.readFileSync(file, 'utf8'), 'contents of DEMO.RBG');
     }
   });
 
@@ -344,17 +358,11 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
     put('tests/studio/testlib.c', '/* library */\n');
     put('tests/studio/testlib.h', '/* header */\n');
     for (const name of ['video.c', 'main.c', 'dos.c']) put(`src/studio/${name}`, '/* module */\n');
-    put('src/factory/patches/ORGAN.RBP', 'patch');
+    putFactory(root);
     put('src/studio/data/SPLASH.ANS', 'art');
     put(
       'src/targets.json',
-      JSON.stringify({
-        targets: [],
-        files: [
-          { source: 'studio/data/SPLASH.ANS', deploy: 'REBEEP' },
-          { source: 'factory/patches/ORGAN.RBP', deploy: 'REBEEP/FACTORY/PATCHES' },
-        ],
-      }),
+      JSON.stringify({ targets: [], files: [{ source: 'studio/data/SPLASH.ANS', deploy: 'REBEEP' }, ...factoryFiles] }),
     );
   });
 
@@ -408,7 +416,7 @@ describe('test run --suite studio, with fake Open Watcom and DOSBox-X', () => {
         assert.ok(fs.existsSync(path.join(folder, file)), `${name}: ${file}`);
       }
     }
-    for (const call of calls) assert.equal(call.factory, 'ORGAN.RBP', 'only the factory files are staged');
+    for (const call of calls) assert.equal(call.factory, FACTORY_STAGED, 'only the factory files are staged');
   });
 
   test('a SUITE: OPL2 program runs a second time as an OPL2 card with /OPL2; others run once', () => {

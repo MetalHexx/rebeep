@@ -19,8 +19,8 @@ const ANSI = /\x1b\[[0-9;]*[A-Za-z]/g;
 const OPL2_MARKER = /^\s*\/\*\s*SUITE:\s*OPL2\s*\*\//;
 /** A first line of `SUITE: MACHINES` runs the program once under each of `DISPLAY_MACHINES` (its argument is the machine's name), and not under the default machine. */
 const MACHINES_MARKER = /^\s*\/\*\s*SUITE:\s*MACHINES\s*\*\//;
-/** The factory patches' data-file folder, staged at the same place beside the test programs. */
-const FACTORY_DEPLOY = 'REBEEP/FACTORY/PATCHES';
+/** The data-file folders of the factory defaults, patches and game profiles, start with this. */
+const FACTORY_DEPLOY = 'REBEEP/FACTORY/';
 /** The data-file folder whose files sit beside RBSTUDIO.EXE, as they do beside the installed program. */
 const PROGRAM_DEPLOY = 'REBEEP';
 const SCREEN_FILE = /^([a-z0-9-]+)\.(vga|mono)\.scr$/;
@@ -206,12 +206,16 @@ async function runInterpreter(ctx, repo, { jobs }) {
   return { suite: 'interpreter', ok: results.every((r) => r.ok), programs: results };
 }
 
-/** Stages the shipped factory patches as `FACTORY\PATCHES\` in `out`, so a test program reads what players get. */
+/**
+ * Stages the shipped factory defaults, patches and game profiles, as `FACTORY\` in `out`, in the folders a player gets
+ * them in, so a test program reads what players read.
+ */
 function stageFactory(repo, out) {
-  const folder = path.join(out, 'FACTORY', 'PATCHES');
-  fs.mkdirSync(folder, { recursive: true });
   for (const file of loadDataFiles(repo)) {
-    if (file.deploy === FACTORY_DEPLOY) fs.copyFileSync(file.from, path.join(folder, file.name));
+    if (!file.deploy.startsWith(FACTORY_DEPLOY)) continue;
+    const folder = path.join(out, ...file.deploy.split('/').slice(1));
+    fs.mkdirSync(folder, { recursive: true });
+    fs.copyFileSync(file.from, path.join(folder, file.name));
   }
 }
 
@@ -244,7 +248,7 @@ function warnCompiler(ctx, name, stderr) {
 
 /**
  * Builds the screen check: compiles RBSTUDIO.EXE as `build run` does, once, into `screens/`, then gives the default
- * machine and each of `DISPLAY_MACHINES` a folder there with a copy of the program, its art, the factory patches and one
+ * machine and each of `DISPLAY_MACHINES` a folder there with a copy of the program, its art, the factory files and one
  * batch file that dumps every reference screen in one DOSBox-X start (`/DUMP:<screen>`, with `/VIEW:MONO` for the mono
  * views). Returns one group of runs a machine. A screen the program does not draw exits with `UNKNOWN_SCREEN_CODE` and
  * writes nothing: that reference fails the run.
@@ -277,6 +281,7 @@ async function buildScreens(ctx, repo, { watcom, dosbox, version, out, reference
   ]);
   return [null, ...DISPLAY_MACHINES].map((machine) => {
     const folder = path.join(screensDir, machine ?? 'default');
+    fs.mkdirSync(folder, { recursive: true });
     stageFactory(repo, folder);
     stageProgramData(repo, folder);
     fs.copyFileSync(program, path.join(folder, 'RBSTUDIO.EXE'));

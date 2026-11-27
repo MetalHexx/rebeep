@@ -30,7 +30,7 @@
 - `interpreter/T_PATCH.ASM` (`T_PATCH.COM`) covers the startup part's `.RBP` parser, name rules, `RBSTUDIO.CFG` reader,
   patch lookup and INT 24h handler, on text buffers and on `FACTORY\PATCHES\` (the suite stages the factory files). Its cases are `patch.c`'s: both parsers take and refuse the same files.
 - `interpreter/T_RULES.ASM` covers a game profile's rules (`engine/rules.asm`, `WHILE` too) and the patch switch; `T_FX.ASM` its effects (`engine/fx.asm`) through
-  `oplsink.inc`, T_OPL's recording sink: the turns between the voices, 2-OP and 4-OP, no stray register, the main voice current after each call, at most 22 bytes of stack; `T_PROF.ASM` the `.RBG` parser (`startup/profile.asm`) on text buffers: its numbers, reasons and limits.
+  `oplsink.inc`, T_OPL's recording sink: the turns between the voices, 2-OP and 4-OP, no stray register, the main voice current after each call, at most 22 bytes of stack; `T_PROF.ASM` the `.RBG` parser (`startup/profile.asm`) on text buffers: its numbers, reasons and limits. `T_FACT.ASM` loads every staged profile in `FACTORY\PROFILES\` as `/G:` does, and fails, naming it, on a profile or patch that can't be used.
 - Listening check: `T_OPL /L` plays the faithful voice, then the four factory records and, on an OPL3, a 4-OP patch, a second each. Run `build/tests/T_OPL/T_OPL.COM /L`
   in DOSBox-X with sound on, once per `oplmode` (`-set "sblaster oplmode=opl2"`, then `opl3`; one space-separated argument).
 - `RBTEST.COM` plays speaker cases for listening, runs PASS/FAIL checks (with `/R`, against ReBeep's state through AMIS), probes free

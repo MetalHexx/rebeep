@@ -13,7 +13,9 @@ A profile in `src/factory/profiles/<SHORT>/` comes with ReBeep: `INSTALL` puts i
 3. List each file in `src/targets.json` `files`, deployed to `REBEEP/FACTORY/PROFILES/<SHORT>`.
 4. In `release/INSTALL.BAT`, make, clear and copy the folder, as for `GPC`, with a label of its
    own (MS-DOS reads 8 characters of it).
-5. `rebeep test run --suite tools`: `factory.test.mjs` names anything left out.
+5. `rebeep test run --suite tools`: `factory.test.mjs` names anything left out. Then
+   `--suite interpreter`: `T_FACT` loads every factory profile as `/G:` does, and names a profile
+   or patch ReBeep can't use. CI runs both on a pull request.
 6. Docs: a `CHANGELOG.md` line, the game in [compatibility.md](../../../../docs/guide/compatibility.md),
    and the list in
    [profiles.md](../../../../docs/guide/profiles.md#change-one-that-comes-with-rebeep).

@@ -209,7 +209,8 @@ Want to know how it works inside? See [how it works](../architecture/how-it-work
 We're looking for contributors to help create profiles for other games. A profile that's merged
 comes with ReBeep, as `GPC` does. If you've made one, or want to, share it in either way:
 
-- Open a pull request, as [contributing](../lab/contributing.md) describes.
+- Open a pull request, as [contributing](../lab/contributing.md) describes. Its checks load every
+  profile that comes with ReBeep, and fail on one ReBeep can't use.
 - Tell us on [Discord](https://discord.gg/4wkPZnCfz), or open a
   [game report](https://github.com/MetalHexx/rebeep/issues/new?template=game-report.yml) and attach
   your profile's folder as a `.zip`.
