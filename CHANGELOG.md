@@ -4,10 +4,13 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-27
+
 ### Added
 
 - **Game profiles:** `REBEEP /G:name` gives each part of a game its own patch, such as one for the
-  title music and another for the menus, told apart by what the game sends the speaker
+  title music and another for the menus. A profile is a text file for now: a profile editor, the
+  Game Profiles screen in ReBeep Studio, is coming next
   ([playing](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/playing.md#game-profiles)).
 - **Sound effects in patches of their own:** a profile can give a game's effects, such as a race's
   start lights or a tire squeal, their own patch, taking turns with the engine or the music as in the game
@@ -20,6 +23,8 @@ Player-facing changes to ReBeep, in [Keep a Changelog](https://keepachangelog.co
 
 - **The factory patches moved** to `FACTORY\PATCHES` in ReBeep's folder. `INSTALL` moves them on an
   update, and `/P:` names stay the same ([banks](https://github.com/MetalHexx/rebeep/blob/main/docs/guide/studio.md#banks)).
+- **ReBeep takes a little more memory:** 5 KB once loaded, up from 3.6 KB, with or without a profile
+  ([how it works](https://github.com/MetalHexx/rebeep/blob/main/docs/architecture/how-it-works.md#game-profiles)).
 
 ### Fixed
 
