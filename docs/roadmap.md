@@ -20,6 +20,11 @@ the race and its effects get their own ([game profiles](guide/profiles.md)).
 **A project website**, on GitHub Pages at <https://metalhexx.github.io/rebeep/>: what ReBeep is,
 what it runs on, and how to get it. It shows the latest release on its own.
 
+## Next
+
+**The profile editor.** ReBeep Studio's Game Profiles screen, to make and change a game profile
+without writing its file by hand. It is on the studio's main menu, marked coming soon.
+
 ## Ideas being considered
 
 | Idea | What it would bring |
@@ -30,7 +35,7 @@ what it runs on, and how to get it. It shows the latest release on its own.
 | Jemm in the package | One download instead of two, if Jemm's license allows it |
 | Hotkeys in every game | Catching the keys at the keyboard's port, so games that own the keyboard can't block them |
 | More voices | A larger set of factory patches, beyond the four that ship now |
-| More from game profiles | Profiles for more games, the game recognized on its own, settings such as the volume and how low notes play, and the studio's profile screen, marked coming soon on its menu |
+| More from game profiles | Profiles for more games, the game recognized on its own, and settings such as the volume and how low notes play |
 | Digital sound for the rest | Clicks and noise played through the Sound Blaster's digital audio instead of the speaker |
 | XT and 286 machines | A simpler way to catch the beeps on the machines most speaker games were written for |
 | MIDI and other sound chips | Speaker music on a MIDI synth, or on a Tandy-style tone chip |

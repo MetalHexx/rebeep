@@ -7,7 +7,7 @@ What ReBeep has been tried on, the settings each game wants, and what doesn't mi
 | Game | DOS | Machine | Result |
 |---|---|---|---|
 | Grand Prix Circuit | MS-DOS 6.22 | 86Box, Pentium MMX 233, Sound Blaster Vibra 16S | Engine, effects and music play on the sound card in every voice. At the default `/R:1` the music's drum clicks and each screen change click on the PC speaker, as they do without ReBeep; `REBEEP /R:0` mutes them |
-| Grand Prix Circuit | MS-DOS 7.1 (Windows 98) | Real PC, FIC PA-2010 (Socket 7), Sound Blaster Vibra 16 | With `REBEEP /P:ORGAN /R:0`, loaded high under JemmEx: a practice race and a full race to the win screen, with no crash and no click |
+| Grand Prix Circuit | MS-DOS 7.1 (Windows 98) | Real PC, FIC PA-2010 (Socket 7), Sound Blaster Vibra 16 | With `REBEEP /P:ORGAN /R:0`, loaded high under JemmEx: a practice race and a full race to the win screen, with no crash and no click. With `REBEEP /G:GPC /R:0`, the profile's voices play through a full race |
 | Grand Prix Circuit | FreeDOS 1.4 | 86Box, Pentium MMX 233 | The game hangs on a black screen, with or without ReBeep and Jemm. Use MS-DOS |
 | Space Quest I | MS-DOS 7.1 (Windows 98) | Real PC, FIC PA-2010 (Socket 7), Sound Blaster Vibra 16 | Works |
 
