@@ -8,11 +8,11 @@ It records, into a resident buffer of 1024 records (`REBEEP_TRACE` in `src/targe
 
 - every **speaker step**: a write to the real `61h` that changes bit 1, or the gate while bit 1 is
   on;
-- every **OPL note** the game's writes start or stop.
+- every **OPL note** the game's writes start or stop;
+- every rule of a **game profile** (`/G:`) that completes ([profiles.md](profiles.md)).
 
-Each record carries a timestamp and the game's last 8 byte writes. A full buffer keeps the
-earliest records and counts the rest. `REBEEPD /D` appends the buffer to `D:\REBEEP\RBTRACE.TXT` and
-empties it.
+Each record carries a timestamp and the game's last 8 byte writes. A full buffer keeps the earliest
+records and counts the rest. `REBEEPD /D` appends the buffer to `D:\REBEEP\RBTRACE.TXT` and empties it.
 
 ## A session with the user
 
@@ -39,8 +39,8 @@ ran. Each record is one line; every number is hex:
 | seq | The game's byte OUTs to 42h/43h/61h so far (`RBS_TRAPPED`) |
 | tick | BIOS tick count, low word. A game that reprograms the timer may stop it |
 | pit0 | PIT channel 0's count, latched: it counts down within each tick |
-| kind | `step61` forwarding the game's 61h write, `steppit` a 42h/43h write moved the mask, `steprb` ReBeep itself (an apply, the hotkey, `/OFF`), `noteon`, `noteoff` |
-| before>after | The real `61h` around a step (`00>00` for a note) |
+| kind | `step61` forwarding the game's 61h write, `steppit` a 42h/43h write moved the mask, `steprb` ReBeep itself (an apply, the hotkey, `/OFF`), `noteon`, `noteoff`, `rule` a profile's rule completed, `fallbk` its catch-all did |
+| before>after | The real `61h` around a step (`00>00` for a note); for `rule` and `fallbk`, the rule's number > its patch slot |
 | game61, mode, masked | The game's own `61h`, the interpreter mode (0 silent, 1 tone, 2 raw, 3 rest), the bit held clear |
 | divisor, flags | `RBS_DIVISOR` (valid in tone mode), `RBS_FLAGS` |
 | `pp=vv` x 8 | The game's last byte writes, oldest first: port low byte = value |

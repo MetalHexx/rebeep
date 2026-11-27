@@ -12,7 +12,7 @@
 | `lib/fat` | FAT images: FAT16 disks `buildImage`, FAT12 floppies `buildFloppy`, and `readImage`, `checkImage` for both |
 | `lib/release` · `lib/version` | Package tree, `CHANGES.TXT`, text checks · SemVer, changelog entries and rules, `checkVersions`, the bump's edit |
 | `lib/profiles` · `vmcfg` · `proc` | VM profiles, 86Box cfg rendering, launch and running-VM detection |
-| `lib/delivery` · `freedos` · `nasm` · `watcom` · `guard` | D: contents (targets, `targets.json` `files`, the lab patch set) · scripted FreeDOS C: · assembling · compiling C with Open Watcom (`format: "exe"` targets; the `studio` suite uses it too) · payload guard |
+| `lib/delivery` · `freedos` · `nasm` · `watcom` · `guard` | D: contents (targets, `targets.json` `files`, the lab patch set and game profiles) · scripted FreeDOS C: · assembling · compiling C with Open Watcom (`format: "exe"` targets; the `studio` suite uses it too) · payload guard |
 | `lib/suites` · `commands/vmtest` | RESULT.TXT judging and discovery for the `interpreter`, `studio` and `vm` suites · the `vm` suite: probe header, probe D:, boot-and-wait loop |
 | `lib/screens` | The studio suite's screen check: `parseScr` (a `tests/screens/*.scr` file), `dumpToCells` (a 4000-byte text-screen dump), `compareScreens` (glyph, bg, and fg unless a space) |
 | `lib/site` · `siteserve` · `sitedev` · `sitecheck` | The product page: build and release stamp · `/rebeep/` preview server · its live-reload script and the three-width preview · `site check` |

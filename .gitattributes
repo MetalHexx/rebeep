@@ -16,5 +16,6 @@ release/**/*.TXT text eol=crlf
 # Studio data files: never rewritten by git
 *.ANS binary
 *.RBP text eol=crlf
+*.RBG text eol=crlf
 *.CFG text eol=crlf
 tests/screens/*.scr text eol=lf

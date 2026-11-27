@@ -1,0 +1,29 @@
+; ReBeep game profile: Grand Prix Circuit, the intro and the menus.
+; A lab profile, for testing.
+; Each song, and the race, starts with the timer control word 43h=B6,
+; then its first note. That note plays about 20 counts high, so each
+; opening gets a tolerance of 40.
+[PROFILE]
+FORMAT=1
+; The bell plays until a rule picks a patch, and for any sound the
+; rules don't know.
+DEFAULT=FALLBK
+
+[RULE]
+; The intro song: Accolade, the title, DSI. The trophy screen too.
+STEP=CTRL B6h
+STEP=NOTE 1922h 40
+PATCH=INTRO
+
+[RULE]
+; The menu song: game type, track, car.
+STEP=CTRL B6h
+STEP=NOTE 1521h 40
+PATCH=MENU
+
+[RULE]
+; Anything else that starts this way, such as the race: the fallback,
+; logged as fallbk.
+STEP=CTRL B6h
+STEP=NOTE
+PATCH=FALLBK

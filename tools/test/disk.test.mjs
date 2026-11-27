@@ -226,6 +226,35 @@ describe('disk deploy', () => {
     assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
   });
 
+  test('puts the lab game profiles on D: as REBEEP/PROFILES/<NAME>, CRLF, only their .RBG and .RBP files', () => {
+    const labProfiles = path.join(s.tmp, 'lab-profiles');
+    const ctx = { ...context(), repo: { ...context().repo, labProfiles } };
+    fs.mkdirSync(path.dirname(s.paths.vm('mirror-msdos').dImg), { recursive: true });
+
+    assert.ok(!composeDelivery(ctx).files.some((f) => f.path.startsWith('REBEEP/PROFILES')), 'no folder, no profiles');
+
+    writeFile(path.join(labProfiles, 'gpc', 'gpc.rbg'), '[GAME]\nNAME=GPC\n');
+    writeFile(path.join(labProfiles, 'gpc', 'INTRO.RBP'), '[PATCH]\nFORMAT=1\n');
+    writeFile(path.join(labProfiles, 'gpc', 'README.md'), 'not a profile file');
+    writeFile(path.join(labProfiles, 'gpc', 'TOOLONGNAME.RBP'), 'x');
+    writeFile(path.join(labProfiles, 'X.RBG'), 'x');
+    writeFile(path.join(labProfiles, 'TOOLONGNAME', 'A.RBG'), 'x');
+    const delivery = composeDelivery(ctx);
+    assert.ok(delivery.warnings.some((w) => /TOOLONGNAME\.RBP/.test(w)), 'a file name that is not 8.3 is skipped with a warning');
+    assert.ok(delivery.warnings.some((w) => /PROFILES\/TOOLONGNAME/.test(w)), 'so is a profile folder whose name is not 8.3');
+
+    deployDisk(ctx, 'mirror-msdos');
+    const image = readD();
+    assert.equal(image.readFile('REBEEP/PROFILES/GPC/GPC.RBG').toString(), '[GAME]\r\nNAME=GPC\r\n');
+    assert.equal(image.readFile('REBEEP/PROFILES/GPC/INTRO.RBP').toString(), '[PATCH]\r\nFORMAT=1\r\n');
+    assert.deepEqual(
+      listed(image).filter((n) => n.startsWith('REBEEP/PROFILES')).sort(),
+      ['REBEEP/PROFILES', 'REBEEP/PROFILES/GPC', 'REBEEP/PROFILES/GPC/GPC.RBG', 'REBEEP/PROFILES/GPC/INTRO.RBP'],
+      'only the profile folder with its .RBG and .RBP files',
+    );
+    assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
+  });
+
   test('without JEMM fetched the disk is still built, with a warning', () => {
     fs.rmSync(path.join(s.paths.tool('jemm', '5.87'), '.rebeep-tool.json'));
     const ctx = context();
