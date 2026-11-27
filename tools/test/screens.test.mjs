@@ -221,12 +221,20 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
         },
       });
       const out = path.join(root, 'build', 'studio-tests');
+      const lines = (...parts) => fs.readFileSync(path.join(out, ...parts), 'utf8').split('\n').filter(Boolean);
       return {
         result,
-        staged: fs.existsSync(path.join(out, 'SPLASH.ANS')),
-        batch: fs.readFileSync(path.join(out, 'DUMPS.BAT'), 'utf8'),
-        machines: fs.readFileSync(path.join(out, 'MACHINES.LOG'), 'utf8').split('\n').filter(Boolean),
-        beta: fs.readFileSync(path.join(out, 'BETA.LOG'), 'utf8').split('\n').filter(Boolean),
+        folders: ['default', 'cga', 'ega', 'vgaonly'].map((machine) => {
+          const folder = path.join(out, 'screens', machine);
+          return {
+            machine,
+            program: fs.existsSync(path.join(folder, 'RBSTUDIO.EXE')),
+            art: fs.existsSync(path.join(folder, 'SPLASH.ANS')),
+            batch: fs.readFileSync(path.join(folder, 'DUMPS.BAT'), 'utf8'),
+            ran: lines('screens', machine, 'MACHINES.LOG'),
+          };
+        }),
+        beta: lines('T_BETA', 'BETA.LOG'),
       };
     } finally {
       removeDir(fakes);
@@ -238,16 +246,18 @@ describe('test run --suite studio: the screen check, with fake Open Watcom and D
     return (parsed.data ?? parsed.error?.data).suites[0].programs.filter((p) => p.program.startsWith('SCREENS'));
   };
 
-  test('matching dumps pass under the default machine and again under cga, ega and vgaonly, and the art is staged', () => {
-    const { result, staged, batch, machines } = run({ demo: 'match', later: 'match' });
+  test('matching dumps pass under the default machine and again under cga, ega and vgaonly, each in its own folder', () => {
+    const { result, folders } = run({ demo: 'match', later: 'match' });
     assert.equal(result.code, 0, result.stderr);
     const runs = screensOf(result);
     assert.deepEqual(runs.map((r) => r.program), ['SCREENS', 'SCREENS (cga)', 'SCREENS (ega)', 'SCREENS (vgaonly)']);
     for (const r of runs) assert.deepEqual(r.passed, ['demo.mono', 'demo.vga', 'later.vga'], r.program);
-    assert.deepEqual(machines, ['default', 'cga', 'ega', 'vgaonly']);
-    assert.ok(staged, 'SPLASH.ANS sits beside RBSTUDIO.EXE');
-    assert.match(batch, /RBSTUDIO \/DUMP:demo \/VIEW:MONO \/O:D00\.DMP/);
-    assert.match(batch, /RBSTUDIO \/DUMP:demo \/O:D01\.DMP/);
+    for (const { machine, program, art, batch, ran } of folders) {
+      assert.deepEqual(ran, [machine], 'one run in the folder, under its machine');
+      assert.ok(program && art, `${machine}: RBSTUDIO.EXE with SPLASH.ANS beside it`);
+      assert.match(batch, /RBSTUDIO \/DUMP:demo \/VIEW:MONO \/O:D00\.DMP/);
+      assert.match(batch, /RBSTUDIO \/DUMP:demo \/O:D01\.DMP/);
+    }
   });
 
   test('a program marked SUITE: MACHINES runs once under each display machine with its name, and not under the default', () => {

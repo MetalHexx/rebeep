@@ -21,9 +21,9 @@
 
 ## Rules
 
-- `rebeep test run --suite studio` compiles each `T_*.C` into `build/studio-tests/<NAME>.EXE` with the same `compileExe`
-  wrapper and flags as `build run`, with `tests/studio` on the include path, and runs it in DOSBox-X. The results use the
-  `RESULT.TXT` protocol in [../AGENTS.md](../AGENTS.md); a program returns `t_done()` from `main`.
+- `rebeep test run --suite studio` compiles each `T_*.C` into its own `build/studio-tests/<NAME>/` with the same `compileExe`
+  wrapper and flags as `build run`, with `tests/studio` on the include path, then runs them in DOSBox-X, up to 4 at once
+  (`--jobs`). The results use the `RESULT.TXT` protocol in [../AGENTS.md](../AGENTS.md); a program returns `t_done()` from `main`.
 - **Studio headers are included by path:** `#include "../../src/studio/video.h"`. `src/studio` is not on the include
   path (its `dos.h` would shadow `<dos.h>`), so a plain `"video.h"` does not resolve.
 - `t_case("name")` opens a case and closes the previous one; `t_check(ok, "what")` and `t_checkl(got, want, "what")`
@@ -39,10 +39,10 @@
   copies of the project's exports, which stay outside the repo, so a screen change edits its `.scr` first (see
   [src/studio/AGENTS.md](../../src/studio/AGENTS.md)). **The one version exception:** the reference screens and `SAMPLE_VERSION`
   in `sample.c` hold a fixed sample version, so a bump never changes them (`version check` skips only those).
-- **The screen check** is the last step of the studio suite: it compiles `RBSTUDIO.EXE` into `build/studio-tests/`, stages the
-  data files deployed under `REBEEP` beside it, runs one `DUMPS.BAT` (`RBSTUDIO /DUMP:<screen> [/VIEW:MONO] /O:Dnn.DMP` per
-  reference) in one DOSBox-X start, and compares each 4000-byte dump (`tools/lib/screens.mjs`) with its `.scr`, failing with
-  the first differing cells. A screen RBSTUDIO cannot draw exits 4 and fails the run. The whole set runs again under DOSBox-X's `machine=cga`, `ega` and `vgaonly` (reported as `SCREENS (cga)` and so on): the blink-off path differs on a CGA, so the attributes must still match. A dump cannot show whether blink is really off, so also look at a bright-background screen (the synth focus bar, the save prompt's buttons) in DOSBox-X under `machine=cga` and `ega`.
+- **The screen check**, reported last, compiles `RBSTUDIO.EXE` once, into `build/studio-tests/screens/`. A folder there per
+  machine, `<machine>/`, gets a copy, the data files deployed under `REBEEP` and one `DUMPS.BAT` (`RBSTUDIO /DUMP:<screen> [/VIEW:MONO] /O:Dnn.DMP` per
+  reference), run in one DOSBox-X start; each 4000-byte dump is compared (`tools/lib/screens.mjs`) with its `.scr`, failing with
+  the first differing cells. A screen RBSTUDIO cannot draw exits 4 and fails the run. The set runs under the default machine and again under DOSBox-X's `machine=cga`, `ega` and `vgaonly` (reported as `SCREENS (cga)` and so on): the blink-off path differs on a CGA, so the attributes must still match. A dump cannot show whether blink is really off, so also look at a bright-background screen (the synth focus bar, the save prompt's buttons) in DOSBox-X under `machine=cga` and `ega`.
 
 ## Pitfalls
 

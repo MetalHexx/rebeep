@@ -14,7 +14,7 @@
 ## Rules
 
 - Interpreter test programs are `tests/interpreter/T_*.ASM`. `rebeep test run --suite interpreter`
-  assembles each one and runs it headless in DOSBox-X.
+  assembles each into its own folder, `build/tests/<NAME>/`, then runs them headless in DOSBox-X, up to 4 at once (`--jobs`).
 - A DOS program's exit code never reaches the host, so each program writes `RESULT.TXT`: `PASS <case>`
   per passing case, `FAIL <case>: <detail>` per failure (any line starting with `FAIL` counts), and
   `DONE <n>` **last**, n the number of PASS and FAIL lines. A missing or miscounted `DONE`, any
@@ -31,7 +31,7 @@
   patch lookup and INT 24h handler, on text buffers and on `FACTORY\PATCHES\` (the suite stages the factory files). Its cases are `patch.c`'s: both parsers take and refuse the same files.
 - `interpreter/T_RULES.ASM` covers a game profile's rules (`engine/rules.asm`, `WHILE` too) and the patch switch; `T_FX.ASM` its effects (`engine/fx.asm`) through
   `oplsink.inc`, T_OPL's recording sink: the turns between the voices, 2-OP and 4-OP, no stray register, the main voice current after each call, at most 22 bytes of stack; `T_PROF.ASM` the `.RBG` parser (`startup/profile.asm`) on text buffers: its numbers, reasons and limits.
-- Listening check: `T_OPL /L` plays the faithful voice, then the four factory records and, on an OPL3, a 4-OP patch, a second each. Run `build/tests/T_OPL.COM /L`
+- Listening check: `T_OPL /L` plays the faithful voice, then the four factory records and, on an OPL3, a 4-OP patch, a second each. Run `build/tests/T_OPL/T_OPL.COM /L`
   in DOSBox-X with sound on, once per `oplmode` (`-set "sblaster oplmode=opl2"`, then `opl3`; one space-separated argument).
 - `RBTEST.COM` plays speaker cases for listening, runs PASS/FAIL checks (with `/R`, against ReBeep's state through AMIS), probes free
   memory and times a trapped write. `P_EXER` tests it without ReBeep, `P_CAPT` with it, `P_TRACE` under REBEEPD, `P_BENCH` times it (`docs/architecture/how-it-works.md`); `RBTEST /?`.
@@ -44,8 +44,8 @@
   block first, or `AH=48h` would report about 0 free.
 - The suite runs DOSBox-X with `-set "mixer nosound=true"`, not `-silent`: `-silent` removes the Sound
   Blaster, so no OPL is found at `388h`.
-- CI runs the interpreter and studio suites on `windows-latest` only, with `SDL_VIDEODRIVER` and
-  `SDL_AUDIODRIVER` set to `dummy`. Locally they open a DOSBox-X window briefly.
+- The suites run DOSBox-X with SDL's dummy video and audio drivers, `-fastlaunch` and `cycles=max`:
+  no window opens. CI runs the interpreter and studio suites on `windows-latest` only.
 
 ## Run / test
 

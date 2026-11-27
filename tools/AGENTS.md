@@ -13,7 +13,7 @@
 | `lib/release` · `lib/version` | Package tree, `CHANGES.TXT`, text checks · SemVer, changelog entries and rules, `checkVersions`, the bump's edit |
 | `lib/profiles` · `vmcfg` · `proc` | VM profiles, 86Box cfg rendering, launch and running-VM detection |
 | `lib/delivery` · `freedos` · `nasm` · `watcom` · `guard` | D: contents (targets, `targets.json` `files`, the lab patch set and game profiles) · scripted FreeDOS C: · assembling · compiling C with Open Watcom (`format: "exe"` targets; the `studio` suite uses it too) · payload guard |
-| `lib/suites` · `commands/vmtest` | RESULT.TXT judging and discovery for the `interpreter`, `studio` and `vm` suites · the `vm` suite: probe header, probe D:, boot-and-wait loop |
+| `lib/suites` · `commands/vmtest` | RESULT.TXT judging and discovery for the `interpreter`, `studio` and `vm` suites · the `vm` suite: probe header, probe D:, boot-and-wait loop. `commands/test` builds each `interpreter` and `studio` program into its own folder under `build/`, then runs them in headless DOSBox-X, `--jobs` at a time |
 | `lib/screens` | The studio suite's screen check: `parseScr` (a `tests/screens/*.scr` file), `dumpToCells` (a 4000-byte text-screen dump), `compareScreens` (glyph, bg, and fg unless a space) |
 | `lib/site` · `siteserve` · `sitedev` · `sitecheck` | The product page: build and release stamp · `/rebeep/` preview server · its live-reload script and the three-width preview · `site check` |
 | `test/` | `*.test.mjs` (`factory.test.mjs`: what `src/factory/` ships is wired in; `game-profile.test.mjs`: that skill's scripts); shared fixtures in `helpers.mjs`, `fake86box.mjs` (a stand-in for 86Box) and `serve.mjs` (a local HTTP server for downloads) |

@@ -78,16 +78,10 @@ jobs:
 
       - name: Interpreter tests (DOSBox-X, Windows only)
         if: runner.os == 'Windows'
-        env:
-          SDL_VIDEODRIVER: dummy
-          SDL_AUDIODRIVER: dummy
         run: node tools/rebeep.mjs test run --suite interpreter
 
       - name: Studio tests (Open Watcom and DOSBox-X, Windows only)
         if: runner.os == 'Windows'
-        env:
-          SDL_VIDEODRIVER: dummy
-          SDL_AUDIODRIVER: dummy
         run: node tools/rebeep.mjs test run --suite studio
 
       - name: Payload guard
