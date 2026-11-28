@@ -104,9 +104,9 @@ reads, and both refuse a file that breaks its rules, with the reason.
 
 **The startup loader.** ReBeep reads a patch once, at load, so nothing resident touches a file.
 The name comes from `/P:`, or from `PATCH=` in `RBSTUDIO.CFG` when there is neither `/F` nor `/P:`.
-A bare `NAME` is looked up as `USER\NAME`, then `FACTORY\NAME`, and the first file that exists
-decides. `BANK\NAME` is that file alone: a bank is a folder of patches. `FACTORY`'s are in `FACTORY\PATCHES` beside the
-program; `USER` and the other banks sit in the patches folder, `PATCHES=` in the settings file or else `PATCHES` there.
+A bare `NAME` is ReBeep's own, `FACTORY\NAME`, and never anything else. `FOLDER\NAME` is that file alone: a folder of
+patches. `FACTORY`'s are in `FACTORY\PATCHES` beside the program; `USER` and the other folders sit in the patches
+folder, `PATCHES=` in the settings file or else `PATCHES` there.
 The loader parses the file into a record, then the startup part is freed. A patch it can't use is
 a message and the faithful voice, never an exit code.
 
@@ -139,8 +139,8 @@ gives the game the real speaker, unmuted.
 
 ## Game profiles
 
-A [profile](../guide/profiles.md) picks a patch from what the game plays. `/G:` reads its file, from `PROFILES` or else
-`FACTORY\PROFILES`, and the patches it names beside it, at load, into a table in the resident part.
+A [profile](../guide/profiles.md) picks a patch from what the game plays. `/G:NAME` reads ReBeep's own, from `FACTORY\PROFILES`;
+`/G:FOLDER\NAME` a player's, from `PROFILES`. At load it reads the file and its patches into a table in the resident part.
 
 **Rules go by events, never time.** Each game byte gives at most one event: a note start, a pitch
 change or a note stop, with the divisor, or a byte written to `43h`, the timer's control word. A
@@ -166,10 +166,10 @@ a channel is reprogrammed only for another effect patch, never while it sounds. 
 code serves both voices: the effect code swaps the other voice's state in for a call. No effect
 plays in the faithful voice.
 
-**Fixed size.** The table holds 16 rules of 4 steps, 8 effects and 8 patches, 872 bytes, from the
-first load, so a later `/G:` always fits. ReBeep is 5,120 bytes resident, profile or not: effects
-cost 390 bytes, 155 of them paid by moving startup-only and test-only code out of the resident
-part. The build stops if it grows past that, so growth is a decision. With no profile on, a
+**Fixed size.** The table holds 16 rules of 4 steps, 8 effects and 8 patches, 881 bytes, from the
+first load, so a later `/G:` always fits. Its name is the whole `FOLDER\NAME`, 9 bytes more than a bare one. ReBeep is
+5,136 bytes resident, profile or not: effects cost 390 bytes, 155 of them paid by moving startup-only and test-only
+code out of the resident part. The build stops if it grows past that, so growth is a decision. With no profile on, a
 trapped write costs a call, a compare and a return more, too little to show in `P_BENCH`.
 
 ## Residency, AMIS and the hotkey

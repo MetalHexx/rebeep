@@ -5,19 +5,20 @@ This page is for writing and changing one. To load one, see [playing](playing.md
 
 ## The folder
 
-A profile is a folder in `PROFILES`, in ReBeep's folder. It holds a text file named for the folder,
-ending `.RBG`, and the patches that file names:
+A profile is a folder in a folder of yours in `PROFILES`, in ReBeep's folder: `USER` is the usual one.
+It holds a text file named for the profile, ending `.RBG`, and the patches that file names:
 
 ```
-C:\REBEEP\PROFILES\MYGAME\
+C:\REBEEP\PROFILES\USER\MYGAME\
     MYGAME.RBG      the profile
     MENU.RBP        its patches
     ENGINE.RBP
     SQUEAL.RBP
 ```
 
-Names of profiles and patches are up to 8 letters, digits, `-` and `_`, and not only digits. To
-keep profiles elsewhere, set `PROFILES=` in [the settings file](studio.md#the-settings-file).
+You load it with its folder: `REBEEP /G:USER\MYGAME`. Names of folders, profiles and patches are up
+to 8 letters, digits, `-` and `_`, and not only digits. To keep profiles elsewhere, set `PROFILES=`
+in [the settings file](studio.md#the-settings-file).
 
 ## Change one that comes with ReBeep
 
@@ -27,17 +28,18 @@ Circuit. `INSTALL` replaces them on every update, so change a copy of the whole 
 
 ```
 MD C:\REBEEP\PROFILES
-MD C:\REBEEP\PROFILES\GPC
-COPY C:\REBEEP\FACTORY\PROFILES\GPC\*.* C:\REBEEP\PROFILES\GPC
+MD C:\REBEEP\PROFILES\USER
+MD C:\REBEEP\PROFILES\USER\GPC
+COPY C:\REBEEP\FACTORY\PROFILES\GPC\*.* C:\REBEEP\PROFILES\USER\GPC
 ```
 
-From then on `REBEEP /G:GPC` loads your copy. Edit its `GPC.RBG` in a text editor, or copy a voice
-of your own over one of its patches.
+From then on `REBEEP /G:USER\GPC` loads your copy. Edit its `GPC.RBG` in a text editor, or copy a
+voice of your own over one of its patches.
 
-- ReBeep uses your folder when it holds `GPC.RBG`, and then takes every patch from it. A file your
-  copy lacks isn't taken from `FACTORY`.
-- To go back, delete your copy: `DEL C:\REBEEP\PROFILES\GPC\*.*`, answer `Y`, then
-  `RD C:\REBEEP\PROFILES\GPC`.
+- `REBEEP /G:GPC` still loads ReBeep's own: a bare name is never your copy.
+- ReBeep takes every patch from your folder. A file your copy lacks isn't taken from `FACTORY`.
+- To go back, delete your copy: `DEL C:\REBEEP\PROFILES\USER\GPC\*.*`, answer `Y`, then
+  `RD C:\REBEEP\PROFILES\USER\GPC`.
 
 ## How a profile follows a game
 
@@ -62,8 +64,9 @@ Start with ReBeep's own voices under your profile's names. Skip an `MD` for a fo
 ```
 C:
 MD \REBEEP\PROFILES
-MD \REBEEP\PROFILES\MYGAME
-CD \REBEEP\PROFILES\MYGAME
+MD \REBEEP\PROFILES\USER
+MD \REBEEP\PROFILES\USER\MYGAME
+CD \REBEEP\PROFILES\USER\MYGAME
 COPY \REBEEP\FACTORY\PATCHES\ORGAN.RBP MENU.RBP
 COPY \REBEEP\FACTORY\PATCHES\BRASS.RBP ENGINE.RBP
 COPY \REBEEP\FACTORY\PATCHES\BELL.RBP SQUEAL.RBP
@@ -107,14 +110,14 @@ PATCH=SQUEAL
 The counts above are examples: use your game's. Then load the profile:
 
 ```
-REBEEP /G:MYGAME
+REBEEP /G:USER\MYGAME
 ```
 
-You should see `Profile MYGAME picks the patch from what the game plays. /P: or /F ends it.` To use
+You should see `Profile USER\MYGAME picks the patch from what the game plays.` To use
 a voice of your own, make it in [ReBeep Studio](studio.md), then copy it into the profile's folder:
 
 ```
-COPY C:\REBEEP\PATCHES\USER\ENGINE.RBP C:\REBEEP\PROFILES\MYGAME
+COPY C:\REBEEP\PATCHES\USER\ENGINE.RBP C:\REBEEP\PROFILES\USER\MYGAME
 ```
 
 ## The file
@@ -194,7 +197,7 @@ higher in the file wins. Effects don't play in the faithful voice.
 | Steps in a rule | 4 |
 | Effects | 8 |
 | Different patches, named by `DEFAULT=`, rules and effects | 8 |
-| File size | 2,048 bytes |
+| File size | 4,096 bytes (a patch file: 2,048) |
 
 ## If it doesn't work
 

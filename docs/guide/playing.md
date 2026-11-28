@@ -34,9 +34,9 @@ REBEEP /P:FLUTE
 | `/P:BELL` | Bell |
 
 A patch is an FM voice kept in a small file. Those four come with ReBeep, and `/P:` takes the name
-of any other you have, such as one you made in [ReBeep Studio](studio.md). `REBEEP /P:name` looks
-in `USER` first, then `FACTORY`; a patch from another bank takes the bank too, `/P:HEXX\ORGAN`. If ReBeep
-can't use a patch it says why and plays the faithful voice ([why](troubleshooting.md#a-patch-was-not-used)).
+of any other you have, such as one you made in [ReBeep Studio](studio.md). A bare name, `/P:BELL`, is
+always ReBeep's own, from `FACTORY`; a patch of yours takes its folder too, `/P:USER\BELL` or `/P:HEXX\ORGAN`.
+If ReBeep can't use a patch it says why and plays the faithful voice ([why](troubleshooting.md#a-patch-was-not-used)).
 
 On a card with only an OPL2, such as an AdLib, `/F` is an FM copy of the square wave. It hasn't
 been checked by ear yet: if it sounds wrong, pick a patch. A patch with a four-operator voice
@@ -52,19 +52,20 @@ the speaker, and changes the patch as you play. A profile is a folder holding a 
 patches. ReBeep comes with one, `GPC`, for [Grand Prix Circuit](compatibility.md#grand-prix-circuit);
 to change it or make your own, see [writing a game profile](profiles.md).
 
-Load a profile by its name, before you start the game:
+Load a profile by its name, before you start the game. A bare name is ReBeep's own; one of yours
+takes its folder, `/G:USER\MYGAME`:
 
 ```
 REBEEP /G:GPC
 ```
 
-You should see `Profile GPC picks the patch from what the game plays. /P: or /F ends it.`
+You should see `Profile GPC picks the patch from what the game plays.` and, below it, that `/P:` or `/F` ends it.
 
 | To | Do this |
 |---|---|
 | Load it for one game only | `RBPLAY GAME.EXE /G:GPC` |
 | See which profile is on | `REBEEP /S` |
-| Change to another | `REBEEP /G:MYGAME` |
+| Change to another | `REBEEP /G:USER\MYGAME` |
 | End it | `REBEEP /P:ORGAN`, or `REBEEP /F` |
 
 A profile lasts until you end it, unload ReBeep or restart the PC. Give `/G:` without `/P:` or

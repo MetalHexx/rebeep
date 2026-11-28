@@ -8,12 +8,13 @@
 
 %include "amis.inc"
 
-PROF_LAYOUT     equ 2           ; bump on any change below: the change path checks it
+PROF_LAYOUT     equ 3           ; bump on any change below: the change path checks it
 PROF_RULES      equ 16          ; the limits a profile file must keep
 PROF_STEPS      equ 4
 PROF_PATCHES    equ 8
 PROF_EFFECTS    equ 8
-PROF_NAME_LEN   equ 9           ; ASCIZ, 8 characters at most
+PROF_NAME_LEN   equ 9           ; a patch's or a rule's name, ASCIZ, 8 characters at most
+PROF_SPEC_LEN   equ 18          ; a profile's FOLDER\NAME, ASCIZ, 17 characters at most
 
 ; A step: the next event of one kind, with an optional value range.
 ST_KIND         equ 0           ; db SK_*, or SK_ANY with it: any value
@@ -60,8 +61,8 @@ PT_COUNT        equ 3           ; db rules in use
 PT_STATE        equ 4           ; db the last rule to fire, as RL_F_WHILE holds it; 0: none yet
 PT_FXCOUNT      equ 5           ; db effects in use; /P: and /F clear it with PT_ACTIVE
 PT_FXSLOT       equ 6           ; db the slot the effect channel is programmed with, or PT_NONE
-PT_NAME         equ 7           ; db PROF_NAME_LEN: the profile's name, ASCIZ
-PT_RULES        equ PT_NAME + PROF_NAME_LEN
+PT_NAME         equ 7           ; db PROF_SPEC_LEN: the profile as /G: names it (GPC, or USER\GPC2), ASCIZ
+PT_RULES        equ PT_NAME + PROF_SPEC_LEN
 PT_EFFECTS      equ PT_RULES + PROF_RULES * RULE_LEN    ; PROF_EFFECTS effects
 PT_BLOCKS       equ PT_EFFECTS + PROF_EFFECTS * EFFECT_LEN ; PROF_PATCHES patch blocks (amis.inc)
 PT_LEN          equ PT_BLOCKS + PROF_PATCHES * PBLK_LEN

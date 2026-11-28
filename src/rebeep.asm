@@ -38,7 +38,8 @@ resident_end:
 
 ; The resident part costs every player memory, so its size is a decision: the build stops
 ; when it grows past the cap. Raise RESIDENT_MAX only on purpose, with how-it-works.md.
-RESIDENT_MAX    equ 5120
+; One paragraph more than before (5120), for the profile table's full FOLDER\NAME (PT_NAME).
+RESIDENT_MAX    equ 5136
 %ifndef REBEEP_TRACE
 %if RESIDENT_PARAS * 16 > RESIDENT_MAX
 %error the resident part is over RESIDENT_MAX bytes: raise the cap only on purpose

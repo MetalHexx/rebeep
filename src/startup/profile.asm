@@ -1,7 +1,8 @@
 ; The startup part's game profiles: /G:NAME reads NAME\NAME.RBG, a text file in the .RBP
-; style, from PROFILES or the factory's, into a table of rules (include/profile.inc), and each
-; patch it names from the same folder into a slot of that table. apply_fields then copies the
-; table into the resident one.
+; style, from the one ReBeep came with (<program folder>\FACTORY\PROFILES), and /G:FOLDER\NAME
+; reads FOLDER\NAME\NAME.RBG from the profiles folder (PROFILES=), into a table of rules
+; (include/profile.inc), and each patch it names from the same folder into a slot of that
+; table. apply_fields then copies the table into the resident one.
 ;   [PROFILE]  FORMAT=1 (required), DEFAULT=NAME (optional: the patch that plays first),
 ;              NAME=text (optional)
 ;   [RULE]     STEP=KIND [VALUE [TOLERANCE]], one to four in order, then PATCH=NAME;
@@ -14,7 +15,7 @@
 ; it is resolved when the whole file is read. A NAME is 1 to 24 characters without a control
 ; character: checked, never kept. Numbers are decimal, or hex with a trailing H. Keys, kinds
 ; and section names in any case; ';' comment lines, blank lines, unknown keys and unknown
-; sections are ignored; a duplicate key or [PROFILE] is invalid; at most 2048 bytes.
+; sections are ignored; a duplicate key or [PROFILE] is invalid; at most 4096 bytes.
 ; 8086. Included after resident_end, so it is freed when going resident. Uses patch.asm's line
 ; helpers and parser, and files.asm's names, paths and reads.
 ; SPDX-License-Identifier: MIT
@@ -45,34 +46,33 @@ WHILE_LEN       equ     6               ; a pending WHILE: dw the byte it sets, 
 %endmacro
 
 ; profile_select: loads the profile prof_spec names into prof_new, and each of its patches into
-; a slot. NAME.RBG is read from the profiles folder; when it isn't there, from the profile
-; ReBeep came with, <program folder>\FACTORY\PROFILES. The patches come from the folder the
-; .RBG came from, never the other. A profile that can't be used is reported and nothing changes
-; (prof_ok = 0). A patch that can't be is reported, and its slot plays the faithful voice; an
+; a slot. A bare NAME is ReBeep's own, <program folder>\FACTORY\PROFILES\NAME; FOLDER\NAME is the
+; player's, <profiles folder>\FOLDER\NAME. One is never looked for in the other's place. The
+; patches come from the folder of the .RBG. A profile that can't be used is reported and nothing
+; changes (prof_ok = 0). A patch that can't be is reported, and its slot plays the faithful voice; an
 ; effect that names one is dropped. When the profile has a DEFAULT=, its block goes into pbuf
 ; and OPT_P is set, as load_patch does for PATCH=, so apply_fields plays it. Run inside
 ; crit_on. Out: prof_ok. Clobbers ES.
 profile_select:
         mov     byte [prof_ok], 0
+        cmp     byte [prof_own], 0
+        jne     .read                   ; ReBeep's own is beside the program: no settings needed
         call    settings_ensure
         call    profiles_resolve
-        call    prof_read
-        jnc     .parse
-        or      al, al
-        jnz     .unread                 ; there, so the factory's is not read
-        mov     ax, 4300h               ; DX = path_buf still: its attributes
-        int     21h
-        jnc     .unread                 ; there too, though it would not open
-        mov     si, s_unset
-        mov     di, profiles_dir
-        mov     bx, s_factoryprofs
-        call    dir_resolve
+.read:
         call    prof_read
         jnc     .parse
         or      al, al
         jnz     .unread
+        mov     ax, 4300h               ; DX = path_buf still: its attributes
+        int     21h
+        jnc     .unread                 ; there, though it would not open
         call    prof_not_used
-        mov     dx, msg_gn_nowhere
+        mov     dx, msg_gn_nofactory
+        cmp     byte [prof_own], 0
+        jne     .nowhere
+        mov     dx, msg_gn_noprofiles
+.nowhere:
         jmp     print
 .unread:
         mov     si, r_unread
@@ -125,38 +125,75 @@ profile_select:
 .ret:
         ret
 
-; prof_read: reads NAME.RBG in the NAME folder under profiles_dir. Out: as read_file, with
-; path_buf naming the file. Clobbers CX, DX, SI, DI and ES.
+; prof_take: the spec /G: took, spec_buf (spec_valid's), into prof_spec as profile_select loads
+; it: ReBeep's own is the bare NAME, so FACTORY\NAME is NAME. Sets prof_name (the NAME part)
+; and prof_own (1 for a bare NAME). Clobbers AL, BX, SI and DI. Needs DF clear.
+prof_take:
+        mov     si, spec_buf
+        mov     bx, s_factory
+        call    starts_with
+        jne     .keep
+        add     si, FACTORY_LEN
+.keep:
+        mov     di, prof_spec
+        call    copy_upper
+        mov     byte [prof_own], 1
+        mov     word [prof_name], prof_spec
+        mov     si, prof_spec
+.name:
+        lodsb
+        or      al, al
+        jz      .ret
+        cmp     al, '\'
+        jne     .name
+        mov     [prof_name], si
+        mov     byte [prof_own], 0
+.ret:
+        ret
+
+; prof_read: reads NAME.RBG in the profile's folder. Out: as read_file, with path_buf naming the
+; file. Clobbers CX, DX, SI, DI and ES.
 prof_read:
         push    ds
         pop     es
         cld
         mov     di, path_buf
         call    prof_folder
-        mov     si, prof_spec
+        mov     si, [prof_name]
         call    copy_upper
         mov     si, s_rbg
         call    copy_upper
         mov     dx, path_buf
-        mov     cx, PATCH_FILE_MAX + 1
+        mov     cx, PROF_FILE_MAX + 1
         jmp     read_file
 
-; prof_not_used: prints "Profile NAME not used:"; what follows says why.
+; prof_not_used: prints "Profile SPEC not used:"; what follows says why.
 prof_not_used:
         mov     dx, msg_gn_1
         call    print
         mov     si, prof_spec
-        mov     cx, 8
+        mov     cx, PROF_SPEC_LEN - 1
         call    print_text
         mov     dx, msg_gn_2
         jmp     print
 
-; prof_folder: DI = where to write "<profiles folder>\<NAME>\". Out: DI at its NUL.
+; prof_folder: DI = where to write the profile's folder with its closing backslash:
+; "<program folder>\FACTORY\PROFILES\NAME\" for ReBeep's own, "<profiles folder>\FOLDER\NAME\"
+; otherwise. Out: DI at its NUL.
 prof_folder:
+        cmp     byte [prof_own], 0
+        jne     .own
         mov     si, profiles_dir
         call    copy_upper
         mov     byte [di], '\'
         inc     di
+        jmp     .spec
+.own:
+        mov     si, prog_dir
+        call    copy_upper
+        mov     si, s_factoryprofs
+        call    copy_upper
+.spec:
         mov     si, prof_spec
         call    copy_upper
         mov     byte [di], '\'
@@ -175,14 +212,15 @@ prof_block:
         ret
 
 ; prof_load_slot: AL = a slot. Loads the patch prof_names holds for it into its block, named
-; "PROFILE\PATCH"; one that fails is reported and leaves the block without a patch.
+; "NAME\PATCH" (the profile's NAME part, never its folder: the field holds 17 characters); one
+; that fails is reported and leaves the block without a patch.
 prof_load_slot:
         push    ax
         push    ax
         call    prof_block
         mov     di, si                  ; DI = the block, its name first
         push    di
-        mov     si, prof_spec
+        mov     si, [prof_name]
         call    copy_upper
         mov     byte [di], '\'
         inc     di
@@ -273,7 +311,8 @@ profiles_resolve:
 .ret:
         ret
 
-; name_valid: one 8.3 base name, as spec_valid takes a part. In: SI = the text, CX = its length.
+; name_valid: one 8.3 base name, as spec_valid takes a part: a patch or a rule ID in a profile
+; file. In: SI = the text, CX = its length.
 ; Out: CF clear and spec_buf = the upper-cased ASCIZ name; CF set when it is not one.
 ; Keeps every register but the flags.
 name_valid:
@@ -309,9 +348,9 @@ name_valid:
 profile_parse:
         cld
         mov     [pg_sp], sp
-        cmp     cx, PATCH_FILE_MAX
+        cmp     cx, PROF_FILE_MAX
         jbe     .size
-        PFAIL   r_size
+        PFAIL   r_profsize
 .size:
         mov     [pf_pos], si
         add     cx, si
@@ -939,14 +978,14 @@ w_kinds         db      "NOTE", 0, "CHANGE", 0, "PITCH", 0, "OFF", 0, "CTRL", 0,
 %endif
 s_rbg           db      ".RBG", 0
 s_badprofiles   db      "PROFILES=$"
-s_factoryprofs  db      "FACTORY\PROFILES", 0     ; beside the program
-s_unset         db      0                       ; dir_resolve's "no setting"
+s_factoryprofs  db      "FACTORY\PROFILES\", 0    ; beside the program
 
 msg_gn_1        db      "Profile $"
 msg_gn_2        db      " not used:$"
 msg_gn_3        db      ".", 13, 10, '$'
 msg_gn_file     db      13, 10, "  $"                    ; the file and the reason: lines of their own
-msg_gn_nowhere  db      " not found in PROFILES or FACTORY.", 13, 10, '$'
+msg_gn_nofactory db     " not found in FACTORY.", 13, 10, '$'
+msg_gn_noprofiles db    " not found in PROFILES.", 13, 10, '$'
 
 g_noprofile     db      "there is no [PROFILE] section$"
 g_noformat      db      "[PROFILE] has no FORMAT$"
@@ -975,7 +1014,9 @@ g_dispname      db      "a NAME is not 1 to 24 characters$"
 
 prof_ok         db      0               ; 1 when prof_new holds the profile /G: asked for
 prof_dst        dw      0               ; the resident table's offset beside RB_STATE, or 0: none
-prof_spec       times PROF_NAME_LEN db 0
+prof_spec       times PROF_SPEC_LEN db 0        ; as /G: loads it: NAME, or FOLDER\NAME
+prof_name       dw      prof_spec               ; its NAME part
+prof_own        db      1                       ; 1 for a bare NAME: ReBeep's own
 prof_default    db      PT_NONE
 prof_npat       db      0
 prof_names      times PROF_PATCHES * PROF_NAME_LEN db 0

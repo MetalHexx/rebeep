@@ -625,7 +625,7 @@ start:
         LOOKUP  "looks_up_factory_flute", q_flute, e_flute, "FACTORY\FLUTE"
         LOOKUP  "looks_up_factory_brass", q_brass, e_brass, "FACTORY\BRASS"
         LOOKUP  "looks_up_factory_bell", q_bell, e_bell, "FACTORY\BELL"
-        LOOKUP  "bare_name_falls_back_to_factory", q_bare, e_bell, "FACTORY\BELL"
+        LOOKUP  "a_bare_name_is_factorys", q_bare, e_bell, "FACTORY\BELL"
 
         CASE    "lookup_reports_a_missing_file"
         mov     si, q_none
@@ -649,8 +649,11 @@ start:
         call    cf_ax
         mov     cx, 1
         call    t_check
+        mov     ax, [fail_who]          ; a bare name that FACTORY lacks: the miss is in FACTORY
+        xor     cx, cx
+        call    t_check
         mov     ax, [fail_reason]
-        mov     cx, r_notfound2
+        mov     cx, r_notfactory
         call    t_check
         ENDCASE
 
@@ -678,6 +681,16 @@ start:
         call    t_check
         mov     ax, [fail_reason]
         mov     cx, r_notfound
+        call    t_check
+        mov     si, q_nobare            ; nor a bare name, which is FACTORY's alone
+        mov     cx, q_nobare_len
+        call    spec_valid
+        call    find_patch
+        mov     ax, [fail_who]
+        xor     cx, cx
+        call    t_check
+        mov     ax, [fail_reason]
+        mov     cx, r_notfactory
         call    t_check
         mov     byte [patches_missing], 0
         ENDCASE

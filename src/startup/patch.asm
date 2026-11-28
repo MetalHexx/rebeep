@@ -13,6 +13,7 @@
 %include "amis.inc"
 
 PATCH_FILE_MAX  equ     2048
+PROF_FILE_MAX   equ     4096            ; a profile file (.RBG)
 
 ; patch_parse
 ; In:  DS:SI = the text, CX = its length, ES:DI = a patch block (PBLK_LEN bytes: the name,
@@ -639,6 +640,7 @@ op_max          db      15, 15, 15, 15, 63, 3, 15, 7, 1, 1, 1, 1
 ksl_bits        db      0, 2, 1, 3
 
 r_size          db      "the file is over 2048 bytes$"
+r_profsize      db      "the file is over 4096 bytes$"
 r_header        db      "a section header is not [name]$"
 r_secdup        db      "a section is given twice$"
 r_keydup        db      "a key is given twice$"

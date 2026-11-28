@@ -173,6 +173,18 @@ streq:
         xor     cx, cx
         call    t_check
 %endmacro
+; NAME_FIELD_IS_ZERO: a parse leaves PT_NAME empty, all PROF_SPEC_LEN bytes: profile_select sets it.
+%macro NAME_FIELD_IS_ZERO 0
+        xor     ax, ax
+        mov     si, prof_new + PT_NAME
+        mov     cx, PROF_SPEC_LEN
+%%or:
+        or      al, [si]
+        inc     si
+        loop    %%or
+        xor     cx, cx
+        call    t_check
+%endmacro
 ; NAME_IS slot, "NAME"
 %macro NAME_IS 2
         mov     si, prof_names + (%1) * PROF_NAME_LEN
@@ -239,7 +251,7 @@ TEXT p_nodefault, HEAD, "[RULE]", 10, "STEP=OFF", 10, "PATCH=ONE", 10
 TEXT p_default, HEAD, "DEFAULT=ORGAN", 10
 TEXT p_defaultlast, "[RULE]", 10, "STEP=OFF", 10, "PATCH=ONE", 10, HEAD, "DEFAULT=TWO", 10
 
-; The limits: 16 rules, 4 steps, 8 patches, 2048 bytes.
+; The limits: 16 rules, 4 steps, 8 patches, 4096 bytes (a patch file's is 2048).
 %macro RULES 1
 %assign %%i 0
 %rep %1
@@ -282,14 +294,18 @@ p_9patches:
         PATCHES 8
 p_9patches_len equ $ - p_9patches
 
-p_2048:
-        db      HEAD, ";"
-        times 2048 - ($ - p_2048) db 'x'
-p_2048_len equ 2048
 p_2049:
         db      HEAD, ";"
         times 2049 - ($ - p_2049) db 'x'
 p_2049_len equ 2049
+p_4096:
+        db      HEAD, ";"
+        times 4096 - ($ - p_4096) db 'x'
+p_4096_len equ 4096
+p_4097:
+        db      HEAD, ";"
+        times 4097 - ($ - p_4097) db 'x'
+p_4097_len equ 4097
 
 ; Every new key: two rules and an effect, with their IDs, names and a WHILE; and the same without
 ; the NAME lines, whose table must come out identical.
@@ -309,6 +325,27 @@ TEXT p_fxbare, "[PROFILE]", 13, 10, "FORMAT=1", 13, 10, \
         "STEP=PITCH 0471h 30", 13, 10, "STEP=OFF", 13, 10, "PATCH=ENGINE", 13, 10, 13, 10, \
         "[EFFECT]", 13, 10, "WHILE=GRID", 13, 10, \
         "PITCH=11D6h 40", 13, 10, "PATCH=LIGHTS", 13, 10
+
+; [SOUND] sections: unknown to the parser, so ignored with their keys, even a PATCH= that no rule
+; plays and keys that would be refused in a [RULE]. p_soundgpc is p_gpc, p_soundfx is p_fx.
+TEXT p_soundgpc, "[PROFILE]", 13, 10, "FORMAT=1", 13, 10, "DEFAULT=FALLBK", 13, 10, 13, 10, \
+        "[SOUND]", 13, 10, "NAME=Engine", 13, 10, "PATCH=IDLE", 13, 10, "STEP=BEEP", 13, 10, 13, 10, \
+        "[RULE]", 13, 10, "STEP=CTRL B6h", 13, 10, "STEP=NOTE 1922h 40", 13, 10, "PATCH=INTRO", 13, 10, \
+        "[Sound]", 13, 10, "ID=A", 13, 10, "WHILE=NOSUCH", 13, 10, "PITCH=1", 13, 10, "PATCH=NOONE", 13, 10, \
+        "[RULE]", 13, 10, "STEP=CTRL B6h", 13, 10, "STEP=NOTE 1521h 40", 13, 10, "PATCH=MENU", 13, 10, \
+        "[RULE]", 13, 10, "STEP=CTRL B6h", 13, 10, "STEP=NOTE", 13, 10, "PATCH=FALLBK", 13, 10, \
+        "[SOUND]", 13, 10, "PATCH=LAST", 13, 10
+TEXT p_soundfx, "[PROFILE]", 13, 10, "FORMAT=1", 13, 10, "NAME=Grand Prix Circuit", 13, 10, \
+        "DEFAULT=FALLBK", 13, 10, 13, 10, \
+        "[SOUND]", 13, 10, "PATCH=HORN", 13, 10, "STEP=OFF", 13, 10, \
+        "[RULE]", 13, 10, "ID=GRID", 13, 10, "NAME=Race start", 13, 10, "STEP=CTRL B6h", 13, 10, \
+        "STEP=NOTE C22Eh 40", 13, 10, "PATCH=ENGINE", 13, 10, 13, 10, \
+        "[RULE]", 13, 10, "ID=RACE", 13, 10, "NAME=Racing", 13, 10, "WHILE=GRID", 13, 10, \
+        "STEP=PITCH 0471h 30", 13, 10, "STEP=OFF", 13, 10, "PATCH=ENGINE", 13, 10, 13, 10, \
+        "[SOUND]", 13, 10, "NAME=Crowd", 13, 10, "ID=GRID", 13, 10, "WHILE=GRID", 13, 10, "PATCH=CROWD", 13, 10, \
+        "[EFFECT]", 13, 10, "NAME=Start lights", 13, 10, "WHILE=GRID", 13, 10, \
+        "PITCH=11D6h 40", 13, 10, "PATCH=LIGHTS", 13, 10, \
+        "[SOUND]", 13, 10, "PITCH=500", 13, 10, "PATCH=BELL", 13, 10
 
 ; A WHILE naming a later rule (rule 0 names rule 2), itself (rule 1), and a later rule from an
 ; effect before it, in any case; the later rule's ID is eight characters.
@@ -518,7 +555,7 @@ bad_table:
         dw      p_5steps, p_5steps_len, g_steps
         dw      p_9patches, p_9patches_len, g_patches
         dw      p_8patches, p_8patches_bad_len, r_secdup
-        dw      p_2049, p_2049_len, r_size
+        dw      p_4097, p_4097_len, r_profsize
         dw      p_9fx, p_9fx_len, g_effects
         dw      p_fxshare, p_fxshare_len, g_patches
         dw      p_fxfull, p_fxfull_len, g_patches
@@ -643,7 +680,41 @@ start:
         BYTE_IS prof_npat, 8
         BYTE_IS prof_default, 0
         NAME_IS 7, "QG"
-        GOOD    p_2048
+        ENDCASE
+
+        CASE    "a_profile_file_may_be_4096_bytes_a_patch_file_2048"
+        GOOD    p_2049                  ; over a patch file's limit, a profile's all right
+        GOOD    p_4096
+        mov     si, p_2049
+        mov     cx, p_2049_len
+        mov     di, patch_scratch
+        call    patch_parse
+        mov     [got_si], si
+        call    cf_ax
+        mov     cx, 1
+        call    t_check
+        mov     ax, [got_si]
+        mov     cx, r_size
+        call    t_check
+        ENDCASE
+
+        CASE    "a_sound_section_is_ignored"
+        GOOD    p_gpc
+        SAVE_TABLE
+        GOOD    p_soundgpc
+        TABLE_IS_SAVED
+        BYTE_IS prof_npat, 3            ; no slot for IDLE, NOONE or LAST
+        BYTE_IS prof_default, 0
+        NAME_IS 0, "FALLBK"
+        NAME_IS 1, "INTRO"
+        NAME_IS 2, "MENU"
+        GOOD    p_fx
+        SAVE_TABLE
+        GOOD    p_soundfx
+        TABLE_IS_SAVED
+        BYTE_IS prof_npat, 3
+        NAME_IS 1, "ENGINE"
+        NAME_IS 2, "LIGHTS"
         ENDCASE
 
         CASE    "stores_ids_whiles_and_effects"
@@ -652,7 +723,7 @@ start:
         BYTE_IS prof_new + PT_FXCOUNT, 1
         BYTE_IS prof_new + PT_STATE, 0
         BYTE_IS prof_new + PT_FXSLOT, PT_NONE
-        BYTE_IS prof_new + PT_NAME, 0   ; the profile's NAME= is not kept
+        NAME_FIELD_IS_ZERO              ; the profile's NAME= is not kept
         BYTE_IS prof_npat, 3
         BYTE_IS prof_default, 0
         NAME_IS 0, "FALLBK"
@@ -673,7 +744,7 @@ start:
         TABLE_IS_SAVED
         GOOD    p_name24                ; 24 characters, in all three sections
         GOOD    p_namepad               ; trimmed first; 20h to 7Eh and 80h up are all right
-        BYTE_IS prof_new + PT_NAME, 0
+        NAME_FIELD_IS_ZERO
         ENDCASE
 
         CASE    "a_while_names_a_later_rule_or_itself"
@@ -829,14 +900,81 @@ start:
         call    t_check
         ENDCASE
 
+        CASE    "a_game_name_is_a_name_or_a_folder_and_a_name"
+        mov     si, n_user              ; USER\GPC2: the player's, with its NAME part
+        mov     cx, n_user_len
+        call    spec_valid
+        call    cf_ax
+        xor     cx, cx
+        call    t_check
+        call    prof_take
+        mov     si, prof_spec
+        mov     di, n_userup
+        call    streq
+        xor     cx, cx
+        call    t_check
+        BYTE_IS prof_own, 0
+        WORD_IS prof_name, prof_spec + 5
+        mov     si, n_gpc               ; GPC: ReBeep's own
+        mov     cx, n_gpc_len
+        call    spec_valid
+        call    prof_take
+        mov     si, prof_spec
+        mov     di, n_gpcup
+        call    streq
+        xor     cx, cx
+        call    t_check
+        BYTE_IS prof_own, 1
+        WORD_IS prof_name, prof_spec
+        mov     si, n_factory           ; FACTORY\GPC is GPC
+        mov     cx, n_factory_len
+        call    spec_valid
+        call    prof_take
+        mov     si, prof_spec
+        mov     di, n_gpcup
+        call    streq
+        xor     cx, cx
+        call    t_check
+        BYTE_IS prof_own, 1
+        mov     si, n_longest           ; 8 + 1 + 8: the whole PT_NAME
+        mov     cx, n_longest_len
+        call    spec_valid
+        call    prof_take
+        mov     si, prof_spec
+        mov     di, n_longestup
+        call    streq
+        xor     cx, cx
+        call    t_check
+        mov     si, n_two               ; A\B\C: two backslashes
+        mov     cx, n_two_len
+        call    spec_valid
+        call    cf_ax
+        mov     cx, 1
+        call    t_check
+        mov     si, n_ends              ; USER\: no name
+        mov     cx, n_ends_len
+        call    spec_valid
+        call    cf_ax
+        mov     cx, 1
+        call    t_check
+        ENDCASE
+
         jmp     t_done
 
 TEXT    n_gpc, "gpc"
 n_gpcup db      "GPC", 0
 TEXT    n_folder, "GPC\X"
 TEXT    n_digits, "1234"
+TEXT    n_user, "user\gpc2"
+n_userup db     "USER\GPC2", 0
+TEXT    n_factory, "Factory\gpc"
+TEXT    n_longest, "abcdefgh\ijklmnop"
+n_longestup db  "ABCDEFGH\IJKLMNOP", 0
+TEXT    n_two, "A\B\C"
+TEXT    n_ends, "USER\"
 
 tw              dw      0
 got_si          dw      0
 got_ax          dw      0
 saved_table     times PT_LEN db 0
+patch_scratch   times PBLK_LEN db 0

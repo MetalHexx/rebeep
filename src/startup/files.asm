@@ -595,55 +595,48 @@ print_text:
         pop     ax
         ret
 
-; find_patch: loads the patch spec_buf names. FOLDER\NAME is that file alone (FACTORY's are
-; in FACTORY\PATCHES beside the program, any other folder's under the patches folder); a bare
-; NAME is USER\NAME, then FACTORY\NAME, and the first file that exists decides. Needs the
-; settings read first for a folder other than FACTORY (settings_ensure).
+; spec_has_folder: SI = an ASCIZ spec. Out: CF set when it has a backslash: FOLDER\NAME, not a
+; bare NAME. Keeps every register but the flags.
+spec_has_folder:
+        push    ax
+        push    si
+.next:
+        lodsb
+        or      al, al
+        jz      .out                    ; CF clear from the OR
+        cmp     al, '\'
+        jne     .next
+        stc
+.out:
+        pop     si
+        pop     ax
+        ret
+
+; find_patch: loads the patch spec_buf names. FOLDER\NAME is that file alone (FACTORY's are in
+; FACTORY\PATCHES beside the program, any other folder's under the patches folder); a bare NAME is
+; ReBeep's own, FACTORY\NAME. Needs the settings read first for a folder other than FACTORY
+; (settings_ensure).
 ; Out: CF clear: pbuf = the name field and the patch block. CF set: fail_who (0, or an ASCIZ
 ; to print before the reason) and fail_reason (a '$' string) say why. Clobbers ES.
 find_patch:
         push    ds
         pop     es
         cld
-        mov     si, spec_buf
-.scan:
-        lodsb
-        or      al, al
-        jz      .bare
-        cmp     al, '\'
-        jne     .scan
         mov     word [fail_who], 0
+        mov     di, cand_name
+        mov     si, spec_buf
+        call    spec_has_folder
+        jnc     .bare
         mov     word [fail_reason], r_notfound
-        mov     di, cand_name           ; the spec is the candidate
-        mov     si, spec_buf
-        call    copy_upper
+        call    copy_upper              ; the spec is the candidate
         call    try_cand
-        cmp     al, FP_FAILED
-        jne     .tried
-        mov     word [fail_who], 0      ; the spec already says which file
-        jmp     .failed
-.bare:
-        mov     word [fail_who], 0
-        mov     word [fail_reason], r_notfound2
-        mov     di, cand_name
-        mov     si, s_user
-        call    copy_upper
-        mov     si, spec_buf
-        call    copy_upper
-        call    try_cand
-        cmp     al, FP_MISSING
-        jne     .tried
-        mov     di, cand_name
-        mov     si, s_factory
-        call    copy_upper
-        mov     si, spec_buf
-        call    copy_upper
-        call    try_cand
-.tried:
         cmp     al, FP_LOADED
         je      .loaded
         cmp     al, FP_FAILED
-        je      .failed
+        jne     .missing
+        mov     word [fail_who], 0      ; the spec already says which file
+        jmp     .failed
+.missing:
         cmp     byte [patches_missing], 0
         je      .failed
         mov     si, spec_buf            ; a FACTORY patch is never looked for in the patches folder
@@ -655,6 +648,15 @@ find_patch:
 .failed:
         stc
         ret
+.bare:                                  ; fail_who stays 0 for a miss; try_cand sets it for a bad file
+        mov     word [fail_reason], r_notfactory
+        mov     si, s_factory
+        call    copy_upper
+        mov     si, spec_buf
+        call    copy_upper
+        call    try_cand
+        cmp     al, FP_LOADED
+        jne     .failed
 .loaded:
         clc
         ret
@@ -719,7 +721,6 @@ try_cand:
 
 ; ---------------------------------------------------------------- data
 
-s_user          db      "USER\", 0
 s_factory       db      "FACTORY\", 0
 s_factorypats   db      "FACTORY\PATCHES\", 0   ; the FACTORY bank, beside the program
 s_patches       db      "PATCHES", 0
@@ -734,13 +735,13 @@ s_badpatches_1  db      "PATCHES=$"
 s_badpatches_2  db      13, 10, "ignored: not a plain DOS path. Using the default folder.", 13, 10, '$'
 
 r_notfound      db      "not found$"
-r_notfound2     db      "not found in USER or FACTORY$"
+r_notfactory    db      "not found in FACTORY$"
 r_nofolder      db      "folder does not exist$"
 r_unread        db      "cannot be read$"
 
 prog_dir        times 128 db 0
 patches_dir     times 192 db 0
-path_buf        times 216 db 0
+path_buf        times 232 db 0          ; profiles_dir, \FOLDER\NAME\NAME.RBG and the NUL
 cand_name       times 18 db 0
 spec_buf        times 18 db 0
 cfg_patches     times CFG_PATCHES_LEN + 1 db 0
@@ -754,4 +755,4 @@ old24           dd      0               ; INT 24h as crit_on found it
 fail_who        dw      0
 fail_reason     dw      0
 pbuf            times PBLK_LEN db 0
-io_buf          times PATCH_FILE_MAX + 1 db 0
+io_buf          times PROF_FILE_MAX + 1 db 0

@@ -47,7 +47,7 @@ A patch ReBeep can't use is never an error. It says why, and the faithful voice 
 
 ```
 Patch MYLEAD not used. Playing the faithful voice.
-  not found in USER or FACTORY.
+  not found in FACTORY.
 ```
 
 The last line is the reason. A line above it, ending in `:`, names the file or folder it is about,
@@ -55,8 +55,8 @@ when that isn't the name you gave.
 
 | The reason | What to do |
 |---|---|
-| `not found in USER or FACTORY` | No `MYLEAD.RBP` in either folder. Check the spelling, and that the file is in `USER` in the patches folder. A patch in another bank takes the bank too: `/P:HEXX\ORGAN` |
-| `not found` | There is no such file in the folder you named |
+| `not found in FACTORY` | A bare name is only ReBeep's own: there is no `MYLEAD.RBP` in `FACTORY`. For a patch of yours, give its folder, such as `/P:USER\MYLEAD` or `/P:HEXX\ORGAN`. Check the spelling too |
+| `not found` | There is no such file in the folder you named, such as `USER\MYLEAD.RBP` for `/P:USER\MYLEAD` |
 | `folder does not exist` | The `PATCHES=` folder in `RBSTUDIO.CFG` isn't there. Fix the line or make the folder |
 | `not a valid patch name` | A name is up to 8 letters, digits, `-` and `_`, and not only digits |
 | `cannot be read` | DOS couldn't read the file. Check the disk |
@@ -77,15 +77,17 @@ A [game profile](profiles.md) ReBeep can't use is never an error either. It says
 was playing goes on:
 
 ```
-Profile MYGAME not used: not found in PROFILES or FACTORY.
+Profile USER\MYGAME not used: not found in PROFILES.
 ```
 
-That means there is no `MYGAME.RBG` in your `PROFILES` folder, and ReBeep doesn't come with one:
-check the folder and the name. Otherwise a line names the file and the next gives the reason, such as
-`a rule has no PATCH` or `more than 16 rules`: fix that line. A patch the profile names that can't
-be used gets the patch message above, and the faithful voice plays for its rule. It is looked for
-only beside the `.RBG`, so a [changed copy](profiles.md#change-one-that-comes-with-rebeep) needs
-every patch. A bad `PROFILES=` line gets a message like the one for `PATCHES=`.
+That means there is no `MYGAME.RBG` in `PROFILES\USER\MYGAME`: check the folder and the name. A
+bare name, `/G:MYGAME`, is only ReBeep's own, and says `not found in FACTORY`; give your folder,
+`/G:USER\MYGAME`. A profile of yours never stands in for a bare name, nor ReBeep's for yours.
+Otherwise a line names the file and the next gives the reason, such as
+`a rule has no PATCH`, `more than 16 rules` or `the file is over 4096 bytes`: fix that. A patch the
+profile names that can't be used gets the patch message above, and the faithful voice plays for its
+rule. It is looked for only beside the `.RBG`, so a [changed copy](profiles.md#change-one-that-comes-with-rebeep)
+needs every patch. A bad `PROFILES=` line gets a message like the one for `PATCHES=`.
 
 ## The studio log
 

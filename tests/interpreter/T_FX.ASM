@@ -24,7 +24,7 @@ SINK_MAX        equ 512
 %if PT_LAYOUT != 0 || PT_ACTIVE != 1 || PT_CUR != 2 || PT_COUNT != 3 || PT_STATE != 4
 %error TABLE writes layout, active, current, count, state, effects, effect slot, then the name
 %endif
-%if PT_FXCOUNT != 5 || PT_FXSLOT != 6 || PT_NAME != 7
+%if PT_FXCOUNT != 5 || PT_FXSLOT != 6 || PT_NAME != 7 || PT_RULES != PT_NAME + PROF_SPEC_LEN
 %error TABLE writes layout, active, current, count, state, effects, effect slot, then the name
 %endif
 %if EF_LO != 0 || EF_HI != 2 || EF_SLOT != 4 || EF_WHILE != 5
@@ -35,7 +35,8 @@ SINK_MAX        equ 512
 %1:
 %$start:
         db      PROF_LAYOUT, 1, PT_NONE, %2, 0, %3, PT_NONE
-        db      "TEST", 0, 0, 0, 0, 0
+        db      "TEST"
+        times PROF_SPEC_LEN - 4 db 0
 %endmacro
 %macro RULE 3                           ; slot, flags, steps
 %push rule

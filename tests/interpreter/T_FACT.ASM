@@ -64,7 +64,7 @@ check_profile:
         inc     word [found]
         mov     si, dta + 1Eh           ; the folder's name
         call    asciz_len
-        call    name_valid              ; the names /G: takes; into spec_buf
+        call    spec_valid              ; the names /G: takes; into spec_buf
         jnc     .named
         mov     word [fail_reason], r_noname
         jmp     fail_line
@@ -72,9 +72,7 @@ check_profile:
         push    ds
         pop     es
         cld
-        mov     si, spec_buf
-        mov     di, prof_spec
-        call    copy_upper
+        call    prof_take               ; a bare NAME: ReBeep's own, as /G:NAME loads it
         mov     byte [patch_failed], 0
         mov     word [fail_reason], r_norbg     ; the one failure that sets no reason
         call    crit_on
@@ -87,7 +85,7 @@ check_profile:
         jne     .ret                    ; each such patch has its FAIL line
         mov     dx, s_pass
         call    result_start
-        mov     cx, 8
+        mov     cx, PROF_SPEC_LEN - 1
         call    print_text
         mov     dx, s_crlf
         jmp     t_print

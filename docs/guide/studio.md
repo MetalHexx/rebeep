@@ -190,8 +190,8 @@ A refused name or bank, or a full list, shows a `!` line instead, and Enter does
 fix it. The studio refuses a bad name, a new bank named like one you have, and a new patch when the
 list already holds 2,048.
 
-A `USER` patch with the name of a factory patch is an **override**: ReBeep looks in `USER` before
-`FACTORY`, so `REBEEP /P:BELL` plays your Bell. To go back to the factory Bell, open yours and press
+A `USER` patch with the name of a factory patch is an **override** in the studio's list. ReBeep's
+`/P:BELL` is always the factory Bell: yours is `/P:USER\BELL`. To go back to the factory Bell, open yours and press
 Ctrl+R to load the factory values, which leaves the patch unsaved. Then press Ctrl+S: the dialog says
 `Removes:`, and Enter deletes your file. You can also delete `USER\BELL.RBP` yourself.
 
@@ -235,7 +235,7 @@ it.
 |---|---|
 | `PATCHES=D:\MYSOUNDS` | Where `USER` and the other banks are. Plain DOS names only. With no drive or leading `\`, the path starts at the program's folder. The default is `PATCHES` there |
 | `PATCH=FLUTE` | The patch ReBeep loads when you give it neither `/F` nor `/P:`. Same names as `/P:` |
-| `PROFILES=D:\MYGAMES` | Where your [game profiles](profiles.md) are, a folder each. The same kind of path as `PATCHES=`. The default is `PROFILES` beside the program |
+| `PROFILES=D:\MYGAMES` | Where your [game profiles](profiles.md) are, as `FOLDER\NAME`. The same kind of path as `PATCHES=`. The default is `PROFILES` beside the program |
 
 A line is `KEY=VALUE`, in any case. A line starting with `;` is a comment, and a line the studio does
 not know is ignored. The first line for a key counts. A `PATCHES=` that is not a plain DOS path is

@@ -531,9 +531,11 @@ load_patch:
 select_patch:
         mov     byte [patch_ok], 0
         mov     si, spec_buf
+        call    spec_has_folder
+        jnc     .lookup                 ; ReBeep's own is beside the program: no settings needed
         mov     bx, s_factory
         call    starts_with
-        je      .lookup                 ; FACTORY is beside the program: no settings needed
+        je      .lookup
         call    settings_ensure
 .lookup:
         mov     word [fail_spec], spec_buf
@@ -689,18 +691,16 @@ parse_options:
         mov     bx, OPT_P
         jmp     .flag
 
-.profile:                               ; /G:NAME, a game profile (profile_select)
+.profile:                               ; /G:NAME or /G:FOLDER\NAME, a game profile (profile_select)
         call    getc
         cmp     al, ':'
         jne     .bad
         call    opt_word
         push    si
         mov     si, bx
-        call    name_valid              ; into spec_buf, which /P: also uses: they never meet
+        call    spec_valid              ; into spec_buf, which /P: also uses: they never meet
         jc      .gbad
-        mov     si, spec_buf
-        mov     di, prof_spec
-        call    copy_upper
+        call    prof_take
         pop     si
         mov     bx, OPT_G
         jmp     .flag
@@ -1160,7 +1160,8 @@ msg_low_1       db      "Notes below 20 Hz are played (/L:1).", 13, 10, '$'
 msg_raw_1       db      "Sounds ReBeep can't translate play on the speaker (/R:1).", 13, 10, '$'
 msg_raw_0       db      "Sounds ReBeep can't translate are muted (/R:0).", 13, 10, '$'
 msg_prof_1      db      "Profile $"
-msg_prof_2      db      " picks the patch from what the game plays. /P: or /F ends it.", 13, 10, '$'
+msg_prof_2      db      " picks the patch from what the game plays.", 13, 10
+                db      "  /P: or /F ends it.", 13, 10, '$'
 
 msg_help        db      REBEEP_NAME, " - plays PC-speaker beeps on a Sound Blaster's OPL2/OPL3.", 13, 10
                 db      "Needs a 386 or better and Jemm's QPIEMU (JLOAD QPIEMU.DLL).", 13, 10, 13, 10
@@ -1172,8 +1173,8 @@ msg_help        db      REBEEP_NAME, " - plays PC-speaker beeps on a Sound Blast
                 db      "       [/ON | /OFF] [/S] [/U] [/?]", 13, 10
 %endif
                 db      "  /F       faithful square-wave voice (default)", 13, 10
-                db      "  /P:name  a patch: FOLDER\NAME, or NAME from USER then FACTORY", 13, 10
-                db      "  /G:name  a game profile, yours or one that comes with ReBeep", 13, 10
+                db      "  /P:name  a patch: NAME from FACTORY, or FOLDER\NAME", 13, 10
+                db      "  /G:name  a game profile: NAME from FACTORY, or FOLDER\NAME", 13, 10
                 db      "  /V:n     volume 0-15 (default 12)", 13, 10
                 db      "  /L:n     notes below 20 Hz: 0 silent (default), 1 played", 13, 10
                 db      "  /R:n     sounds it can't translate: 1 speaker (default), 0 muted", 13, 10

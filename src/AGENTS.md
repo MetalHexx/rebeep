@@ -44,7 +44,7 @@
   Below 20 Hz (above `DIV_MAX`, or 0 = 65536) is `M_REST`, OPL keyed off, or `M_TONE` once `interp_low` is set (`/L:1`).
 - While the traps are off the OPL belongs to the game: no OPL or `61h` write, and uninstall skips
   `opl_shutdown`. The hotkey then only updates `RB_STATE`. `/OFF` first undoes any masking; `/ON` resyncs.
-- A command-line change writes only the fields it names (`/P:`: the whole patch block at once, interrupts off). Defaults apply on a plain load alone. `/P:` and `PATCH=` share one name rule (`spec_valid`); a patch that can't be used is a message and the faithful voice, never an exit code.
+- A command-line change writes only the fields it names (`/P:`: the whole patch block at once, interrupts off). Defaults apply on a plain load alone. `/P:`, `PATCH=` and `/G:` share one name rule (`spec_valid`): a bare `NAME` is ReBeep's own (FACTORY), `FOLDER\NAME` any other; a patch that can't be used is a message and the faithful voice, never an exit code.
 - NASM rejects an out-of-range short jump under `cpu 8086`; keep branches local. DOS `09h` returns `AL = '$'`.
 - A profile's table is resident at its full size from the first load, so a later `/G:` always fits: raising a limit costs every player memory, and any change to the table bumps `PROF_LAYOUT`. Its rules see each game event, translation on or off, before `play_event`; a switch keeps a tone that sounds on in the new voice (`capture_voice_changed`). Every path that restarts or drops a tone goes through `fx_play` or `fx_quiet`, so an effect is never left sounding.
 

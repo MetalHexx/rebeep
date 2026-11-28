@@ -161,9 +161,9 @@ JEMMEX.EXE in CONFIG.SYS. If Jemm is not in C:\JEMM, set RBJEMM first:
          [/ON | /OFF] [/S] [/U] [/?]
 
   /F      faithful square-wave voice (default)
-  /P:name a patch: FOLDER\NAME, or NAME from USER then FACTORY (the four that
-          come with ReBeep are ORGAN, FLUTE, BRASS and BELL)
-  /G:name a game profile, yours or one that comes with ReBeep
+  /P:name a patch: NAME from FACTORY, or FOLDER\NAME (the four that come
+          with ReBeep are ORGAN, FLUTE, BRASS and BELL)
+  /G:name a game profile: NAME from FACTORY, or FOLDER\NAME
   /V:n    volume, 0 to 15 (default 12)
   /L:n    notes below 20 Hz: 0 silent (default), 1 played
   /R:n    sounds it can't translate: 1 speaker (default), 0 muted
@@ -185,17 +185,20 @@ the game sends the speaker. ReBeep comes with one, for Grand Prix Circuit:
 
   REBEEP /G:GPC
 
-/G:name loads PROFILES\name\name.RBG and the patches beside it. With no
-such file, it loads the one that comes with ReBeep, in FACTORY\PROFILES.
-INSTALL replaces those on an update, so to change one, copy its whole
-folder into PROFILES and change the copy, which then wins:
+/G:name loads the profile that comes with ReBeep, from FACTORY\PROFILES,
+and the patches beside it. /G:FOLDER\NAME loads yours, from
+PROFILES\FOLDER\NAME\NAME.RBG. INSTALL replaces ReBeep's on an update, so
+to change one, copy its whole folder into PROFILES\USER and change the
+copy, which you load as /G:USER\GPC:
 
   MD C:\REBEEP\PROFILES
-  MD C:\REBEEP\PROFILES\GPC
-  COPY C:\REBEEP\FACTORY\PROFILES\GPC\*.* C:\REBEEP\PROFILES\GPC
+  MD C:\REBEEP\PROFILES\USER
+  MD C:\REBEEP\PROFILES\USER\GPC
+  COPY C:\REBEEP\FACTORY\PROFILES\GPC\*.* C:\REBEEP\PROFILES\USER\GPC
 
-A profile you write goes in its own folder in PROFILES, such as
-PROFILES\MYGAME. Its text file looks like this:
+A profile you write goes in its own folder in PROFILES\USER, such as
+PROFILES\USER\MYGAME, loaded as /G:USER\MYGAME. Its text file looks like
+this:
 
   [PROFILE]
   FORMAT=1
@@ -227,7 +230,7 @@ takes it back. Effects don't play in the faithful voice. ID= names a rule
 or an effect count only while that rule is the last to have matched. NAME=
 gives any section a name of 1 to 24 characters, for a menu later.
 
-A profile has up to 8 patches and 2048 bytes. Numbers are decimal, or hex
+A profile has up to 8 patches and 4096 bytes. Numbers are decimal, or hex
 with a trailing h, and lines starting with ; are comments. A rule's patch
 plays in its own voice, even after Ctrl+Alt+N. A profile ReBeep can't use
 is a message, and what was playing goes on.
@@ -277,8 +280,8 @@ Patches are .RBP text files in banks, which are folders:
 
   FACTORY   ORGAN, FLUTE, BRASS and BELL, in FACTORY\PATCHES beside
             RBSTUDIO.EXE. INSTALL replaces them on an update.
-  USER      your patches, and where the Save dialog starts. A USER patch
-            named like a factory one overrides it for /P:name.
+  USER      your patches, and where the Save dialog starts. Use them as
+            /P:USER\name, even one named like a factory patch.
   banks     any other folder in the patches folder, such as HEXX. Use them
             as /P:HEXX\ORGAN. The Save dialog can save into one, or make a
             new one. AdLib .BNK files are not read.
@@ -359,8 +362,8 @@ Messages, and what to do about each:
 
   "Patch NAME not used. Playing the faithful voice."
       ReBeep could not use the patch. The reason is on the lines below: "not
-      found in USER or FACTORY" means no NAME.RBP in either folder (a patch
-      in another bank needs its bank, /P:HEXX\ORGAN). "folder does not exist"
+      found in FACTORY" means no NAME.RBP in FACTORY (a patch of yours needs
+      its folder, /P:USER\NAME or /P:HEXX\ORGAN). "folder does not exist"
       means the PATCHES= folder is missing. Anything about the file itself
       names a line to fix in a text editor.
 
