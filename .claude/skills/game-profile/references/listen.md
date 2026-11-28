@@ -10,7 +10,7 @@ each field means: rebeep-dev's [trace.md](../../rebeep-dev/references/trace.md).
 2. A bench (rebeep-dev's [bench.md](../../rebeep-dev/references/bench.md)) whose load line is
    `LH D:\REBEEP\REBEEPD`, without `/R:0`: `/R:0` mutes the sound ReBeep can't play as a note, and
    the log then shows none of it. Tell the user to expect clicks. Once the profile has rules, add
-   `/G:<SHORT>`: the log then shows what fired too. Then whatever sets the game to the PC speaker
+   `/G:LAB\<SHORT>`: the log then shows what fired too. Then whatever sets the game to the PC speaker
    ([plan.md](plan.md#the-game-in-the-lab)), the game's program, `D:\REBEEP\REBEEPD /D`, and the
    offer to play again.
 3. Start the VM and wait for it to close, as bench.md says.

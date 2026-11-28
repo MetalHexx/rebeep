@@ -226,7 +226,7 @@ describe('disk deploy', () => {
     assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);
   });
 
-  test('puts the lab game profiles on D: as REBEEP/PROFILES/<NAME>, CRLF, only their .RBG and .RBP files', () => {
+  test('puts the lab game profiles on D: as REBEEP/PROFILES/LAB/<NAME>, CRLF, only their .RBG and .RBP files', () => {
     const labProfiles = path.join(s.tmp, 'lab-profiles');
     const ctx = { ...context(), repo: { ...context().repo, labProfiles } };
     fs.mkdirSync(path.dirname(s.paths.vm('mirror-msdos').dImg), { recursive: true });
@@ -241,15 +241,21 @@ describe('disk deploy', () => {
     writeFile(path.join(labProfiles, 'TOOLONGNAME', 'A.RBG'), 'x');
     const delivery = composeDelivery(ctx);
     assert.ok(delivery.warnings.some((w) => /TOOLONGNAME\.RBP/.test(w)), 'a file name that is not 8.3 is skipped with a warning');
-    assert.ok(delivery.warnings.some((w) => /PROFILES\/TOOLONGNAME/.test(w)), 'so is a profile folder whose name is not 8.3');
+    assert.ok(delivery.warnings.some((w) => /PROFILES\/LAB\/TOOLONGNAME/.test(w)), 'so is a profile folder whose name is not 8.3');
 
     deployDisk(ctx, 'mirror-msdos');
     const image = readD();
-    assert.equal(image.readFile('REBEEP/PROFILES/GPC/GPC.RBG').toString(), '[GAME]\r\nNAME=GPC\r\n');
-    assert.equal(image.readFile('REBEEP/PROFILES/GPC/INTRO.RBP').toString(), '[PATCH]\r\nFORMAT=1\r\n');
+    assert.equal(image.readFile('REBEEP/PROFILES/LAB/GPC/GPC.RBG').toString(), '[GAME]\r\nNAME=GPC\r\n');
+    assert.equal(image.readFile('REBEEP/PROFILES/LAB/GPC/INTRO.RBP').toString(), '[PATCH]\r\nFORMAT=1\r\n');
     assert.deepEqual(
       listed(image).filter((n) => n.startsWith('REBEEP/PROFILES')).sort(),
-      ['REBEEP/PROFILES', 'REBEEP/PROFILES/GPC', 'REBEEP/PROFILES/GPC/GPC.RBG', 'REBEEP/PROFILES/GPC/INTRO.RBP'],
+      [
+        'REBEEP/PROFILES',
+        'REBEEP/PROFILES/LAB',
+        'REBEEP/PROFILES/LAB/GPC',
+        'REBEEP/PROFILES/LAB/GPC/GPC.RBG',
+        'REBEEP/PROFILES/LAB/GPC/INTRO.RBP',
+      ],
       'only the profile folder with its .RBG and .RBP files',
     );
     assert.equal(checkImage(fs.readFileSync(s.paths.vm('mirror-msdos').dImg)).ok, true);

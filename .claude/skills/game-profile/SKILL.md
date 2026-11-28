@@ -45,7 +45,7 @@ The user may never have made a patch or read a log. Keep the conversation at the
 
 | Stage | Done when | Reference |
 |---|---|---|
-| 1. Plan | The game is in the lab, its parts are listed, the folder has placeholder patches | [plan.md](references/plan.md) |
+| 1. Plan | The game is in the lab, its parts are listed, the folder has placeholder patches and a `[SOUND]` each | [plan.md](references/plan.md) |
 | 2. Listen | A REBEEPD log holds each part, played by the user in a known order | [listen.md](references/listen.md) |
 | 3. Find the events | Each part has a signature: events that start it and nothing else | [events.md](references/events.md) |
 | 3b. Read the code | Only when a log can't settle a question | [code.md](references/code.md) |

@@ -1,7 +1,8 @@
 ; ReBeep game profile: Grand Prix Circuit, the intro, the menus and the
 ; race, with the race's effects in patches of their own.
-; It comes with ReBeep. To change it, copy the whole folder to
-; PROFILES\GPC and edit the copy: yours then plays instead.
+; It comes with ReBeep, and ReBeep's own profile is never changed. To
+; change it, copy the whole folder under another one, such as
+; PROFILES\USER\GPC2, and load the copy with /G:USER\GPC2.
 ; Each song, and the race, starts with the timer control word 43h=B6,
 ; then its first note. That note plays about 20 counts high, so each
 ; opening gets a tolerance of 40.
@@ -82,3 +83,41 @@ NAME=Tire squeal
 WHILE=RACE
 PITCH=094Ch 40
 PATCH=SQUEAL
+
+; What the studio shows and plays for each patch: its name, when it
+; sounds, and the pitch of a Space preview. ReBeep ignores these.
+
+[SOUND]
+PATCH=INTRO
+NAME=Intro music
+DESCRIPTION=The intro and the trophy screen
+PITCH=1922h
+
+[SOUND]
+PATCH=MENU
+NAME=Menu music
+DESCRIPTION=The menus
+PITCH=1521h
+
+[SOUND]
+PATCH=ENGINE
+NAME=Engine
+DESCRIPTION=The whole race
+PITCH=C22Eh
+
+[SOUND]
+PATCH=LIGHTS
+NAME=Start lights
+DESCRIPTION=The red, yellow and green lights
+PITCH=11D6h
+
+[SOUND]
+PATCH=SQUEAL
+NAME=Squeal
+DESCRIPTION=Tire squeals and gear changes
+PITCH=094Ch
+
+[SOUND]
+PATCH=FALLBK
+NAME=Other sounds
+DESCRIPTION=Anything the profile doesn't recognize

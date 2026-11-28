@@ -14,8 +14,8 @@ const AUTOLOAD_BYTES = Buffer.from('autoload\r\n');
 /** Where the lab's patch set lands: banks in the studio's default patches folder. */
 const PATCHES_DIR = 'REBEEP/PATCHES';
 const LAB_BANK = `${PATCHES_DIR}/LAB`;
-/** Where the lab's game profiles land: one folder per profile. */
-const PROFILES_DIR = 'REBEEP/PROFILES';
+/** Where the lab's game profiles land: a folder of their own, one subfolder per profile, loaded as `/G:LAB\NAME`. */
+const LAB_PROFILES = 'REBEEP/PROFILES/LAB';
 
 const fileNames = (dir) =>
   fs
@@ -126,16 +126,16 @@ function labPatchFiles(repo) {
 /**
  * The lab's game profiles (`repo.labProfiles`, the rebeep-dev skill's `profiles/`), CRLF: each folder in it
  * whose name is a valid 8.3 base name is a profile, and its `.RBG` and `.RBP` files go to
- * `REBEEP/PROFILES/<FOLDER>/`. Files at the top of `profiles/`, other files and badly named folders are
- * skipped; names that are not 8.3 are skipped with a warning by `composeDelivery`. A dev aid only: `release
- * create` never reads it. No folder, no files and no warning.
+ * `REBEEP/PROFILES/LAB/<FOLDER>/`, which ReBeep loads as `/G:LAB\<FOLDER>`. Files at the top of `profiles/`,
+ * other files and badly named folders are skipped; names that are not 8.3 are skipped with a warning by
+ * `composeDelivery`. A dev aid only: `release create` never reads it. No folder, no files and no warning.
  */
 function labProfileFiles(repo) {
   if (!repo.labProfiles || !fs.existsSync(repo.labProfiles)) return [];
   return subfolderNames(repo.labProfiles)
     .filter((name) => !name.includes('.'))
     .flatMap((name) =>
-      labFolderFiles(path.join(repo.labProfiles, name), `${PROFILES_DIR}/${name.toUpperCase()}`, /\.(rbg|rbp)$/i),
+      labFolderFiles(path.join(repo.labProfiles, name), `${LAB_PROFILES}/${name.toUpperCase()}`, /\.(rbg|rbp)$/i),
     );
 }
 

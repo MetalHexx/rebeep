@@ -45,8 +45,13 @@ Make `.claude/skills/rebeep-dev/profiles/<SHORT>/` with `<SHORT>.RBG` and one pa
   catch-all rule. When the user hears it, a rule missed.
 - **The file starts small:** `[PROFILE]`, `FORMAT=1`, a `NAME=` and `DEFAULT=FALLBK`. The rules
   come in stage 3.
+- **A `[SOUND]` for each patch,** so the studio can name and play it: `NAME=` up to 14 characters,
+  `DESCRIPTION=` up to 53 saying when in the game it plays, in the player's words, and `PITCH=` the
+  count the sound plays at (see [`[SOUND]`](../../../../docs/guide/profiles.md#sound)). A rule's
+  count isn't always its sound's pitch: GPC's racing rule waits on the green light's count, but
+  its engine sounds at the idle's. Write the real pitch once the log shows it ([events.md](events.md)).
 - The lab's naming and line rules: rebeep-dev's [profiles.md](../../rebeep-dev/references/profiles.md).
-- To change a profile ReBeep comes with, start from its folder
+- To change a profile ReBeep comes with, copy its folder
   ([ship.md](ship.md#changing-a-shipped-profile)).
 
 ## Pitfalls

@@ -86,6 +86,19 @@ test('trace.mjs hits: an effect whose patch is missing is dropped, and the next 
   assert.ok(fs.existsSync(path.join(dir, 'ZAP.RBP')));
 }));
 
+test('trace.mjs: [SOUND] sections take no patch slot, wherever they sit in the .RBG', () => withLog((log, rbg) => {
+  const sounds = ['ZAP', 'OTHER', 'PLAYP', 'FALLBK']
+    .flatMap((patch) => ['[SOUND]', `PATCH=${patch}`, `NAME=${patch}`, 'DESCRIPTION=Plays somewhere', 'PITCH=0952h']);
+  const plain = ['parts', 'hits', 'near'].map((verb) =>
+    run('trace.mjs', verb === 'near' ? [verb, log, '0400h', '8', '--rbg', rbg] : [verb, log, '--rbg', rbg]));
+  fs.writeFileSync(rbg, [...sounds, RBG, ...sounds].join('\r\n'));
+  const withSounds = ['parts', 'hits', 'near'].map((verb) =>
+    run('trace.mjs', verb === 'near' ? [verb, log, '0400h', '8', '--rbg', rbg] : [verb, log, '--rbg', rbg]));
+  for (const r of [...plain, ...withSounds]) assert.equal(r.code, 0, r.err);
+  assert.deepEqual(withSounds, plain);
+  assert.match(withSounds[1].out, /rule 0 PLAY "Play" -> PLAYP\n/);
+}));
+
 test('trace.mjs near: an older log\'s pitch records, and the rule carried into the next dump', () => withLog((log, rbg) => {
   const next = [
     '# ReBeep x.y.z trace: 1 records kept of 1 offered (capacity 1024)',

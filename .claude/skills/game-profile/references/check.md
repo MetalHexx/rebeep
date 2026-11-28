@@ -5,13 +5,14 @@
 Before the user plays, have ReBeep read the profile, unattended: `mirror-freedos` boots its dev
 entry by itself and can power itself off. No game runs.
 
-1. Write `BENCH.BAT`, CRLF, in a folder of its own outside the repo:
+1. Write `BENCH.BAT`, CRLF, in a folder of its own outside the repo. While the profile is in the
+   lab it loads as `/G:LAB\<SHORT>`; once it ships, as `/G:<SHORT>`:
 
    ```bat
    @ECHO OFF
    REM Load check: what ReBeep says about a profile, then power off.
    IF NOT "%RBDEV%"=="1" GOTO OFF
-   D:\REBEEP\REBEEP /G:<SHORT> > D:\REBEEP\GLOAD.TXT
+   D:\REBEEP\REBEEP /G:LAB\<SHORT> > D:\REBEEP\GLOAD.TXT
    :OFF
    C:\FREEDOS\BIN\FDAPM.COM POWEROFF
    ```
@@ -28,7 +29,7 @@ entry by itself and can power itself off. No game runs.
 ## A listening session
 
 1. A bench (rebeep-dev's [bench.md](../../rebeep-dev/references/bench.md)) on the game's VM,
-   whose load line is `LH D:\REBEEP\REBEEPD /G:<SHORT> /R:0` (no clicks while the user listens),
+   whose load line is `LH D:\REBEEP\REBEEPD /G:LAB\<SHORT> /R:0` (no clicks while the user listens),
    then the game set to the PC speaker, then `D:\REBEEP\REBEEPD /D`.
 2. Give the user an order to play the parts in, and what each should sound like: each placeholder
    differs, and the fallback means a miss.

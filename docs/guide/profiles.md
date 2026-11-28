@@ -122,14 +122,14 @@ COPY C:\REBEEP\PATCHES\USER\ENGINE.RBP C:\REBEEP\PROFILES\USER\MYGAME
 
 ## The file
 
-- Sections are in `[brackets]`: one `[PROFILE]`, then your `[RULE]` and `[EFFECT]` sections.
+- Sections are in `[brackets]`: one `[PROFILE]`, then your `[RULE]` and `[EFFECT]` sections, and a `[SOUND]` for each patch.
 - Each line is `KEY=VALUE`, in capitals or not. A comment starts with `;`, on a line of its own.
 - A key or section ReBeep doesn't know is ignored, so check the spelling. A key given twice in a
   section is refused, except `STEP=`.
 - Numbers are decimal, or hex with a trailing `h`.
 
-`NAME=` is allowed in every section: a longer name of 1 to 24 characters, which ReBeep checks but
-doesn't show. It is always optional.
+`NAME=` is allowed in every section but `[SOUND]`: a longer name of 1 to 24 characters, which ReBeep
+checks but doesn't show. It is always optional.
 
 ### `[PROFILE]`
 
@@ -166,6 +166,18 @@ Leave out `t` to match the count exactly, or both numbers to match any.
 | `PITCH=n t` | Required: the counts that are this effect, `n` give or take `t`. `n - t` is at least 193 |
 | `PATCH=SQUEAL` | Required: the patch it plays in |
 | `WHILE=RACE` | The effect counts only while the rule `RACE` is the last to have matched |
+
+### `[SOUND]`
+
+One for each patch the profile plays. It tells [ReBeep Studio](studio.md) how to name and play that
+sound; ReBeep itself ignores it. A patch with no `[SOUND]` shows its file name.
+
+| Line | Means |
+|---|---|
+| `PATCH=ENGINE` | Required: the patch it describes. One `[SOUND]` for each patch, and none for another |
+| `NAME=Engine` | Required: what the studio calls it, 1 to 14 characters |
+| `DESCRIPTION=The whole race` | Required: when in the game it plays, at most 53 characters |
+| `PITCH=C22Eh` | The count the studio plays it at to be heard, 1 to 65,535. Without it, middle C. It is the count the sound plays at, which may differ from its rule's |
 
 ## How rules match
 

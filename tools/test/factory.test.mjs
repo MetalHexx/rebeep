@@ -18,6 +18,58 @@ const PROFILE_NAME = /^(?=.*[A-Z_-])[A-Z0-9_-]{1,8}$/;
 const entries = (dir) => fs.readdirSync(dir, { withFileTypes: true });
 const profiles = entries(path.join(FACTORY, 'profiles')).map((e) => e.name).sort();
 
+/** ReBeep's `get_word`: decimal digits, or hex digits and a trailing H, from 1 to 65535. */
+const validCount = (text) => {
+  if (!/^(?:\d+|[0-9a-f]+h)$/i.test(text)) return false;
+  const value = parseInt(text, /h$/i.test(text) ? 16 : 10);
+  return value >= 1 && value <= 65535;
+};
+
+/**
+ * What is wrong with a profile's size and `[SOUND]` sections, as messages: more than 4,096 bytes; a patch
+ * it plays (`DEFAULT=`, and `PATCH=` in a rule or effect) with other than one `[SOUND]`; a `[SOUND]` for
+ * a patch it doesn't play; a `NAME=` that isn't 1-14 characters or a `DESCRIPTION=` over 53; a `PITCH=`
+ * that isn't a count.
+ */
+function soundProblems(bytes) {
+  const problems = [];
+  if (bytes.length > 4096) problems.push(`${bytes.length} bytes is over 4,096`);
+  const played = new Set();
+  const sounds = [];
+  let section = null;
+  for (const raw of bytes.toString('latin1').split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith(';')) continue;
+    const head = /^\[([^\]]*)\]$/.exec(line);
+    if (head) {
+      section = head[1].trim().toUpperCase();
+      if (section === 'SOUND') sounds.push({});
+      continue;
+    }
+    const pair = /^([^=]*)=(.*)$/.exec(line);
+    if (!pair) continue;
+    const key = pair[1].trim().toUpperCase();
+    const value = pair[2].trim();
+    if (key === 'PATCH' && (section === 'RULE' || section === 'EFFECT')) played.add(value.toUpperCase());
+    if (key === 'DEFAULT' && section === 'PROFILE') played.add(value.toUpperCase());
+    if (section === 'SOUND') sounds.at(-1)[key] = value;
+  }
+  for (const patch of played) {
+    const count = sounds.filter((s) => s.PATCH?.toUpperCase() === patch).length;
+    if (count !== 1) problems.push(`${patch} has ${count} [SOUND], wanted 1`);
+  }
+  for (const sound of sounds) {
+    const patch = sound.PATCH?.toUpperCase();
+    if (!played.has(patch)) problems.push(`[SOUND] ${patch} is not a patch it plays`);
+    if (!sound.NAME || sound.NAME.length > 14) problems.push(`${patch}: NAME=${sound.NAME ?? ''} is not 1-14 characters`);
+    if (sound.DESCRIPTION === undefined || sound.DESCRIPTION.length > 53) {
+      problems.push(`${patch}: DESCRIPTION=${sound.DESCRIPTION ?? ''} is not at most 53 characters`);
+    }
+    if (sound.PITCH !== undefined && !validCount(sound.PITCH)) problems.push(`${patch}: PITCH=${sound.PITCH} is not a count`);
+  }
+  return problems;
+}
+
 /** Each shipped folder under src/factory/, as `{ dir, dos }`: `patches` is `PATCHES` on the player's disk. */
 const folders = [
   { dir: path.join(FACTORY, 'patches'), dos: 'PATCHES' },
@@ -65,6 +117,33 @@ describe('factory defaults', () => {
       assert.deepEqual(files.sort(), wanted, 'a named patch is missing, or a file is not used');
     });
   }
+
+  for (const name of profiles) {
+    test(`profile ${name} is under 4,096 bytes and describes each sound it plays in a [SOUND]`, () => {
+      const file = path.join(FACTORY, 'profiles', name, `${name}.RBG`);
+      assert.deepEqual(soundProblems(fs.readFileSync(file)), []);
+    });
+  }
+
+  test('the [SOUND] checks catch a missing, an extra, a long-named and a badly pitched [SOUND]', () => {
+    const head = ['[PROFILE]', 'DEFAULT=ONE', '[RULE]', 'PATCH=TWO'];
+    const sound = (patch, ...extra) => ['[SOUND]', `PATCH=${patch}`, 'NAME=n', 'DESCRIPTION=d', ...extra];
+    const problems = (...parts) => soundProblems(Buffer.from(parts.flat().join('\r\n'), 'latin1')).join('; ');
+    assert.equal(problems(head, sound('one', 'PITCH=0Ah'), sound('Two', 'PITCH=65535')), '');
+    assert.match(problems(head, sound('ONE')), /TWO has 0 \[SOUND\]/);
+    assert.match(problems(head, sound('ONE'), sound('TWO'), sound('THREE')), /THREE is not a patch it plays/);
+    assert.match(problems(head, sound('ONE'), sound('TWO'), sound('ONE')), /ONE has 2 \[SOUND\]/);
+    const other = (...keys) => ['[SOUND]', 'PATCH=TWO', ...keys];
+    assert.match(problems(head, sound('ONE'), other('NAME=Fifteen chars!!', 'DESCRIPTION=d')), /NAME/);
+    assert.match(problems(head, sound('ONE'), other('NAME=n', `DESCRIPTION=${'d'.repeat(54)}`)), /DESCRIPTION/);
+    for (const pitch of ['0', '0000h', '10000h', '65536', '12G', '', 'H']) {
+      assert.match(problems(head, sound('ONE', `PITCH=${pitch}`), sound('TWO')), /PITCH/, `PITCH=${pitch}`);
+    }
+    for (const pitch of ['1', '0000c22eH', '65535', 'ffffh']) {
+      assert.equal(problems(head, sound('ONE', `PITCH=${pitch}`), sound('TWO')), '', `PITCH=${pitch}`);
+    }
+    assert.match(soundProblems(Buffer.alloc(4097, 0x3b)).join(), /4,096/);
+  });
 
   const installLines = () => fs.readFileSync(path.join(repo.root, 'release', 'INSTALL.BAT'), 'latin1').split(/\r?\n/);
 
